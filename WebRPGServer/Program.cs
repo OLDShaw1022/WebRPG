@@ -1,11 +1,11 @@
 ﻿using System.Net.WebSockets;
 using System.Text;
 
-var builder = WebApplication.CreateBuilder(args);
-var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+string port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
 builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
-var app = builder.Build();
+WebApplication app = builder.Build();
 
 app.UseWebSockets(new WebSocketOptions
 {
@@ -44,9 +44,21 @@ app.Map("/ws", async context =>
                 break;
             }
 
-            var message = Encoding.UTF8.GetString(memoryStream.ToArray());
-            Console.WriteLine($"收到訊息: {message}");
-            await SendText(webSocket, $"Server 收到: {message}");
+            byte[] messageBytes = memoryStream.ToArray();
+            if (result.MessageType == WebSocketMessageType.Text)
+            {
+                string message = Encoding.UTF8.GetString(messageBytes);
+                var log = $"文字：{message}";
+                Console.WriteLine(log);
+                await SendText(webSocket, $"Server 收到: {log}");
+            }
+            else if (result.MessageType == WebSocketMessageType.Binary)
+            {
+                string message = Convert.ToHexString(messageBytes);
+                var log = $"位元組：{string.Join(" ", message.Chunk(2).Select(bytes => new string(bytes)))}";
+                Console.WriteLine(log);
+                await SendText(webSocket, $"Server 收到: {log}");
+            }
         }
     }
     catch (WebSocketException exception)
