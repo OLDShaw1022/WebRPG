@@ -3,7 +3,7 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
-builder.WebHost.UseUrls($"http://0.0.0.0:{port}"); // 0.0.0.0 = 允許區網其他裝置連線；只想本機用可改成 localhost
+builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
 var app = builder.Build();
 
@@ -12,7 +12,7 @@ app.UseWebSockets(new WebSocketOptions
     KeepAliveInterval = TimeSpan.FromSeconds(30)
 });
 
-app.Map("/ws", async (HttpContext context) =>
+app.Map("/ws", async context =>
 {
     if (!context.WebSockets.IsWebSocketRequest)
     {
@@ -20,49 +20,51 @@ app.Map("/ws", async (HttpContext context) =>
         return;
     }
 
-    using var ws = await context.WebSockets.AcceptWebSocketAsync();
+    using WebSocket webSocket = await context.WebSockets.AcceptWebSocketAsync();
     Console.WriteLine("有 client 連線了");
 
-    await SendText(ws, "歡迎連線到 WebSocket server！");
+    await SendText(webSocket, "歡迎連線到 WebSocket server！");
 
     var buffer = new byte[4096];
     try
     {
-        while (ws.State == WebSocketState.Open)
+        while (webSocket.State == WebSocketState.Open)
         {
-            // 累積多段資料，避免大訊息被截斷
-            using var ms = new MemoryStream();
+            using var memoryStream = new MemoryStream();
             WebSocketReceiveResult result;
             do
             {
-                result = await ws.ReceiveAsync(buffer, context.RequestAborted);
-                ms.Write(buffer, 0, result.Count);
+                result = await webSocket.ReceiveAsync(buffer, context.RequestAborted);
+                memoryStream.Write(buffer, 0, result.Count);
             } while (!result.EndOfMessage);
 
             if (result.MessageType == WebSocketMessageType.Close)
             {
-                await ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "bye", CancellationToken.None);
+                await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "bye", CancellationToken.None);
                 break;
             }
 
-            var msg = Encoding.UTF8.GetString(ms.ToArray());
-            Console.WriteLine($"收到訊息: {msg}");
-            await SendText(ws, $"Server 收到: {msg}");
+            var message = Encoding.UTF8.GetString(memoryStream.ToArray());
+            Console.WriteLine($"收到訊息: {message}");
+            await SendText(webSocket, $"Server 收到: {message}");
         }
     }
-    catch (WebSocketException ex)
+    catch (WebSocketException exception)
     {
-        Console.WriteLine($"連線異常: {ex.Message}");
+        Console.WriteLine($"連線異常: {exception.Message}");
     }
-    catch (OperationCanceledException) { }
+    catch (OperationCanceledException)
+    {
+    }
 
     Console.WriteLine("client 已斷線");
 });
 
 app.Run();
+return;
 
 static Task SendText(WebSocket ws, string text)
 {
-    var bytes = Encoding.UTF8.GetBytes(text);
+    byte[] bytes = Encoding.UTF8.GetBytes(text);
     return ws.SendAsync(bytes, WebSocketMessageType.Text, true, CancellationToken.None);
 }
