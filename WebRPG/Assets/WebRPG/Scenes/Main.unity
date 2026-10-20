@@ -4614,6 +4614,8 @@ GameObject:
   - component: {fileID: 1835696491}
   - component: {fileID: 1835696490}
   - component: {fileID: 1835696489}
+  - component: {fileID: 1835696494}
+  - component: {fileID: 1835696493}
   m_Layer: 0
   m_Name: ChatRoomCanvas
   m_TagString: Untagged
@@ -4705,6 +4707,44 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 0}
+--- !u!114 &1835696493
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1835696488}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b913f4666ed74ab3986e8b76a404bf27, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _chatWebSocketClient: {fileID: 1835696494}
+  _loginPanel: {fileID: 1760478334}
+  _chatPanel: {fileID: 526061947}
+  _usernameInput: {fileID: 542973597}
+  _loginHint: {fileID: 1585900877}
+  _connectButton: {fileID: 1959061155}
+  _channelStatus: {fileID: 954956678}
+  _messageInput: {fileID: 1644326659}
+  _sendButton: {fileID: 1029278652}
+  _messageScrollRect: {fileID: 1745167164}
+  _messageContent: {fileID: 644565776}
+  _incomingMessagePrefab: {fileID: 2770549492231922635, guid: 6f2a9ac177573d34cbfc7e4957b8a2bc, type: 3}
+  _outgoingMessagePrefab: {fileID: 3266805340091180668, guid: 02329383cf67f624fb4313ca2ae50dcb, type: 3}
+--- !u!114 &1835696494
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1835696488}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eeecc85687f34437988a1408c0240636, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _serverUrl: wss://ws.oldshaw-webrpg.com/ws
 --- !u!1 &1946095531
 GameObject:
   m_ObjectHideFlags: 0
