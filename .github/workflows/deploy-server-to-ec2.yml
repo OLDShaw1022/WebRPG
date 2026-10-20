@@ -1,0 +1,61 @@
+name: Deploy WebRPG server to EC2
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_deployment:
+        description: Type deploy to publish this server build to EC2
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: webrpg-server-ec2
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: inputs.confirm_deployment == 'deploy'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Publish server
+        run: dotnet publish WebRPGServer/WebRPGServer.csproj --configuration Release --runtime linux-x64 --self-contained true --output publish
+
+      - name: Configure SSH
+        env:
+          EC2_SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$EC2_SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts
+
+      - name: Copy server to EC2
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+        run: |
+          ssh "$EC2_USER@$EC2_HOST" 'mkdir -p /home/ec2-user/myserver'
+          scp -r publish/. "$EC2_USER@$EC2_HOST:/home/ec2-user/myserver/"
+
+      - name: Restart server
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+        run: |
+          ssh "$EC2_USER@$EC2_HOST" '
+            sudo systemctl restart webrpg
+            sudo systemctl is-active --quiet webrpg
+          '
