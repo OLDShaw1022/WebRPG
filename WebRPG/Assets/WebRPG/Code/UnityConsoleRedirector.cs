@@ -3,85 +3,88 @@ using System.IO;
 using System.Text;
 using UnityEngine;
 
-public class UnityConsoleRedirector : MonoBehaviour
+namespace WebRPG
 {
-    private TextWriter _originalOut;
-    private TextWriter _originalError;
-
-    private void Awake()
+    public class UnityConsoleRedirector : MonoBehaviour
     {
-        _originalOut = Console.Out;
-        _originalError = Console.Error;
+        private TextWriter _originalOut;
+        private TextWriter _originalError;
 
-        // Redirect standard out and standard error to Unity's Debug Log
-        Console.SetOut(new UnityTextWriter(LogType.Log));
-        Console.SetError(new UnityTextWriter(LogType.Error));
-    }
-
-    private void OnDestroy()
-    {
-        if (_originalOut != null)
+        private void Awake()
         {
-            Console.SetOut(_originalOut);
-            _originalOut = null;
+            _originalOut = Console.Out;
+            _originalError = Console.Error;
+
+            // Redirect standard out and standard error to Unity's Debug Log
+            Console.SetOut(new UnityTextWriter(LogType.Log));
+            Console.SetError(new UnityTextWriter(LogType.Error));
         }
 
-        if (_originalError != null)
+        private void OnDestroy()
         {
-            Console.SetError(_originalError);
-            _originalError = null;
-        }
-    }
-
-    private class UnityTextWriter : TextWriter
-    {
-        private readonly LogType _logType;
-        private readonly StringBuilder _buffer = new StringBuilder();
-
-        public override Encoding Encoding => Encoding.UTF8;
-
-        public UnityTextWriter(LogType logType)
-        {
-            _logType = logType;
-        }
-
-        // Catch individual characters to build full lines
-        public override void Write(char value)
-        {
-            if (value == '\n')
+            if (_originalOut != null)
             {
-                FlushBuffer();
+                Console.SetOut(_originalOut);
+                _originalOut = null;
             }
-            else if (value != '\r') // Ignore carriage returns
+
+            if (_originalError != null)
             {
-                _buffer.Append(value);
+                Console.SetError(_originalError);
+                _originalError = null;
             }
         }
 
-        // Catch string blocks / WriteLine directly
-        public override void WriteLine(string value)
+        private class UnityTextWriter : TextWriter
         {
-            Log(value);
-        }
+            private readonly LogType _logType;
+            private readonly StringBuilder _buffer = new StringBuilder();
 
-        private void FlushBuffer()
-        {
-            if (_buffer.Length > 0)
-            {
-                Log(_buffer.ToString());
-                _buffer.Clear();
-            }
-        }
+            public override Encoding Encoding => Encoding.UTF8;
 
-        private void Log(string message)
-        {
-            if (_logType == LogType.Error)
+            public UnityTextWriter(LogType logType)
             {
-                Debug.LogError(message);
+                _logType = logType;
             }
-            else
+
+            // Catch individual characters to build full lines
+            public override void Write(char value)
             {
-                Debug.Log(message);
+                if (value == '\n')
+                {
+                    FlushBuffer();
+                }
+                else if (value != '\r') // Ignore carriage returns
+                {
+                    _buffer.Append(value);
+                }
+            }
+
+            // Catch string blocks / WriteLine directly
+            public override void WriteLine(string value)
+            {
+                Log(value);
+            }
+
+            private void FlushBuffer()
+            {
+                if (_buffer.Length > 0)
+                {
+                    Log(_buffer.ToString());
+                    _buffer.Clear();
+                }
+            }
+
+            private void Log(string message)
+            {
+                if (_logType == LogType.Error)
+                {
+                    Debug.LogError(message);
+                }
+                else
+                {
+                    Debug.Log(message);
+                }
             }
         }
     }
