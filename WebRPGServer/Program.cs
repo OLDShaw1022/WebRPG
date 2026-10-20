@@ -48,7 +48,7 @@ app.Map("/ws", async context =>
             if (result.MessageType == WebSocketMessageType.Text)
             {
                 string message = Encoding.UTF8.GetString(messageBytes);
-                var log = $"文字：{message}";
+                var log = $"測試文字：{message}";
                 Console.WriteLine(log);
                 await SendText(webSocket, $"Server 收到: {log}");
             }
