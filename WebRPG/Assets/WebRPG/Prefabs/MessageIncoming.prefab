@@ -148,6 +148,7 @@ GameObject:
   - component: {fileID: 6050906118929999484}
   - component: {fileID: 7893842267779873017}
   - component: {fileID: 108097230054597393}
+  - component: {fileID: 4933963471792427773}
   m_Layer: 0
   m_Name: MessageIncoming
   m_TagString: Untagged
@@ -221,6 +222,20 @@ MonoBehaviour:
   m_FlexibleWidth: -1
   m_FlexibleHeight: 0
   m_LayoutPriority: 1
+--- !u!114 &4933963471792427773
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2770549492231922635}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e8d7323b932a4ac88fce9ccb1d5e7f6a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: WebRPG::WebRPG.ChatMessageView
+  _author: {fileID: 8292708348765261462}
+  _messageText: {fileID: 7826850487757339411}
 --- !u!1 &3414583067486539856
 GameObject:
   m_ObjectHideFlags: 0

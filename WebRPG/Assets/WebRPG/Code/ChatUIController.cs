@@ -20,8 +20,8 @@ public sealed class ChatUIController : MonoBehaviour
     [SerializeField] private Button _sendButton;
     [SerializeField] private ScrollRect _messageScrollRect;
     [SerializeField] private RectTransform _messageContent;
-    [SerializeField] private GameObject _incomingMessagePrefab;
-    [SerializeField] private GameObject _outgoingMessagePrefab;
+    [SerializeField] private ChatMessageView _incomingMessagePrefab;
+    [SerializeField] private ChatMessageView _outgoingMessagePrefab;
 
     private string _connectionId;
     private bool _hasStartedConnecting;
@@ -128,20 +128,9 @@ public sealed class ChatUIController : MonoBehaviour
     private void CreateMessage(ChatPacket packet)
     {
         bool isOutgoing = packet.ConnectionId == _connectionId;
-        GameObject prefab = isOutgoing ? _outgoingMessagePrefab : _incomingMessagePrefab;
-        GameObject message = Instantiate(prefab, _messageContent, false);
-        TMP_Text author = message.transform.Find("Author")?.GetComponent<TMP_Text>();
-        TMP_Text messageText = message.transform.Find("MessageText")?.GetComponent<TMP_Text>();
-        if (author != null)
-        {
-            author.text = packet.Username;
-        }
-
-        if (messageText != null)
-        {
-            messageText.text = packet.Text;
-            messageText.richText = false;
-        }
+        ChatMessageView prefab = isOutgoing ? _outgoingMessagePrefab : _incomingMessagePrefab;
+        ChatMessageView messageView = Instantiate(prefab, _messageContent, false);
+        messageView.SetMessage(packet.Username, packet.Text);
 
         StartCoroutine(ScrollToLatestMessage());
     }
