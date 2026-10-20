@@ -47,6 +47,10 @@ publish/
 *.sln
 *.suo
 
+# Server and shared library project files required by GitHub Actions
+!/WebRPGServer/WebRPGServer.csproj
+!/WebRPGShared/WebRPGShared.csproj
+
 ### Windows
 # Windows thumbnail cache files
 Thumbs.db
