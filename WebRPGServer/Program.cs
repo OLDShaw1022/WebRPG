@@ -55,7 +55,7 @@ app.Map("/ws", async context =>
             else if (result.MessageType == WebSocketMessageType.Binary)
             {
                 string message = Convert.ToHexString(messageBytes);
-                var log = $"位元組：{string.Join(" ", message.Chunk(2).Select(bytes => new string(bytes)))}";
+                var log = $"測試位元組：{string.Join(" ", message.Chunk(2).Select(bytes => new string(bytes)))}";
                 Console.WriteLine(log);
                 await SendText(webSocket, $"Server 收到: {log}");
             }
