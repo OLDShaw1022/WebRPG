@@ -11,12 +11,14 @@
 
 - 修改前先問使用者。
 - 在允許前不要直接更改檔案。
-- 先提供完整diff檔案並等待使用者同意才進行直接修改。
+- 更改檔案時先提供完整diff檔案並等待使用者同意才進行直接修改。
 - 先閱讀使用者準備修改的程式碼及相關設定，再做最小且完整的修改。
-- 修改要符合SOLID。
+- 程式修改要符合SOLID。
 - 命名時要完整不要簡寫。
 - 撰寫程式碼時使用以下網址撰寫的coding conventions : https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/coding-style/coding-conventions 。
 - 不要寫一堆註解，只寫註解在複雜的東西前一行。
+- Git Commit命名使用以下網址撰寫的naming conventions : https://www.conventionalcommits.org/en/v1.0.0/ 。
+- Git Commit前先向使用者確認是否同意命名。
 - Unity 的資產、場景、Prefab、Project Settings 和套件設定可能彼此相依；修改前先確認影響範圍。
 - `WebRPGShared` 必須維持與 Unity 相容：目前目標框架是 `netstandard2.1`，C# 語言版本是 9.0。不要直接使用只適用於 .NET 9 的 API。
 - 修改 WebSocket 訊息格式或連線行為時，同時檢查 Unity 用戶端與伺服器是否一致。
