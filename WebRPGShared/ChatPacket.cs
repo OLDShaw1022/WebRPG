@@ -9,6 +9,7 @@ namespace WebRPGShared
         public string Username { get; set; }
         public string Text { get; set; }
         public string ConnectionId { get; set; }
+        public DateTimeOffset TimestampUtc { get; set; }
     }
 
     public static class ChatPacketType

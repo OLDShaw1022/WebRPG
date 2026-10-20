@@ -236,6 +236,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: WebRPG::WebRPG.ChatMessageView
   _author: {fileID: 8292708348765261462}
   _messageText: {fileID: 7826850487757339411}
+  _time: {fileID: 542196005990643233}
 --- !u!1 &3414583067486539856
 GameObject:
   m_ObjectHideFlags: 0

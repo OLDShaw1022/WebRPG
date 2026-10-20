@@ -90,7 +90,8 @@ public sealed class ChatHub
                     Type = ChatPacketType.Chat,
                     Username = session.Username,
                     Text = text,
-                    ConnectionId = session.ConnectionId
+                    ConnectionId = session.ConnectionId,
+                    TimestampUtc = DateTimeOffset.UtcNow
                 };
                 await BroadcastAsync(message, cancellationToken);
             }

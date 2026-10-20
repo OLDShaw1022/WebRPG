@@ -130,7 +130,7 @@ public sealed class ChatUIController : MonoBehaviour
         bool isOutgoing = packet.ConnectionId == _connectionId;
         ChatMessageView prefab = isOutgoing ? _outgoingMessagePrefab : _incomingMessagePrefab;
         ChatMessageView messageView = Instantiate(prefab, _messageContent, false);
-        messageView.SetMessage(packet.Username, packet.Text);
+        messageView.SetMessage(packet.Username, packet.Text, packet.TimestampUtc);
 
         StartCoroutine(ScrollToLatestMessage());
     }
