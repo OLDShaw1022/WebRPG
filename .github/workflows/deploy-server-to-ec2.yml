@@ -48,7 +48,8 @@ jobs:
           EC2_USER: ${{ secrets.EC2_USER }}
         run: |
           ssh "$EC2_USER@$EC2_HOST" 'mkdir -p /home/ec2-user/myserver'
-          scp -r publish/. "$EC2_USER@$EC2_HOST:/home/ec2-user/myserver/"
+          ssh "$EC2_USER@$EC2_HOST" 'command -v rsync >/dev/null || { echo "rsync is required on EC2"; exit 1; }'
+          rsync -azc --itemize-changes publish/ "$EC2_USER@$EC2_HOST:/home/ec2-user/myserver/"
 
       - name: Restart server
         env:
