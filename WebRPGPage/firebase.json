@@ -12,11 +12,17 @@
         "destination": "/index.html"
       }
     ],
-"headers": [
+    "headers": [
       {
-        "source": "index.html",
+        "source": "**",
         "headers": [
           { "key": "Cache-Control", "value": "no-cache" }
+        ]
+      },
+      {
+        "source": "**/*.wasm",
+        "headers": [
+          { "key": "Content-Type", "value": "application/wasm" }
         ]
       }
     ]

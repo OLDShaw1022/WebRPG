@@ -126,3 +126,6 @@ x86/
 # Others
 oldshaw-webrpg.pem
 oldshaw-webrpg.ppk
+
+# Temporary credentials created by Google GitHub Actions authentication
+/gha-creds-*.json
