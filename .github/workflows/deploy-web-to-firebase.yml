@@ -63,6 +63,12 @@ jobs:
           cp WebRPGPage/ci/UnityWebBuild.cs WebRPG/Assets/Editor/WebRPGContinuousIntegration/
           cp -R WebRPGPage/template/. WebRPG/Assets/WebGLTemplates/WebRPGContinuousIntegration/
 
+      - name: Free runner disk space for Unity
+        run: |
+          df -h /
+          sudo rm -rf /usr/local/lib/android
+          df -h /
+
       - name: Build Unity Web
         uses: game-ci/unity-builder@v4
         env:
