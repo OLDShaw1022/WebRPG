@@ -54,7 +54,6 @@ namespace WebRPG
 
         private void Update()
         {
-            _webSocket?.DispatchMessageQueue();
 
             _direction = Vector2.zero;
 

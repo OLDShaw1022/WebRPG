@@ -57,7 +57,6 @@ public sealed class ChatWebSocketClient : MonoBehaviour
 
     private void Update()
     {
-        _webSocket?.DispatchMessageQueue();
     }
 
     private async System.Threading.Tasks.Task OpenConnectionAsync()
