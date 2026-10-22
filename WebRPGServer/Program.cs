@@ -1,10 +1,11 @@
 using System.Net.WebSockets;
+using Npgsql;
 
 namespace WebRPGServer;
 
 public static class Program
 {
-    public static void Main(string[] args)
+    public static async Task Main(string[] args)
     {
         WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
         string port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
@@ -12,6 +13,7 @@ public static class Program
         builder.Services.AddSingleton<ChatHub>();
 
         WebApplication app = builder.Build();
+        await TestDatabaseConnectionAsync(builder.Configuration, app.Logger);
 
         app.UseWebSockets(new WebSocketOptions
         {
@@ -31,7 +33,40 @@ public static class Program
             await next();
         });
 
-        app.Run();
+        await app.RunAsync();
     }
 
+    private static async Task TestDatabaseConnectionAsync(
+        IConfiguration configuration,
+        ILogger logger)
+    {
+        string? connectionString = configuration.GetConnectionString("GameDatabase");
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            logger.LogWarning("Database connection test skipped: GameDatabase is not configured.");
+            return;
+        }
+
+        using CancellationTokenSource cancellationTokenSource = new(TimeSpan.FromSeconds(10));
+
+        try
+        {
+            await using NpgsqlDataSource dataSource = NpgsqlDataSource.Create(connectionString);
+            await using NpgsqlCommand command = dataSource.CreateCommand("SELECT 1");
+            await command.ExecuteScalarAsync(cancellationTokenSource.Token);
+            logger.LogInformation("Database connection test succeeded.");
+        }
+        catch (OperationCanceledException)
+        {
+            logger.LogError("Database connection test timed out.");
+        }
+        catch (NpgsqlException exception)
+        {
+            logger.LogError("Database connection test failed ({ErrorType}).", exception.GetType().Name);
+        }
+        catch (ArgumentException)
+        {
+            logger.LogError("Database connection test failed: invalid connection string.");
+        }
+    }
 }
