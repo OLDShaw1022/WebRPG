@@ -10,10 +10,29 @@ public static class Program
         WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
         string port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
         builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+
+        string? connectionString = builder.Configuration.GetConnectionString("GameDatabase");
+        if (!string.IsNullOrWhiteSpace(connectionString))
+        {
+            builder.Services.AddSingleton(NpgsqlDataSource.Create(connectionString));
+            builder.Services.AddSingleton<IChatMessageStore, PostgresChatMessageStore>();
+        }
+
         builder.Services.AddSingleton<ChatHub>();
 
         WebApplication app = builder.Build();
-        await TestDatabaseConnectionAsync(builder.Configuration, app.Logger);
+
+        if (!string.IsNullOrWhiteSpace(connectionString))
+        {
+            IChatMessageStore messageStore = app.Services.GetRequiredService<IChatMessageStore>();
+            await messageStore.InitializeAsync(CancellationToken.None);
+            app.Logger.LogInformation("Chat message database is ready.");
+        }
+        else
+        {
+            app.Logger.LogWarning(
+                "Chat message persistence is disabled: GameDatabase is not configured.");
+        }
 
         app.UseWebSockets(new WebSocketOptions
         {
@@ -34,39 +53,5 @@ public static class Program
         });
 
         await app.RunAsync();
-    }
-
-    private static async Task TestDatabaseConnectionAsync(
-        IConfiguration configuration,
-        ILogger logger)
-    {
-        string? connectionString = configuration.GetConnectionString("GameDatabase");
-        if (string.IsNullOrWhiteSpace(connectionString))
-        {
-            logger.LogWarning("Database connection test skipped: GameDatabase is not configured.");
-            return;
-        }
-
-        using CancellationTokenSource cancellationTokenSource = new(TimeSpan.FromSeconds(10));
-
-        try
-        {
-            await using NpgsqlDataSource dataSource = NpgsqlDataSource.Create(connectionString);
-            await using NpgsqlCommand command = dataSource.CreateCommand("SELECT 1");
-            await command.ExecuteScalarAsync(cancellationTokenSource.Token);
-            logger.LogInformation("Database connection test succeeded.");
-        }
-        catch (OperationCanceledException)
-        {
-            logger.LogError("Database connection test timed out.");
-        }
-        catch (NpgsqlException exception)
-        {
-            logger.LogError("Database connection test failed ({ErrorType}).", exception.GetType().Name);
-        }
-        catch (ArgumentException)
-        {
-            logger.LogError("Database connection test failed: invalid connection string.");
-        }
     }
 }

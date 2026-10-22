@@ -14,6 +14,12 @@ public sealed class ChatHub
     };
 
     private readonly ConcurrentDictionary<string, ChatSession> _sessions = new();
+    private readonly IChatMessageStore? _messageStore;
+
+    public ChatHub(IChatMessageStore? messageStore = null)
+    {
+        _messageStore = messageStore;
+    }
 
     public async Task HandleConnectionAsync(WebSocket webSocket, CancellationToken cancellationToken)
     {
@@ -56,7 +62,8 @@ public sealed class ChatHub
                     string username = packet.Username?.Trim() ?? string.Empty;
                     if (username.Length == 0 || username.Length > ChatPacketLimits.UsernameLength)
                     {
-                        await SendErrorAsync(null, webSocket, "Username must contain 1 to 24 characters.", cancellationToken);
+                        await SendErrorAsync(null, webSocket, "Username must contain 1 to 24 characters.",
+                            cancellationToken);
                         continue;
                     }
 
@@ -67,7 +74,31 @@ public sealed class ChatHub
                         Username = session.Username,
                         ConnectionId = session.ConnectionId
                     }, cancellationToken);
-                    _sessions.TryAdd(session.ConnectionId, session);
+
+                    if (_messageStore is not null)
+                    {
+                        await session.SendLock.WaitAsync(cancellationToken);
+                        try
+                        {
+                            _sessions.TryAdd(session.ConnectionId, session);
+                            IReadOnlyList<ChatPacket> history =
+                                await _messageStore.GetRecentMessagesAsync(50, cancellationToken);
+
+                            foreach (ChatPacket historyMessage in history)
+                            {
+                                await SendUnlockedAsync(session, historyMessage, cancellationToken);
+                            }
+                        }
+                        finally
+                        {
+                            session.SendLock.Release();
+                        }
+                    }
+                    else
+                    {
+                        _sessions.TryAdd(session.ConnectionId, session);
+                    }
+
                     Console.WriteLine($"{session.Username} joined ({session.ConnectionId}).");
                     continue;
                 }
@@ -81,7 +112,8 @@ public sealed class ChatHub
                 string text = packet.Text?.Trim() ?? string.Empty;
                 if (text.Length == 0 || text.Length > ChatPacketLimits.MessageLength)
                 {
-                    await SendErrorAsync(session, webSocket, "Message must contain 1 to 200 characters.", cancellationToken);
+                    await SendErrorAsync(session, webSocket, "Message must contain 1 to 200 characters.",
+                        cancellationToken);
                     continue;
                 }
 
@@ -93,6 +125,12 @@ public sealed class ChatHub
                     ConnectionId = session.ConnectionId,
                     TimestampUtc = DateTimeOffset.UtcNow
                 };
+
+                if (_messageStore is not null)
+                {
+                    await _messageStore.SaveMessageAsync(message, cancellationToken);
+                }
+
                 await BroadcastAsync(message, cancellationToken);
             }
         }
@@ -115,7 +153,8 @@ public sealed class ChatHub
             {
                 try
                 {
-                    await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Disconnected", CancellationToken.None);
+                    await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Disconnected",
+                        CancellationToken.None);
                 }
                 catch (WebSocketException)
                 {
@@ -154,7 +193,8 @@ public sealed class ChatHub
         }
     }
 
-    private static async Task SendErrorAsync(ChatSession? session, WebSocket socket, string text, CancellationToken cancellationToken)
+    private static async Task SendErrorAsync(ChatSession? session, WebSocket socket, string text,
+        CancellationToken cancellationToken)
     {
         ChatPacket packet = new() { Type = ChatPacketType.Error, Text = text };
         if (session is null)
@@ -169,19 +209,29 @@ public sealed class ChatHub
 
     private static async Task SendAsync(ChatSession session, ChatPacket packet, CancellationToken cancellationToken)
     {
-        byte[] payload = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(packet, JsonOptions));
         await session.SendLock.WaitAsync(cancellationToken);
         try
         {
-            if (session.Socket.State == WebSocketState.Open)
-            {
-                await session.Socket.SendAsync(payload, WebSocketMessageType.Text, true, cancellationToken);
-            }
+            await SendUnlockedAsync(session, packet, cancellationToken);
         }
         finally
         {
             session.SendLock.Release();
         }
+    }
+
+    private static async Task SendUnlockedAsync(
+        ChatSession session,
+        ChatPacket packet,
+        CancellationToken cancellationToken)
+    {
+        if (session.Socket.State != WebSocketState.Open)
+        {
+            return;
+        }
+
+        byte[] payload = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(packet, JsonOptions));
+        await session.Socket.SendAsync(payload, WebSocketMessageType.Text, true, cancellationToken);
     }
 
     private static async Task<string?> ReceiveTextAsync(WebSocket socket, CancellationToken cancellationToken)
@@ -203,8 +253,7 @@ public sealed class ChatHub
             {
                 message.Write(buffer, 0, result.Count);
             }
-        }
-        while (!result.EndOfMessage);
+        } while (!result.EndOfMessage);
 
         return isTextMessage ? Encoding.UTF8.GetString(message.ToArray()) : string.Empty;
     }
