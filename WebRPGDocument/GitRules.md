@@ -5,5 +5,5 @@
 
 ## 規則
 
-- 1：Git Commit命名使用以下網址撰寫的naming conventions : https://www.conventionalcommits.org/en/v1.0.0/ 。
-- 2：Git Commit前先向使用者確認是否同意命名。
+- 1：Git Commit 命名遵循 [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) 規範。
+- 2：Git Commit 前先向使用者確認是否同意命名。
