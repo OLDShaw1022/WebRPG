@@ -8,6 +8,8 @@
 | 文件 | 內容 | 何時讀取 |
 | --- | --- | --- |
 | [Coding 規則](CodingRules.md) | SOLID、命名、程式風格、註解、相容性與通訊一致性 | 撰寫、修改或審查程式碼前必讀 |
+| [Git 規則](GitRules.md) | Commit 命名與提交前確認 | Git Commit 前必讀 |
+| [Unity 規則](UnityRules.md) | 修改影響範圍、自動產生資料夾與既有內容保護 | 修改 `WebRPG/` 內的 Unity 專案檔案前必讀 |
 | [文件撰寫格式範例](DocumentTemplate.md) | 文件撰寫原則與可複製範本 | 新增或修改設計與技術文件前閱讀 |
 | [主玩法](CoreGameplay.md) | 核心循環、玩家目標、規則與驗收情境 | 討論或修改主要遊戲行為時 |
 

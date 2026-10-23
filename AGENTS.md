@@ -14,12 +14,7 @@
 - 有不清楚的細節直接問使用者。
 - 在允許前不要直接更改檔案。
 - 更改檔案時先提供完整diff檔案並等待使用者同意才進行直接修改。
-- Git Commit命名使用以下網址撰寫的naming conventions : https://www.conventionalcommits.org/en/v1.0.0/ 。
-- Git Commit前先向使用者確認是否同意命名。
-- Unity 的資產、場景、Prefab、Project Settings 和套件設定可能彼此相依；修改前先確認影響範圍。
-- 不要編輯 Unity 自動產生的資料夾（例如 `Library/`、`Temp/`、`obj/`、`Logs/`、`UserSettings/`），除非使用者明確要求處理其中內容。
 - 不要覆寫、提交或輸出憑證、私密金鑰或其他機密資料。不要把秘密值寫進程式碼或文件。
-- 不要為了方便而移除或重建使用者已有的場景、資產或設定。
 - 新增規則時，寫清楚它適用的路徑、要做的事，以及必要時的例外情況。
 
 ## 建置與驗證
@@ -33,4 +28,6 @@
 
 - 開始任務前，先閱讀 [文件目錄](WebRPGDocument/Document%20Directory.md)，依任務選讀相關文件。
 - 涉及撰寫、修改或審查程式碼時，必須先閱讀並遵守 [Coding 規則](WebRPGDocument/CodingRules.md)。
+- 涉及 Git Commit 時，必須先閱讀並遵守 [Git 規則](WebRPGDocument/GitRules.md)。
+- 涉及修改 `WebRPG/` 內的 Unity 專案檔案時，必須先閱讀並遵守 [Unity 規則](WebRPGDocument/UnityRules.md)。
 - 不要一次載入全部文件；任務涉及多個系統時，再補讀相關文件。
