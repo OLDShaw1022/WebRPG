@@ -7,25 +7,23 @@ namespace WebRPG
 {
     public class UnityConsoleRedirector : MonoBehaviour
     {
-        private TextWriter _originalOut;
+        private TextWriter _originalStandardOutput;
         private TextWriter _originalError;
 
         private void Awake()
         {
-            _originalOut = Console.Out;
+            _originalStandardOutput = Console.Out;
             _originalError = Console.Error;
-
-            // Redirect standard out and standard error to Unity's Debug Log
             Console.SetOut(new UnityTextWriter(LogType.Log));
             Console.SetError(new UnityTextWriter(LogType.Error));
         }
 
         private void OnDestroy()
         {
-            if (_originalOut != null)
+            if (_originalStandardOutput != null)
             {
-                Console.SetOut(_originalOut);
-                _originalOut = null;
+                Console.SetOut(_originalStandardOutput);
+                _originalStandardOutput = null;
             }
 
             if (_originalError != null)
@@ -46,21 +44,17 @@ namespace WebRPG
             {
                 _logType = logType;
             }
-
-            // Catch individual characters to build full lines
             public override void Write(char value)
             {
                 if (value == '\n')
                 {
                     FlushBuffer();
                 }
-                else if (value != '\r') // Ignore carriage returns
+                else if (value != '\r')
                 {
                     _buffer.Append(value);
                 }
             }
-
-            // Catch string blocks / WriteLine directly
             public override void WriteLine(string value)
             {
                 Log(value);

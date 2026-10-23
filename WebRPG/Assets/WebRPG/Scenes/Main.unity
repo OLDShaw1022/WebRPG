@@ -7279,7 +7279,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b913f4666ed74ab3986e8b76a404bf27, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _chatWebSocketClient: {fileID: 1835696494}
+  _chatModel: {fileID: 1835696494}
   _loginPanel: {fileID: 1760478334}
   _chatPanel: {fileID: 526061947}
   _usernameInput: {fileID: 542973597}

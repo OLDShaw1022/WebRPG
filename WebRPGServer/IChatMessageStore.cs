@@ -4,11 +4,11 @@ namespace WebRPGServer;
 
 public interface IChatMessageStore
 {
-    Task InitializeAsync(CancellationToken cancellationToken);
+    public Task InitializeAsync(CancellationToken cancellationToken);
 
-    Task SaveMessageAsync(ChatPacket message, CancellationToken cancellationToken);
+    public Task SaveMessageAsync(ChatPacket message, CancellationToken cancellationToken);
 
-    Task<IReadOnlyList<ChatPacket>> GetRecentMessagesAsync(
+    public Task<IReadOnlyList<ChatPacket>> GetRecentMessagesAsync(
         int count,
         CancellationToken cancellationToken);
 }
