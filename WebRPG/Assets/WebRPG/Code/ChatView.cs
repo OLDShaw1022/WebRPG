@@ -9,9 +9,6 @@ namespace WebRPG
     public sealed class ChatView : MonoBehaviour, IChatView
     {
         [SerializeField]
-        private ChatModel _chatModel;
-
-        [SerializeField]
         private GameObject _loginPanel;
 
         [SerializeField]
@@ -47,8 +44,6 @@ namespace WebRPG
         [SerializeField]
         private ChatMessageView _outgoingMessagePrefab;
 
-        private ChatPresenter _presenter;
-
         public event Action ConnectRequested;
         public event Action SendRequested;
 
@@ -70,15 +65,12 @@ namespace WebRPG
             _loginPanel.SetActive(true);
             _chatPanel.SetActive(false);
             _sendButton.interactable = false;
-            _presenter = new ChatPresenter(_chatModel, this);
             _connectButton.onClick.AddListener(HandleConnectClicked);
             _sendButton.onClick.AddListener(HandleSendClicked);
         }
 
         private void OnDestroy()
         {
-            _presenter?.Dispose();
-
             if (_connectButton != null)
             {
                 _connectButton.onClick.RemoveListener(HandleConnectClicked);

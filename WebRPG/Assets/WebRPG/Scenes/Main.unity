@@ -1196,6 +1196,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 519530674}
+  - component: {fileID: 519530675}
   m_Layer: 0
   m_Name: Main
   m_TagString: Untagged
@@ -1220,6 +1221,20 @@ Transform:
   - {fileID: 201106277}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &519530675
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 519530673}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a8263bf958124e4d8ab3fd7fc7ea9921, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  _chatModel: {fileID: 1835696494}
+  _chatView: {fileID: 1835696493}
 --- !u!1 &526061947
 GameObject:
   m_ObjectHideFlags: 0
@@ -7279,7 +7294,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b913f4666ed74ab3986e8b76a404bf27, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _chatModel: {fileID: 1835696494}
   _loginPanel: {fileID: 1760478334}
   _chatPanel: {fileID: 526061947}
   _usernameInput: {fileID: 542973597}
