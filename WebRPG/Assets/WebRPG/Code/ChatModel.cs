@@ -1,6 +1,5 @@
 using System;
-using System.Collections;
-using System.Threading.Tasks;
+using System.Threading;
 using NativeWebSocket;
 using Newtonsoft.Json;
 using UnityEngine;
@@ -8,12 +7,13 @@ using WebRPGShared;
 
 namespace WebRPG
 {
-    public sealed class ChatModel : MonoBehaviour, IChatModel
+    public sealed class ChatModel : IChatModel
     {
-        [SerializeField] private string _serverUrl = "wss://ws.oldshaw-webrpg.com/ws";
+        private const string ServerUrl = "wss://ws.oldshaw-webrpg.com/ws";
 
         private WebSocket _webSocket;
-        private Coroutine _reconnectRoutine;
+        private readonly CancellationTokenSource _shutdownCancellation = new CancellationTokenSource();
+        private bool _isReconnecting;
         private string _username;
         private bool _isJoining;
         private bool _hasJoined;
@@ -31,7 +31,7 @@ namespace WebRPG
                 && trimmedUsername.Length <= ChatPacketLimits.UsernameLength;
         }
 
-        public async Task ConnectAsync(string username)
+        public async Awaitable ConnectAsync(string username)
         {
             if (_isShuttingDown || _isJoining || IsJoined)
             {
@@ -47,7 +47,7 @@ namespace WebRPG
             await OpenConnectionAsync();
         }
 
-        public async Task<bool> SendChatAsync(string text)
+        public async Awaitable<bool> SendChatAsync(string text)
         {
             string trimmedText = text?.Trim();
             if (!IsJoined || string.IsNullOrEmpty(trimmedText) || trimmedText.Length > ChatPacketLimits.MessageLength)
@@ -64,14 +64,14 @@ namespace WebRPG
             return socket == _webSocket && IsJoined;
         }
 
-        private async Task OpenConnectionAsync()
+        private async Awaitable OpenConnectionAsync()
         {
             _isJoining = true;
             _hasJoined = false;
             ConnectionStateChanged?.Invoke("Connecting");
-            WebSocket socket = new(_serverUrl);
+            WebSocket socket = new(ServerUrl);
             _webSocket = socket;
-            socket.OnOpen += () => _ = SendJoinAsync(socket);
+            socket.OnOpen += () => SendJoinAsync(socket).Forget();
             socket.OnMessage += bytes => HandlePacket(System.Text.Encoding.UTF8.GetString(bytes));
             socket.OnError += error => ConnectionStateChanged?.Invoke($"Connection error: {error}");
             socket.OnClose += code => HandleClosed(socket, code);
@@ -90,10 +90,16 @@ namespace WebRPG
             }
         }
 
-        private async Task SendJoinAsync(WebSocket socket)
+        private async Awaitable SendJoinAsync(WebSocket socket)
         {
             try
             {
+                if (_isShuttingDown)
+                {
+                    await socket.Close();
+                    return;
+                }
+
                 await socket.SendText(JsonConvert.SerializeObject(new ChatPacket
                 {
                     Type = ChatPacketType.Join,
@@ -108,6 +114,11 @@ namespace WebRPG
 
         private void HandlePacket(string json)
         {
+            if (_isShuttingDown)
+            {
+                return;
+            }
+
             ChatPacket packet;
             try
             {
@@ -147,10 +158,7 @@ namespace WebRPG
             bool hadJoined = _hasJoined;
             _hasJoined = false;
             ConnectionStateChanged?.Invoke(hadJoined ? "Disconnected. Reconnecting..." : "Connection failed. Retrying...");
-            if (_reconnectRoutine == null)
-            {
-                _reconnectRoutine = StartCoroutine(ReconnectAsync());
-            }
+            StartReconnecting();
         }
 
         private void HandleConnectionFailure(WebSocket socket, string error)
@@ -162,47 +170,77 @@ namespace WebRPG
 
             _hasJoined = false;
             ConnectionStateChanged?.Invoke($"Connection failed: {error}");
-            if (_reconnectRoutine == null)
-            {
-                _reconnectRoutine = StartCoroutine(ReconnectAsync());
-            }
+            StartReconnecting();
         }
 
-        private IEnumerator ReconnectAsync()
+        private void StartReconnecting()
         {
-            int[] delays = { 1, 2, 4, 8, 16, 30 };
+            if (_isShuttingDown || _isReconnecting)
+            {
+                return;
+            }
+
+            _isReconnecting = true;
+            ReconnectAsync().Forget();
+        }
+
+        private async Awaitable ReconnectAsync()
+        {
+            float[] delays = { 1f, 2f, 4f, 8f, 16f, 30f };
             int attempt = 0;
-            yield return new WaitUntil(() => !_isJoining || _isShuttingDown);
-            while (!_isShuttingDown && !_hasJoined)
+            CancellationToken cancellationToken = _shutdownCancellation.Token;
+
+            try
             {
-                yield return new WaitForSecondsRealtime(delays[Math.Min(attempt, delays.Length - 1)]);
-                if (_isShuttingDown || _hasJoined)
+                await WaitForConnectionAttemptAsync(cancellationToken);
+                while (!_isShuttingDown && !_hasJoined)
                 {
-                    break;
+                    await AwaitableExtensions.WaitForSecondsRealtimeAsync(delays[Math.Min(attempt, delays.Length - 1)], cancellationToken);
+                    if (_isShuttingDown || _hasJoined)
+                    {
+                        break;
+                    }
+
+                    OpenConnectionAsync().Forget();
+                    attempt++;
+                    await WaitForConnectionAttemptAsync(cancellationToken);
                 }
-
-                _ = OpenConnectionAsync();
-                attempt++;
-                yield return new WaitUntil(() => _hasJoined || !_isJoining || _isShuttingDown);
             }
-
-            _reconnectRoutine = null;
-        }
-
-        private void OnApplicationQuit()
-        {
-            _isShuttingDown = true;
-            if (_reconnectRoutine != null)
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
-                StopCoroutine(_reconnectRoutine);
-                _reconnectRoutine = null;
             }
-
-            _ = CloseConnectionAsync();
+            catch (Exception exception)
+            {
+                if (!_isShuttingDown)
+                {
+                    ConnectionStateChanged?.Invoke($"Connection failed: {exception.Message}");
+                }
+            }
+            finally
+            {
+                _isReconnecting = false;
+            }
         }
 
-        private async Task CloseConnectionAsync()
+        private async Awaitable WaitForConnectionAttemptAsync(CancellationToken cancellationToken)
         {
+            while (!_hasJoined && _isJoining && !_isShuttingDown)
+            {
+                await Awaitable.NextFrameAsync(cancellationToken);
+            }
+        }
+
+        public async Awaitable DisposeAsync()
+        {
+            if (_isShuttingDown)
+            {
+                return;
+            }
+
+            _isShuttingDown = true;
+            _hasJoined = false;
+            _shutdownCancellation.Cancel();
+
             try
             {
                 if (_webSocket != null)
@@ -210,9 +248,9 @@ namespace WebRPG
                     await _webSocket.Close();
                 }
             }
-            catch (Exception exception)
+            finally
             {
-                Debug.LogException(exception, this);
+                _shutdownCancellation.Dispose();
             }
         }
     }

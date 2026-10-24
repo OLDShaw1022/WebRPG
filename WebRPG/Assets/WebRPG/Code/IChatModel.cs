@@ -1,5 +1,5 @@
 using System;
-using System.Threading.Tasks;
+using UnityEngine;
 using WebRPGShared;
 
 namespace WebRPG
@@ -13,8 +13,8 @@ namespace WebRPG
 
         public bool IsUsernameValid(string username);
 
-        public Task ConnectAsync(string username);
+        public Awaitable ConnectAsync(string username);
 
-        public Task<bool> SendChatAsync(string text);
+        public Awaitable<bool> SendChatAsync(string text);
     }
 }

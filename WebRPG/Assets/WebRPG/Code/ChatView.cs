@@ -71,12 +71,12 @@ namespace WebRPG
 
         private void OnDestroy()
         {
-            if (_connectButton != null)
+            if (_connectButton)
             {
                 _connectButton.onClick.RemoveListener(HandleConnectClicked);
             }
 
-            if (_sendButton != null)
+            if (_sendButton)
             {
                 _sendButton.onClick.RemoveListener(HandleSendClicked);
             }

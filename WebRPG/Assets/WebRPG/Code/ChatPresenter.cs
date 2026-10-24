@@ -1,5 +1,5 @@
 using System;
-using System.Threading.Tasks;
+using UnityEngine;
 using WebRPGShared;
 
 namespace WebRPG
@@ -40,10 +40,10 @@ namespace WebRPG
 
         private void HandleConnectRequested()
         {
-            _ = HandleConnectRequestedAsync();
+            HandleConnectRequestedAsync().Forget();
         }
 
-        private async Task HandleConnectRequestedAsync()
+        private async Awaitable HandleConnectRequestedAsync()
         {
             if (_isDisposed || _hasStartedConnecting)
             {
@@ -78,10 +78,10 @@ namespace WebRPG
 
         private void HandleSendRequested()
         {
-            _ = HandleSendRequestedAsync();
+            HandleSendRequestedAsync().Forget();
         }
 
-        private async Task HandleSendRequestedAsync()
+        private async Awaitable HandleSendRequestedAsync()
         {
             if (_isDisposed || _isSending || !_model.IsJoined)
             {
