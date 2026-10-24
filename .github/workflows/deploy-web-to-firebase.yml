@@ -2,15 +2,6 @@ name: Build and deploy WebRPG Web
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - 'WebRPG/Assets/**'
-      - 'WebRPG/Packages/**'
-      - 'WebRPG/ProjectSettings/**'
-      - 'WebRPGShared/**'
-      - 'WebRPGPage/**'
-      - '.github/workflows/deploy-web-to-firebase.yml'
 
 permissions:
   contents: read
