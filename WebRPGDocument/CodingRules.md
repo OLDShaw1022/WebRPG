@@ -12,9 +12,15 @@
 - 5：不要撰寫過多註解；僅在複雜內容的前一行撰寫註解。
 - 6：`WebRPGShared` 必須維持與 Unity 相容：目前目標框架是 `netstandard2.1`，C# 語言版本是 9.0。不要直接使用只適用於 .NET 9 的 API。
 - 7：修改 WebSocket 訊息格式或連線行為時，同時檢查 Unity 用戶端與伺服器是否一致。
-- 8：新增或修改 UI 相關程式碼時，採用 Model–View–Presenter（MVP）架構：Model 負責資料與業務邏輯，View 負責畫面呈現與轉送使用者操作，Presenter 負責處理操作並協調 Model 與 View；Model 不依賴 View 或 Presenter，View 不直接處理業務邏輯。修改既有 UI 時，套用範圍限於本次需求涉及的程式碼。
+- 8：新增或修改 UI 相關程式碼時，採用 Model–View–Presenter（MVP）架構：Model 負責資料與業務邏輯，View 負責畫面呈現與轉送使用者操作，Presenter 負責處理操作並協調 Model 與 View；Model 不依賴 View 或 Presenter，View 不直接處理業務邏輯。WebRPG/ 內的 Model 使用一般 C# 類別，不繼承 MonoBehaviour；設定由類別內定義或透過建構子傳入，不透過 Inspector 配置。修改既有 UI 時，套用範圍限於本次需求涉及的程式碼。
 - 9：新增或修改系統程式碼時，若有適合目前需求的設計模式（Design Pattern），應予以套用；避免為套用模式而增加不必要的抽象與複雜度。
 - 10：本專案自行維護的 C# 型別與成員，在語法允許時必須明確標示存取修飾詞（例如 public、private、protected、internal），包含介面成員，不依賴預設可見性；補齊修飾詞時，維持原本或需求指定的可見性。
 - 11：採用 MVP 的 C# 類別，名稱必須包含其職責對應的 Model、View 或 Presenter；繼承相關基底類別或實作相關介面的類別亦同，例如 ChatModel、ChatView、ChatPresenter。
-- 12：本專案自行維護的 C# 程式碼不得使用 async void，包含轉換為 void 委派的非同步 lambda。非同步作業使用 Task、Task<T> 等可等待的回傳型別；受 Unity 生命週期或事件委派簽章限制時，保留同步 void 入口，再啟動非同步方法。無法 await 的工作必須在非同步流程內或透過觀察機制處理例外。
+- 12：本專案自行維護的 C# 程式碼不得使用 async void，包含轉換為 void 委派的非同步 lambda。非同步作業使用 Awaitable、Awaitable<T>、Task、Task<T> 等可等待的回傳型別；受 Unity 生命週期或事件委派簽章限制時，保留同步 void 入口，再啟動非同步方法。無法 await 的工作必須在非同步流程內或透過觀察機制處理例外。
 - 13：重新命名 WebRPG/ 內的 Unity 元件類別或序列化欄位時，同步更新受影響的程式引用、場景、Prefab 與其他序列化資產，直接設定新欄位的參照，不使用 FormerlySerializedAs。Unity 元件類別與腳本檔名須一致；重新命名腳本時同步移動原有 .meta，保留 GUID 與既有元件綁定。
+- 14：WebRPG/ 內自行維護的遊戲非同步流程使用 Unity Awaitable／Awaitable<T>，並維持 WebGL 相容；等待與排程不得依賴 Task.Delay、Task.Run 或背景執行緒計時器。外部套件提供的 Task API 可直接 await；WebRPGServer 與 WebRPGShared 不受此 Awaitable 要求限制。
+- 15：WebRPG/ 內每個 Awaitable 實例只消耗一次：可等待的呼叫端使用 await；同步 void 入口無法直接 await 時，使用 AwaitableExtensions.Forget() 觀察完成與例外，並釋放 Awaitable。不得對同一實例同時使用 await 與 Forget()。方法內已有 try/catch，不代表呼叫端可以省略完成觀察。
+- 16：WebRPG/ 內對 MonoBehaviour、GameObject、Component 及其他 UnityEngine.Object 衍生型別進行生命週期檢查時，使用 if (unityObject)／if (!unityObject)，不使用 == null、!= null 或 C# null 模式與運算子判斷其存活。一般 C# 類別維持一般 null 檢查。
+- 17：WebRPG/ 內採用 MVP 時，Model、View、Presenter 由 MVP 以外的高階類別建立、組裝並管理生命週期，例如 Main。高階類別生成 UI Prefab 時，序列化欄位直接引用該 Prefab 的 View 元件。已知且固定的 Unity 元件相依透過序列化欄位直接綁定，不以 GetComponent、TryGetComponent 或場景搜尋取代。
+- 18：WebRPG/ 內不受 Time.timeScale 影響的秒數等待，統一使用 AwaitableExtensions.WaitForSecondsRealtimeAsync(seconds, cancellationToken)。此方法在 Unity 主執行緒以 Awaitable.NextFrameAsync() 搭配 Time.unscaledDeltaTime 累計時間，支援 CancellationToken，採靜態方法，不以 float 作為擴充方法的目標。
+- 19：本專案自行維護的一般 C# 方法中，區域函式（local function）放在所屬方法最後，位於主流程結束的 return 敘述之後。
