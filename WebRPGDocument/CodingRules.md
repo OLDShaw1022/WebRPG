@@ -24,3 +24,4 @@
 - 17：WebRPG/ 內採用 MVP 時，Model、View、Presenter 由 MVP 以外的高階類別建立、組裝並管理生命週期，例如 Main。高階類別生成 UI Prefab 時，序列化欄位直接引用該 Prefab 的 View 元件。已知且固定的 Unity 元件相依透過序列化欄位直接綁定，不以 GetComponent、TryGetComponent 或場景搜尋取代。
 - 18：WebRPG/ 內不受 Time.timeScale 影響的秒數等待，統一使用 AwaitableExtensions.WaitForSecondsRealtimeAsync(seconds, cancellationToken)。此方法在 Unity 主執行緒以 Awaitable.NextFrameAsync() 搭配 Time.unscaledDeltaTime 累計時間，支援 CancellationToken，採靜態方法，不以 float 作為擴充方法的目標。
 - 19：本專案自行維護的一般 C# 方法中，區域函式（local function）放在所屬方法最後，位於主流程結束的 return 敘述之後。
+- 20：在 WebRPG/、WebRPGServer/ 與 WebRPGShared/ 開發新功能時，先撰寫驗證預期行為的測試，確認測試因功能尚未實作而失敗，再實作功能；驗證時必須執行相關測試，全部通過後才算完成實作。
