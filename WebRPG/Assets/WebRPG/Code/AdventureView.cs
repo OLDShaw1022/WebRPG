@@ -13,12 +13,14 @@ namespace WebRPG
         [SerializeField]
         private TMP_FontAsset _font;
 
-        private static readonly Color Background = new Color32(14, 20, 31, 255);
-        private static readonly Color Panel = new Color32(24, 33, 49, 255);
-        private static readonly Color Border = new Color32(100, 112, 130, 255);
-        private static readonly Color Foreground = new Color32(242, 244, 248, 255);
-        private static readonly Color Secondary = new Color32(190, 199, 213, 255);
-        private static readonly Color Accent = new Color32(217, 184, 108, 255);
+        private static readonly Color Background = new Color32(10, 13, 18, 255);
+        private static readonly Color InsetBackground = new Color32(18, 20, 26, 255);
+        private static readonly Color Panel = new Color32(26, 31, 38, 255);
+        private static readonly Color ControlBackground = new Color32(41, 46, 56, 255);
+        private static readonly Color ControlHighlight = new Color32(61, 69, 82, 255);
+        private static readonly Color Border = new Color32(115, 115, 115, 255);
+        private static readonly Color Foreground = new Color32(255, 255, 255, 255);
+        private static readonly Color Secondary = new Color32(179, 184, 194, 255);
         private const int LargeFontSize = 28;
         private const int MediumFontSize = 22;
         private const int SmallFontSize = 18;
@@ -63,12 +65,12 @@ namespace WebRPG
             UnityEngine.UI.Image backdrop = _root.gameObject.AddComponent<UnityEngine.UI.Image>();
             backdrop.color = Background;
             backdrop.raycastTarget = false;
-            _sidebar = CreatePanel("Sidebar", _root);
+            _sidebar = CreatePanel("Sidebar", _root, Background);
             TextMeshProUGUI brand = CreateText("Brand", _sidebar, MediumFontSize);
             brand.text = "WEB RPG\n\n灰燼之塔\n\n挑戰 / 單人\n\n試玩規則 v2";
-            brand.color = Accent;
+            brand.color = Foreground;
             Place(brand.rectTransform, 0, 0, 1, 1, 18, 18, -18, -18);
-            _header = CreatePanel("Header", _root);
+            _header = CreatePanel("Header", _root, Background);
             _heading = CreateText("Heading", _header, LargeFontSize);
             _summary = CreateText("Summary", _header, SmallFontSize);
             _start = CreateButton("Start", _header, () => StartRequested?.Invoke());
@@ -76,9 +78,9 @@ namespace WebRPG
             _abandon = CreateButton("Abandon", _header, () => AbandonRequested?.Invoke());
             _abandon.Label.text = "放棄本輪";
             _body = CreateRect("Body", _root);
-            _routePanel = CreatePanel("Route", _body);
+            _routePanel = CreatePanel("Route", _body, Panel);
             _route = CreateScrollText("RouteText", _routePanel, out _routeScroll, out _routeContent);
-            _activityPanel = CreatePanel("Activity", _body);
+            _activityPanel = CreatePanel("Activity", _body, Panel);
             _situation = CreateText("Situation", _activityPanel, SmallFontSize);
             for (int index = 0; index < _choices.Length; index++)
             {
@@ -90,12 +92,12 @@ namespace WebRPG
             _journalArea = CreateRect("JournalArea", _activityPanel);
             _journal = CreateScrollText("Journal", _journalArea, out _journalScroll, out _journalContent);
             _journal.color = Secondary;
-            _footer = CreatePanel("Loadout", _root);
+            _footer = CreatePanel("Loadout", _root, Panel);
             _skillGrid = CreateRect("SkillGrid", _footer);
             _relics = CreateText("Relics", _footer, SmallFontSize);
             for (int index = 0; index < _skills.Length; index++)
             {
-                RectTransform slot = CreatePanel("SkillSlot" + index, _skillGrid);
+                RectTransform slot = CreatePanel("SkillSlot" + index, _skillGrid, InsetBackground);
                 _skills[index] = CreateText("Skill", slot, SmallFontSize);
                 Place(_skills[index].rectTransform, 0, 0, 1, 1, 10, 4, -10, -4);
             }
@@ -250,11 +252,11 @@ namespace WebRPG
             return text;
         }
 
-        private RectTransform CreatePanel(string name, RectTransform parent)
+        private RectTransform CreatePanel(string name, RectTransform parent, Color color)
         {
             RectTransform rect = CreateRect(name, parent);
             UnityEngine.UI.Image image = rect.gameObject.AddComponent<UnityEngine.UI.Image>();
-            image.color = Panel;
+            image.color = color;
             image.raycastTarget = false;
             UnityEngine.UI.Outline outline = rect.gameObject.AddComponent<UnityEngine.UI.Outline>();
             outline.effectColor = Border;
@@ -280,7 +282,7 @@ namespace WebRPG
         {
             RectTransform rect = CreateRect(name, parent);
             UnityEngine.UI.Image image = rect.gameObject.AddComponent<UnityEngine.UI.Image>();
-            image.color = Color.white;
+            image.color = Foreground;
             image.raycastTarget = true;
             UnityEngine.UI.Outline outline = rect.gameObject.AddComponent<UnityEngine.UI.Outline>();
             outline.effectColor = Border;
@@ -288,11 +290,11 @@ namespace WebRPG
             UnityEngine.UI.Button button = rect.gameObject.AddComponent<UnityEngine.UI.Button>();
             button.targetGraphic = image;
             UnityEngine.UI.ColorBlock colors = button.colors;
-            colors.normalColor = Panel;
-            colors.highlightedColor = Border;
+            colors.normalColor = ControlBackground;
+            colors.highlightedColor = ControlHighlight;
             colors.pressedColor = Background;
             colors.selectedColor = Border;
-            colors.disabledColor = Panel;
+            colors.disabledColor = InsetBackground;
             colors.colorMultiplier = 1;
             button.colors = colors;
             button.onClick.AddListener(() => clicked());
