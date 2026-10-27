@@ -1,0 +1,646 @@
+{
+  "StartingHealth": 120,
+  "StartingSkills": [
+    "slash"
+  ],
+  "BasicAttack": {
+    "Damage": 6,
+    "Cooldown": 1.5
+  },
+  "MaximumMapChoices": 3,
+  "SkillSlots": 6,
+  "RewardChoices": 3,
+  "OwnedSkillWeight": 2,
+  "NewSkillWeight": 3,
+  "SimulationStep": 0.05,
+  "BattleTimeLimit": 120,
+  "Skills": [
+    {
+      "Id": "slash",
+      "Name": "鐵劍斬擊",
+      "Cooldown": 1.2,
+      "MaximumLevel": 4,
+      "Effects": [
+        {
+          "Type": "Damage",
+          "Amount": 14,
+          "PerLevel": 6
+        }
+      ]
+    },
+    {
+      "Id": "bolt",
+      "Name": "幽火箭",
+      "Cooldown": 2,
+      "MaximumLevel": 4,
+      "Effects": [
+        {
+          "Type": "Damage",
+          "Amount": 24,
+          "PerLevel": 10
+        }
+      ]
+    },
+    {
+      "Id": "drain",
+      "Name": "汲血",
+      "Cooldown": 2.4,
+      "MaximumLevel": 4,
+      "Effects": [
+        {
+          "Type": "Damage",
+          "Amount": 12,
+          "PerLevel": 5
+        },
+        {
+          "Type": "Heal",
+          "Amount": 4,
+          "PerLevel": 2
+        }
+      ]
+    },
+    {
+      "Id": "mend",
+      "Name": "回復術",
+      "Cooldown": 3,
+      "MaximumLevel": 4,
+      "Effects": [
+        {
+          "Type": "Heal",
+          "Amount": 9,
+          "PerLevel": 5
+        }
+      ]
+    },
+    {
+      "Id": "strike",
+      "Name": "碎甲擊",
+      "Cooldown": 1.8,
+      "MaximumLevel": 4,
+      "Effects": [
+        {
+          "Type": "Damage",
+          "Amount": 22,
+          "PerLevel": 9
+        }
+      ]
+    },
+    {
+      "Id": "ember",
+      "Name": "燼火",
+      "Cooldown": 4,
+      "MaximumLevel": 4,
+      "Effects": [
+        {
+          "Type": "Damage",
+          "Amount": 48,
+          "PerLevel": 18
+        }
+      ]
+    },
+    {
+      "Id": "dagger",
+      "Name": "迅刃",
+      "Cooldown": 0.6,
+      "MaximumLevel": 4,
+      "Effects": [
+        {
+          "Type": "Damage",
+          "Amount": 8,
+          "PerLevel": 3
+        }
+      ]
+    },
+    {
+      "Id": "judgment",
+      "Name": "裁決",
+      "Cooldown": 5,
+      "MaximumLevel": 4,
+      "Effects": [
+        {
+          "Type": "Damage",
+          "Amount": 68,
+          "PerLevel": 25
+        }
+      ]
+    }
+  ],
+  "Relics": [
+    {
+      "Id": "heart",
+      "Name": "石心護符",
+      "Effects": [
+        {
+          "Type": "MaximumHealth",
+          "Amount": 30,
+          "PerLevel": 0
+        }
+      ]
+    },
+    {
+      "Id": "fang",
+      "Name": "古狼之牙",
+      "Effects": [
+        {
+          "Type": "DamageBonus",
+          "Amount": 4,
+          "PerLevel": 0
+        }
+      ]
+    },
+    {
+      "Id": "crown",
+      "Name": "殘破王冠",
+      "Effects": [
+        {
+          "Type": "MaximumHealth",
+          "Amount": 15,
+          "PerLevel": 0
+        },
+        {
+          "Type": "DamageBonus",
+          "Amount": 2,
+          "PerLevel": 0
+        }
+      ]
+    }
+  ],
+  "Enemies": [
+    {
+      "Id": "guard1",
+      "Name": "荒塚守衛",
+      "Health": 30,
+      "Damage": 4,
+      "Cooldown": 2.2
+    },
+    {
+      "Id": "beast1",
+      "Name": "枯骨獵犬",
+      "Health": 24,
+      "Damage": 3,
+      "Cooldown": 1.8
+    },
+    {
+      "Id": "boss1",
+      "Name": "墓門看守者",
+      "Health": 150,
+      "Damage": 9,
+      "Cooldown": 2.5
+    },
+    {
+      "Id": "guard2",
+      "Name": "黑鐵守衛",
+      "Health": 55,
+      "Damage": 6,
+      "Cooldown": 2.2
+    },
+    {
+      "Id": "beast2",
+      "Name": "幽影獵犬",
+      "Health": 45,
+      "Damage": 5,
+      "Cooldown": 1.8
+    },
+    {
+      "Id": "boss2",
+      "Name": "灰燼騎士",
+      "Health": 250,
+      "Damage": 13,
+      "Cooldown": 2.5
+    },
+    {
+      "Id": "guard3",
+      "Name": "王庭亡靈",
+      "Health": 80,
+      "Damage": 8,
+      "Cooldown": 2.2
+    },
+    {
+      "Id": "beast3",
+      "Name": "深淵獵犬",
+      "Health": 65,
+      "Damage": 7,
+      "Cooldown": 1.8
+    },
+    {
+      "Id": "boss3",
+      "Name": "無光之王",
+      "Health": 380,
+      "Damage": 17,
+      "Cooldown": 2.5
+    }
+  ],
+  "EnemyGroups": [
+    {
+      "Id": "watch1",
+      "EnemyIds": [
+        "guard1"
+      ]
+    },
+    {
+      "Id": "patrol1",
+      "EnemyIds": [
+        "guard1",
+        "beast1"
+      ]
+    },
+    {
+      "Id": "hounds1",
+      "EnemyIds": [
+        "beast1",
+        "beast1"
+      ]
+    },
+    {
+      "Id": "elite1",
+      "EnemyIds": [
+        "guard1",
+        "guard1",
+        "beast1"
+      ]
+    },
+    {
+      "Id": "eliteMixed1",
+      "EnemyIds": [
+        "guard1",
+        "beast1",
+        "beast1",
+        "guard1"
+      ]
+    },
+    {
+      "Id": "boss1",
+      "EnemyIds": [
+        "boss1"
+      ]
+    },
+    {
+      "Id": "watch2",
+      "EnemyIds": [
+        "guard2"
+      ]
+    },
+    {
+      "Id": "patrol2",
+      "EnemyIds": [
+        "guard2",
+        "beast2"
+      ]
+    },
+    {
+      "Id": "hounds2",
+      "EnemyIds": [
+        "beast2",
+        "beast2"
+      ]
+    },
+    {
+      "Id": "elite2",
+      "EnemyIds": [
+        "guard2",
+        "guard2",
+        "beast2"
+      ]
+    },
+    {
+      "Id": "eliteMixed2",
+      "EnemyIds": [
+        "guard2",
+        "beast2",
+        "beast2",
+        "guard2"
+      ]
+    },
+    {
+      "Id": "boss2",
+      "EnemyIds": [
+        "boss2"
+      ]
+    },
+    {
+      "Id": "watch3",
+      "EnemyIds": [
+        "guard3"
+      ]
+    },
+    {
+      "Id": "patrol3",
+      "EnemyIds": [
+        "guard3",
+        "beast3"
+      ]
+    },
+    {
+      "Id": "hounds3",
+      "EnemyIds": [
+        "beast3",
+        "beast3"
+      ]
+    },
+    {
+      "Id": "elite3",
+      "EnemyIds": [
+        "guard3",
+        "guard3",
+        "beast3"
+      ]
+    },
+    {
+      "Id": "eliteMixed3",
+      "EnemyIds": [
+        "guard3",
+        "beast3",
+        "beast3",
+        "guard3"
+      ]
+    },
+    {
+      "Id": "boss3",
+      "EnemyIds": [
+        "boss3"
+      ]
+    }
+  ],
+  "Floors": [
+    {
+      "Name": "荒塚",
+      "Rows": [
+        {
+          "NodeCount": 1,
+          "NodePool": [
+            {
+              "Name": "塔門遭遇",
+              "Type": "Battle",
+              "Gold": 10,
+              "EnemyGroupPool": [
+                "watch1",
+                "patrol1",
+                "hounds1"
+              ]
+            }
+          ]
+        },
+        {
+          "NodeCount": 2,
+          "NodePool": [
+            {
+              "Name": "守衛廊道",
+              "Type": "Battle",
+              "Gold": 12,
+              "EnemyGroupPool": [
+                "watch1",
+                "patrol1",
+                "hounds1"
+              ]
+            },
+            {
+              "Name": "封存寶箱",
+              "Type": "Chest"
+            }
+          ]
+        },
+        {
+          "NodeCount": 2,
+          "NodePool": [
+            {
+              "Name": "精英哨站",
+              "Type": "Elite",
+              "Gold": 25,
+              "EnemyGroupPool": [
+                "elite1",
+                "eliteMixed1"
+              ]
+            },
+            {
+              "Name": "餘燼營火",
+              "Type": "Camp",
+              "Healing": 35
+            }
+          ]
+        },
+        {
+          "NodeCount": 2,
+          "NodePool": [
+            {
+              "Name": "古老祭壇",
+              "Type": "Event",
+              "Gold": 30,
+              "HealthCost": 12,
+              "Healing": 15
+            },
+            {
+              "Name": "暗影迴廊",
+              "Type": "Battle",
+              "Gold": 15,
+              "EnemyGroupPool": [
+                "watch1",
+                "patrol1",
+                "hounds1"
+              ]
+            }
+          ]
+        },
+        {
+          "NodeCount": 1,
+          "NodePool": [
+            {
+              "Name": "墓門看守者",
+              "Type": "Boss",
+              "Gold": 50,
+              "EnemyGroupPool": [
+                "boss1"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Name": "灰燼廳",
+      "Rows": [
+        {
+          "NodeCount": 1,
+          "NodePool": [
+            {
+              "Name": "塔門遭遇",
+              "Type": "Battle",
+              "Gold": 20,
+              "EnemyGroupPool": [
+                "watch2",
+                "patrol2",
+                "hounds2"
+              ]
+            }
+          ]
+        },
+        {
+          "NodeCount": 2,
+          "NodePool": [
+            {
+              "Name": "守衛廊道",
+              "Type": "Battle",
+              "Gold": 24,
+              "EnemyGroupPool": [
+                "watch2",
+                "patrol2",
+                "hounds2"
+              ]
+            },
+            {
+              "Name": "封存寶箱",
+              "Type": "Chest"
+            }
+          ]
+        },
+        {
+          "NodeCount": 2,
+          "NodePool": [
+            {
+              "Name": "精英哨站",
+              "Type": "Elite",
+              "Gold": 50,
+              "EnemyGroupPool": [
+                "elite2",
+                "eliteMixed2"
+              ]
+            },
+            {
+              "Name": "餘燼營火",
+              "Type": "Camp",
+              "Healing": 35
+            }
+          ]
+        },
+        {
+          "NodeCount": 2,
+          "NodePool": [
+            {
+              "Name": "古老祭壇",
+              "Type": "Event",
+              "Gold": 60,
+              "HealthCost": 12,
+              "Healing": 15
+            },
+            {
+              "Name": "暗影迴廊",
+              "Type": "Battle",
+              "Gold": 30,
+              "EnemyGroupPool": [
+                "watch2",
+                "patrol2",
+                "hounds2"
+              ]
+            }
+          ]
+        },
+        {
+          "NodeCount": 1,
+          "NodePool": [
+            {
+              "Name": "騎士舊營地",
+              "Type": "Camp",
+              "Healing": 35
+            },
+            {
+              "Name": "焚毀迴廊",
+              "Type": "Battle",
+              "EnemyGroupPool": [
+                "watch2",
+                "patrol2"
+              ],
+              "Gold": 30
+            },
+            {
+              "Name": "密封石匣",
+              "Type": "Chest"
+            }
+          ]
+        },
+        {
+          "NodeCount": 1,
+          "NodePool": [
+            {
+              "Name": "灰燼騎士",
+              "Type": "Boss",
+              "Gold": 100,
+              "EnemyGroupPool": [
+                "boss2"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Name": "無光王庭",
+      "Rows": [
+        {
+          "NodeCount": 1,
+          "NodePool": [
+            {
+              "Name": "塔門遭遇",
+              "Type": "Battle",
+              "Gold": 30,
+              "EnemyGroupPool": [
+                "watch3",
+                "patrol3",
+                "hounds3"
+              ]
+            }
+          ]
+        },
+        {
+          "NodeCount": 2,
+          "NodePool": [
+            {
+              "Name": "守衛廊道",
+              "Type": "Battle",
+              "Gold": 36,
+              "EnemyGroupPool": [
+                "watch3",
+                "patrol3",
+                "hounds3"
+              ]
+            },
+            {
+              "Name": "封存寶箱",
+              "Type": "Chest"
+            }
+          ]
+        },
+        {
+          "NodeCount": 2,
+          "NodePool": [
+            {
+              "Name": "精英哨站",
+              "Type": "Elite",
+              "Gold": 75,
+              "EnemyGroupPool": [
+                "elite3",
+                "eliteMixed3"
+              ]
+            },
+            {
+              "Name": "餘燼營火",
+              "Type": "Camp",
+              "Healing": 35
+            }
+          ]
+        },
+        {
+          "NodeCount": 1,
+          "NodePool": [
+            {
+              "Name": "無光之王",
+              "Type": "Boss",
+              "Gold": 150,
+              "EnemyGroupPool": [
+                "boss3"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

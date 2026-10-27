@@ -422,6 +422,9 @@ MonoBehaviour:
   m_Name:
   m_EditorClassIdentifier:
   _chatViewPrefab: {fileID: 1835696493, guid: 92ff5c7d751b4894a476bb89f67e7932, type: 3}
+  _startWithAdventure: 1
+  _adventureViewPrefab: {fileID: 1835696493, guid: b6b54ce1fece4d80afdbbd67d43deb8a, type: 3}
+  _adventureConfiguration: {fileID: 4900000, guid: 7e9bde4707824ebe84ce2755eede2fc1, type: 3}
 --- !u!1 &619394800
 GameObject:
   m_ObjectHideFlags: 0

@@ -1,3 +1,5 @@
+using System;
+using Newtonsoft.Json;
 using UnityEngine;
 
 namespace WebRPG
@@ -8,12 +10,30 @@ namespace WebRPG
         [SerializeField]
         private ChatView _chatViewPrefab;
 
+        [SerializeField]
+        private bool _startWithAdventure = true;
+
+        [SerializeField]
+        private AdventureView _adventureViewPrefab;
+
+        [SerializeField]
+        private TextAsset _adventureConfiguration;
+
+        private AdventureView _adventureView;
+        private AdventurePresenter _adventurePresenter;
+
         private ChatView _chatView;
         private ChatModel _chatModel;
         private ChatPresenter _chatPresenter;
 
         private void Start()
         {
+            if (_startWithAdventure)
+            {
+                StartAdventure();
+                return;
+            }
+
             if (!_chatViewPrefab)
             {
                 Debug.LogError("Main requires a ChatView prefab reference.", this);
@@ -28,18 +48,59 @@ namespace WebRPG
 
         private void OnApplicationQuit()
         {
+            DisposeAdventure();
             DisposeChat();
         }
 
         private void OnDestroy()
         {
+            DisposeAdventure();
             DisposeChat();
+
+            if (_adventureView)
+            {
+                Destroy(_adventureView.gameObject);
+                _adventureView = null;
+            }
 
             if (_chatView)
             {
                 Destroy(_chatView.gameObject);
                 _chatView = null;
             }
+        }
+
+        private void Update()
+        {
+            _adventurePresenter?.Tick(Time.deltaTime);
+        }
+
+        private void StartAdventure()
+        {
+            try
+            {
+                if (!_adventureViewPrefab || !_adventureConfiguration)
+                {
+                    throw new InvalidOperationException("Main requires adventure prefab and configuration references.");
+                }
+
+                AdventureConfiguration configuration =
+                    JsonConvert.DeserializeObject<AdventureConfiguration>(_adventureConfiguration.text);
+                AdventureModel model = new AdventureModel(configuration, Environment.TickCount);
+                _adventureView = Instantiate(_adventureViewPrefab);
+                _adventurePresenter = new AdventurePresenter(model, _adventureView);
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception, this);
+                enabled = false;
+            }
+        }
+
+        private void DisposeAdventure()
+        {
+            _adventurePresenter?.Dispose();
+            _adventurePresenter = null;
         }
 
         private void DisposeChat()
