@@ -1,3 +1,4 @@
+// 提供冒險介面的事件綁定、數值條更新與按鈕狀態設定。
 using System;
 using UnityEngine;
 

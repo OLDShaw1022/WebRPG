@@ -1,3 +1,4 @@
+// 驗證冒險畫面資料提供初始滿血的結構化生命值條。
 using System;
 using System.IO;
 using Newtonsoft.Json;

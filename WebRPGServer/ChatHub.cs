@@ -1,3 +1,4 @@
+// 管理聊天室連線、封包驗證、訊息廣播與歷史訊息載入。
 using System.Collections.Concurrent;
 using System.Net.WebSockets;
 using System.Text;

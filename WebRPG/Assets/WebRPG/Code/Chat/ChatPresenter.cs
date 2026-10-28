@@ -1,3 +1,4 @@
+// 協調聊天室登入、訊息傳送與連線狀態的畫面更新。
 using System;
 using UnityEngine;
 using WebRPGShared;

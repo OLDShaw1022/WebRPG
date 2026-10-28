@@ -1,3 +1,4 @@
+// 驗證冒險模型的戰鬥、獎勵、地圖進度與設定檢查。
 using System;
 using System.Collections.Generic;
 using System.IO;

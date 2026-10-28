@@ -1,3 +1,4 @@
+// 處理主選單的單人遊戲與離開操作，協調冒險啟動及選單隱藏。
 using System;
 
 namespace WebRPG

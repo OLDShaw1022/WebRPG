@@ -1,3 +1,4 @@
+// 建立主選單與冒險系統，管理遊戲啟動、更新與結束流程。
 using System;
 using Newtonsoft.Json;
 using UnityEngine;

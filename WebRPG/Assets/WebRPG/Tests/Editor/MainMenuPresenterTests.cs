@@ -1,3 +1,4 @@
+// 驗證主選單的冒險啟動、失敗重試、離開與事件解除。
 using System;
 using NUnit.Framework;
 

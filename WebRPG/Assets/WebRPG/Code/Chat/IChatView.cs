@@ -1,3 +1,4 @@
+// 定義聊天室畫面的輸入、操作事件與顯示更新介面。
 using System;
 using WebRPGShared;
 

@@ -1,3 +1,4 @@
+// 將標準輸出與錯誤輸出轉送至 Unity 日誌，並在銷毀時還原。
 using System;
 using System.IO;
 using System.Text;

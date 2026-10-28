@@ -1,3 +1,4 @@
+// 驗證開始挑戰後進入地圖，並套用設定的初始生命值。
 using System;
 using System.IO;
 using System.Reflection;

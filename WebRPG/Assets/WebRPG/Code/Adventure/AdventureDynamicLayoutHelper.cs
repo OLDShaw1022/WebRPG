@@ -1,3 +1,4 @@
+// 依畫面尺寸調整角色、技能與地圖節點的動態排列。
 using System;
 using System.Collections.Generic;
 using TMPro;

@@ -1,3 +1,4 @@
+// 提供冒險介面動態按鈕範本的元件參照。
 using UnityEngine;
 
 namespace WebRPG

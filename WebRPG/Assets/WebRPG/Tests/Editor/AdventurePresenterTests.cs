@@ -1,3 +1,4 @@
+// 驗證冒險操作事件、數值條、角色檢視與地圖畫面資料。
 using System;
 using System.IO;
 using System.Linq;

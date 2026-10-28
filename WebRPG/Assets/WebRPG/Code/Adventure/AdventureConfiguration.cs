@@ -1,3 +1,4 @@
+// 定義並驗證冒險的玩家、技能、敵人、獎勵與地圖設定。
 using System;
 using System.Collections.Generic;
 using System.Linq;

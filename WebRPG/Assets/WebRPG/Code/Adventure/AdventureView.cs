@@ -1,3 +1,4 @@
+// 顯示冒險戰鬥、地圖與詳細資訊，並轉送使用者操作。
 using System;
 using System.Collections.Generic;
 using TMPro;

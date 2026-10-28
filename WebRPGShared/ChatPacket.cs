@@ -1,3 +1,4 @@
+// 定義客戶端與伺服器共用的聊天封包、訊息類型與長度限制。
 using System;
 
 namespace WebRPGShared

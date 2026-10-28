@@ -1,3 +1,4 @@
+// 使用 PostgreSQL 建立聊天資料表、儲存訊息並查詢近期紀錄。
 using Npgsql;
 using WebRPGShared;
 

@@ -1,3 +1,4 @@
+// 管理冒險進度、戰鬥模擬、路線選擇與獎勵結算。
 using System;
 using System.Collections.Generic;
 using System.Linq;

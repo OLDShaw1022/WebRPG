@@ -1,3 +1,4 @@
+// 處理冒險介面操作，並將遊戲狀態轉換為畫面資料。
 using System;
 using System.Linq;
 

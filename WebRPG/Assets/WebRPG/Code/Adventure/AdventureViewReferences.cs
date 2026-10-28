@@ -1,3 +1,4 @@
+// 定義冒險介面各類控制項的元件參照與地圖節點顯示狀態。
 using System;
 using TMPro;
 using UnityEngine;

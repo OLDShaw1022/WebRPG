@@ -1,3 +1,4 @@
+// 管理聊天室登入與訊息介面，顯示訊息並轉送操作事件。
 using System;
 using System.Collections;
 using TMPro;

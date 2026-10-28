@@ -1,3 +1,4 @@
+// 驗證冒險 Prefab 的元件參照、固定版面與動態地圖重用。
 using System;
 using System.IO;
 using System.Linq;

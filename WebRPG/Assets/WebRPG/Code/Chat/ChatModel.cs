@@ -1,3 +1,4 @@
+// 管理聊天室 WebSocket 連線、訊息收送與斷線重連。
 using System;
 using System.Threading;
 using NativeWebSocket;
