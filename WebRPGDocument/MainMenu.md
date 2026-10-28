@@ -18,10 +18,10 @@
 | 檔案 | 職責 |
 | --- | --- |
 | [MainMenuCanvas.prefab](../WebRPG/Assets/WebRPG/Prefabs/MainMenuCanvas.prefab) | 保存 Canvas、縮放、射線偵測、背景、標題、四個按鈕、提示文字及 View 引用；可在 Prefab Mode 調整。 |
-| [MainMenuView.cs](../WebRPG/Assets/WebRPG/Code/MainMenuView.cs) | 綁定與解除按鈕事件、轉送操作、顯示提示及隱藏選單；不動態建立固定版面。 |
-| [MainMenuModel.cs](../WebRPG/Assets/WebRPG/Code/MainMenuModel.cs) | 記錄是否已成功進入冒險。 |
-| [MainMenuPresenter.cs](../WebRPG/Assets/WebRPG/Code/MainMenuPresenter.cs) | 處理單人與離開操作；成功啟動後更新 Model 並隱藏 View，釋放時解除事件訂閱。 |
-| [Main.cs](../WebRPG/Assets/WebRPG/Code/Main.cs) | 生成主選單 Prefab、組裝 MVP，並負責冒險啟動、逐幀推進、離開遊戲與生命週期管理。 |
+| [MainMenuView.cs](../WebRPG/Assets/WebRPG/Code/MainMenu/MainMenuView.cs) | 綁定與解除按鈕事件、轉送操作、顯示提示及隱藏選單；不動態建立固定版面。 |
+| [MainMenuModel.cs](../WebRPG/Assets/WebRPG/Code/MainMenu/MainMenuModel.cs) | 記錄是否已成功進入冒險。 |
+| [MainMenuPresenter.cs](../WebRPG/Assets/WebRPG/Code/MainMenu/MainMenuPresenter.cs) | 處理單人與離開操作；成功啟動後更新 Model 並隱藏 View，釋放時解除事件訂閱。 |
+| [Main.cs](../WebRPG/Assets/WebRPG/Code/Bootstrap/Main.cs) | 生成主選單 Prefab、組裝 MVP，並負責冒險啟動、逐幀推進、離開遊戲與生命週期管理。 |
 
 - Prefab 的 Menu 節點包含 Title、SinglePlayer、Multiplayer、Settings、Quit 與 Message；按鈕文字位於各自的 Label 子節點。
 - 固定版面與動態內容的製作要求以 [Unity 規則](UnityRules.md)為準；helper method 的拆分要求見 [Coding 規則](CodingRules.md)。
