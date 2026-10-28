@@ -421,8 +421,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a8263bf958124e4d8ab3fd7fc7ea9921, type: 3}
   m_Name:
   m_EditorClassIdentifier:
-  _chatViewPrefab: {fileID: 1835696493, guid: 92ff5c7d751b4894a476bb89f67e7932, type: 3}
-  _startWithAdventure: 1
+  _mainMenuViewPrefab: {fileID: 1835696493, guid: 64871617f95945bc898517fcf6ece958, type: 3}
   _adventureViewPrefab: {fileID: 1835696493, guid: b6b54ce1fece4d80afdbbd67d43deb8a, type: 3}
   _adventureConfiguration: {fileID: 4900000, guid: 7e9bde4707824ebe84ce2755eede2fc1, type: 3}
 --- !u!1 &619394800

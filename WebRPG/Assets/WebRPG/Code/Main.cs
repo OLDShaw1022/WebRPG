@@ -8,10 +8,7 @@ namespace WebRPG
     public sealed class Main : MonoBehaviour
     {
         [SerializeField]
-        private ChatView _chatViewPrefab;
-
-        [SerializeField]
-        private bool _startWithAdventure = true;
+        private MainMenuView _mainMenuViewPrefab;
 
         [SerializeField]
         private AdventureView _adventureViewPrefab;
@@ -22,40 +19,34 @@ namespace WebRPG
         private AdventureView _adventureView;
         private AdventurePresenter _adventurePresenter;
 
-        private ChatView _chatView;
-        private ChatModel _chatModel;
-        private ChatPresenter _chatPresenter;
+        private MainMenuView _mainMenuView;
+        private MainMenuPresenter _mainMenuPresenter;
 
         private void Start()
         {
-            if (_startWithAdventure)
+            if (!_mainMenuViewPrefab)
             {
-                StartAdventure();
-                return;
-            }
-
-            if (!_chatViewPrefab)
-            {
-                Debug.LogError("Main requires a ChatView prefab reference.", this);
+                Debug.LogError("Main requires a MainMenuView prefab reference.", this);
                 enabled = false;
                 return;
             }
 
-            _chatView = Instantiate(_chatViewPrefab);
-            _chatModel = new ChatModel();
-            _chatPresenter = new ChatPresenter(_chatModel, _chatView);
+            _mainMenuView = Instantiate(_mainMenuViewPrefab);
+            _mainMenuPresenter = new MainMenuPresenter(
+                new MainMenuModel(), _mainMenuView, StartAdventure, QuitGame);
         }
 
         private void OnApplicationQuit()
         {
             DisposeAdventure();
-            DisposeChat();
+            _mainMenuPresenter?.Dispose();
         }
 
         private void OnDestroy()
         {
             DisposeAdventure();
-            DisposeChat();
+            _mainMenuPresenter?.Dispose();
+            _mainMenuPresenter = null;
 
             if (_adventureView)
             {
@@ -63,10 +54,10 @@ namespace WebRPG
                 _adventureView = null;
             }
 
-            if (_chatView)
+            if (_mainMenuView)
             {
-                Destroy(_chatView.gameObject);
-                _chatView = null;
+                Destroy(_mainMenuView.gameObject);
+                _mainMenuView = null;
             }
         }
 
@@ -75,8 +66,13 @@ namespace WebRPG
             _adventurePresenter?.Tick(Time.deltaTime);
         }
 
-        private void StartAdventure()
+        private bool StartAdventure()
         {
+            if (_adventurePresenter != null)
+            {
+                return false;
+            }
+
             try
             {
                 if (!_adventureViewPrefab || !_adventureConfiguration)
@@ -87,13 +83,22 @@ namespace WebRPG
                 AdventureConfiguration configuration =
                     JsonConvert.DeserializeObject<AdventureConfiguration>(_adventureConfiguration.text);
                 AdventureModel model = new AdventureModel(configuration, Environment.TickCount);
+                model.StartRun();
                 _adventureView = Instantiate(_adventureViewPrefab);
                 _adventurePresenter = new AdventurePresenter(model, _adventureView);
+                return true;
             }
             catch (Exception exception)
             {
                 Debug.LogException(exception, this);
-                enabled = false;
+                DisposeAdventure();
+                if (_adventureView)
+                {
+                    Destroy(_adventureView.gameObject);
+                    _adventureView = null;
+                }
+                _mainMenuView.ShowMessage("無法開始冒險，請檢查遊戲設定後重試。");
+                return false;
             }
         }
 
@@ -103,17 +108,15 @@ namespace WebRPG
             _adventurePresenter = null;
         }
 
-        private void DisposeChat()
+        private void QuitGame()
         {
-            _chatPresenter?.Dispose();
-            _chatPresenter = null;
-
-            if (_chatModel != null)
-            {
-                ChatModel chatModel = _chatModel;
-                _chatModel = null;
-                chatModel.DisposeAsync().Forget();
-            }
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+#elif UNITY_WEBGL
+            _mainMenuView.ShowMessage("請關閉瀏覽器分頁以離開遊戲。");
+#else
+            Application.Quit();
+#endif
         }
     }
 }
