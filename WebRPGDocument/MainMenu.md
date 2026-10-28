@@ -36,16 +36,6 @@
 - 對應規則 5：遊戲入口不建立聊天 Model、View 或 Presenter。
 - Prefab 編輯：未進入 Play Mode 時即可看見並調整固定 UI，View 的按鈕與提示文字引用完整。
 
-## 驗證紀錄
-
-驗證日期：2026-10-28，對應已核准的主選單 v2。
-
-- 1：Unity 編譯通過；40 個 EditMode 測試全部通過，包含新增的 3 個主選單 Presenter 測試及 1 個 Prefab 結構與引用測試。測試位於 [Editor 測試目錄](../WebRPG/Assets/WebRPG/Tests/Editor/)。
-- 2：Play Mode 幀數確實前進；確認初始只有主選單，單人與離開按鈕可操作，多人與設定停用。
-- 3：透過 EventSystem 射線偵測與點擊事件，確認單人入口未被遮擋；點擊後進入 Map、隱藏選單，場上只有一個 AdventureView，沒有 ChatView。
-- 4：已檢查 1280×720 的主選單實際畫面；離開按鈕已確認能停止 Editor 播放。
-- 5：桌面版與 WebGL 尚未建置驗證；本次未重新驗證所有解析度或裝置輸入。
-
 ## 相關文件
 
 - [單人可玩原型](AdventurePrototype.md)：冒險流程、設定與目前可玩範圍。
