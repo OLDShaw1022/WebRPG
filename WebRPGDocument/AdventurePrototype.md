@@ -16,7 +16,7 @@
 
 | 檔案 | 職責 |
 | --- | --- |
-| [Main.cs](../WebRPG/Assets/WebRPG/Code/Main.cs) | 建立 View、Model、Presenter，逐幀推進並釋放 Presenter；預設進入單人挑戰。 |
+| [Main.cs](../WebRPG/Assets/WebRPG/Code/Main.cs) | 啟動時顯示主選單；選擇單人遊玩後建立冒險 Model、呼叫 StartRun，再建立 View 與 Presenter，逐幀推進並管理釋放。 |
 | [AdventureConfiguration.cs](../WebRPG/Assets/WebRPG/Code/AdventureConfiguration.cs) | JSON 對應資料結構與設定驗證。 |
 | [AdventureModel.cs](../WebRPG/Assets/WebRPG/Code/AdventureModel.cs) | 純 C# 挑戰狀態、地圖生成、戰鬥、獎勵、節點處理與已選路徑。 |
 | [AdventurePresenter.cs](../WebRPG/Assets/WebRPG/Code/AdventurePresenter.cs) | 將 View 操作轉為 Model 指令，產生本機 HUD、角色檢視、讀條與地圖顯示資料。 |
@@ -24,6 +24,7 @@
 | [AdventureCanvas.prefab](../WebRPG/Assets/WebRPG/Prefabs/AdventureCanvas.prefab) | Canvas、縮放及 View 的根節點與字型引用；主要版面由 View 建立。 |
 
 - 狀態流程：Ready → Map → Battle／NodeChoice → SkillReward（有候選技能時）→ 下一節點；通過第三層後進入 Complete，失敗或放棄進入 Failed。NodeChoice 處理完、或戰勝卻無技能可抽時，直接推進節點。
+- 遊戲入口與選項行為見[主選單](MainMenu.md)。單人遊玩會直接進入 Map，不需再按一次「開始挑戰」；Ready 仍是 AdventureModel 建立後、StartRun 前的初始狀態。
 - View 不自行計算戰鬥結果；上方本機資料與下方角色檢視資料分開，由 Presenter 提供。
 - UI 配置的單一規格來源為[挑戰介面](AdventureUI.md)。
 
@@ -60,7 +61,7 @@
 
 ## 驗證紀錄
 
-最近一次驗證：2026-10-27，對應已核准 UI v2；後續修改後須依影響範圍重新驗證。
+最近一次整合驗證為 2026-10-28，結果見[主選單驗證紀錄](MainMenu.md#驗證紀錄)。以下保留 2026-10-27 已核准挑戰 UI v2 的驗證紀錄；後續修改後須依影響範圍重新驗證。
 
 - 1：新增結構化血條契約測試在原版先失敗，套用實作後通過；共 36 項 EditMode 測試通過。測試來源見[Editor 測試目錄](../WebRPG/Assets/WebRPG/Tests/Editor/)。
 - 2：透過 Unity CLI 驗證 Play Mode 幀數確實推進，確認實際執行；遊戲 Console 無本次新增的執行期錯誤。
@@ -70,6 +71,7 @@
 
 ## 相關文件
 
+- [主選單](MainMenu.md)：遊戲啟動、單人入口與離開遊戲行為。
 - [主玩法](CoreGameplay.md)：整體設計與尚未確認的長期規則。
 - [挑戰介面](AdventureUI.md)：挑戰畫面的配置與驗收。
 - [美術製作規範](ArtProductionRules.md)：風格、色票、字體層級與資產要求。

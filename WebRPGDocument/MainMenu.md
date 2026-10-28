@@ -1,0 +1,58 @@
+# 主選單
+
+- 設計狀態：已核定；多人遊玩與設定目前僅保留入口並標示尚未開放。
+- 實作狀態：已實作本文列出的主選單與單人啟動流程；多人遊玩與設定功能未實作。
+- 適用範圍：Unity 主場景的主選單、單人冒險入口與離開遊戲操作。
+- 用途：記錄選項行為、Prefab 編輯方式、程式分工與驗證範圍。
+
+## 規則
+
+- 1：遊戲啟動時先顯示主選單，依序提供「單人遊玩」、「多人遊玩（尚未開放）」、「設定（尚未開放）」與「離開遊戲」。
+- 2：單人遊玩直接開始新一局並進入冒險地圖；成功後隱藏主選單，避免重複建立冒險。啟動失敗時保留選單、顯示錯誤提示並允許重試。
+- 3：多人遊玩與設定按鈕停用，不啟動連線、聊天或設定流程。
+- 4：離開遊戲在桌面版呼叫 Application.Quit，在 Unity Editor 停止播放；WebGL 顯示「請關閉瀏覽器分頁以離開遊戲。」。
+- 5：Main 不再建立或釋放聊天功能；既有 Chat 程式與 Prefab 保留，不代表多人冒險已實作。
+
+## Prefab 與程式分工
+
+| 檔案 | 職責 |
+| --- | --- |
+| [MainMenuCanvas.prefab](../WebRPG/Assets/WebRPG/Prefabs/MainMenuCanvas.prefab) | 保存 Canvas、縮放、射線偵測、背景、標題、四個按鈕、提示文字及 View 引用；可在 Prefab Mode 調整。 |
+| [MainMenuView.cs](../WebRPG/Assets/WebRPG/Code/MainMenuView.cs) | 綁定與解除按鈕事件、轉送操作、顯示提示及隱藏選單；不動態建立固定版面。 |
+| [MainMenuModel.cs](../WebRPG/Assets/WebRPG/Code/MainMenuModel.cs) | 記錄是否已成功進入冒險。 |
+| [MainMenuPresenter.cs](../WebRPG/Assets/WebRPG/Code/MainMenuPresenter.cs) | 處理單人與離開操作；成功啟動後更新 Model 並隱藏 View，釋放時解除事件訂閱。 |
+| [Main.cs](../WebRPG/Assets/WebRPG/Code/Main.cs) | 生成主選單 Prefab、組裝 MVP，並負責冒險啟動、逐幀推進、離開遊戲與生命週期管理。 |
+
+- Prefab 的 Menu 節點包含 Title、SinglePlayer、Multiplayer、Settings、Quit 與 Message；按鈕文字位於各自的 Label 子節點。
+- 固定版面與動態內容的製作要求以 [Unity 規則](UnityRules.md)為準；helper method 的拆分要求見 [Coding 規則](CodingRules.md)。
+- 配色與字體呈現遵守[美術製作規範](ArtProductionRules.md)。
+
+## 驗收情境
+
+- 對應規則 1：啟動後顯示四個選項，尚未建立冒險或聊天畫面。
+- 對應規則 2：點擊單人遊玩後直接進入 Map，主選單隱藏，冒險畫面只有一個；啟動失敗時仍可重試。
+- 對應規則 3：多人與設定的尚未開放標示可讀，按鈕不可操作。
+- 對應規則 4：依執行平台確認關閉程式、停止播放或顯示分頁關閉提示。
+- 對應規則 5：遊戲入口不建立聊天 Model、View 或 Presenter。
+- Prefab 編輯：未進入 Play Mode 時即可看見並調整固定 UI，View 的按鈕與提示文字引用完整。
+
+## 驗證紀錄
+
+驗證日期：2026-10-28，對應已核准的主選單 v2。
+
+- 1：Unity 編譯通過；40 個 EditMode 測試全部通過，包含新增的 3 個主選單 Presenter 測試及 1 個 Prefab 結構與引用測試。測試位於 [Editor 測試目錄](../WebRPG/Assets/WebRPG/Tests/Editor/)。
+- 2：Play Mode 幀數確實前進；確認初始只有主選單，單人與離開按鈕可操作，多人與設定停用。
+- 3：透過 EventSystem 射線偵測與點擊事件，確認單人入口未被遮擋；點擊後進入 Map、隱藏選單，場上只有一個 AdventureView，沒有 ChatView。
+- 4：已檢查 1280×720 的主選單實際畫面；離開按鈕已確認能停止 Editor 播放。
+- 5：桌面版與 WebGL 尚未建置驗證；本次未重新驗證所有解析度或裝置輸入。
+
+## 相關文件
+
+- [單人可玩原型](AdventurePrototype.md)：冒險流程、設定與目前可玩範圍。
+- [Unity 規則](UnityRules.md)：UI Prefab 與動態生成的製作要求。
+- [Coding 規則](CodingRules.md)：MVP 分工、元件引用、生命週期與通用 helper method 拆分要求。
+- [美術製作規範](ArtProductionRules.md)：UI 配色、字體與互動狀態。
+
+## 待確認
+
+- 多人遊玩與設定功能的具體內容及開放時程。

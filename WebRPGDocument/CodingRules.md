@@ -25,3 +25,4 @@
 - 18：WebRPG/ 內不受 Time.timeScale 影響的秒數等待，統一使用 AwaitableExtensions.WaitForSecondsRealtimeAsync(seconds, cancellationToken)。此方法在 Unity 主執行緒以 Awaitable.NextFrameAsync() 搭配 Time.unscaledDeltaTime 累計時間，支援 CancellationToken，採靜態方法，不以 float 作為擴充方法的目標。
 - 19：本專案自行維護的一般 C# 方法中，區域函式（local function）放在所屬方法最後，位於主流程結束的 return 敘述之後。
 - 20：在 WebRPG/、WebRPGServer/ 與 WebRPGShared/ 開發新功能時，先撰寫驗證預期行為的測試，確認測試因功能尚未實作而失敗，再實作功能；驗證時必須執行相關測試，全部通過後才算完成實作。
+- 21：`WebRPG/`、`WebRPGServer/` 與 `WebRPGShared/` 內新增或修改程式碼時，若需要 helper method，須放在獨立的腳本／程式碼檔案，不限於 UI 功能；依用途命名，與使用端類別分開維護。屬於類別自身職責的業務邏輯、事件處理及生命週期方法仍保留在該類別。既有且不在本次修改範圍內的程式碼，不因此要求全面重構。
