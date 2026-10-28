@@ -9,6 +9,15 @@ namespace WebRPG
 {
     public sealed class ChatModel : IChatModel
     {
+        private const string ConnectingStatus = "Connecting";
+        private const string ConnectionErrorFormat = "Connection error: {0}";
+        private const string InvalidServerPacketFormat = "Invalid server packet: {0}";
+        private const string ConnectedStatus = "Connected";
+        private const string ServerErrorStatus = "Server error";
+        private const string DisconnectedRetryStatus = "Disconnected. Reconnecting...";
+        private const string ConnectionFailedRetryStatus = "Connection failed. Retrying...";
+        private const string ConnectionFailedFormat = "Connection failed: {0}";
+
         private const string ServerUrl = "wss://ws.oldshaw-webrpg.com/ws";
 
         private WebSocket _webSocket;
@@ -68,12 +77,12 @@ namespace WebRPG
         {
             _isJoining = true;
             _hasJoined = false;
-            ConnectionStateChanged?.Invoke("Connecting");
+            ConnectionStateChanged?.Invoke(ConnectingStatus);
             WebSocket socket = new(ServerUrl);
             _webSocket = socket;
             socket.OnOpen += () => SendJoinAsync(socket).Forget();
             socket.OnMessage += bytes => HandlePacket(System.Text.Encoding.UTF8.GetString(bytes));
-            socket.OnError += error => ConnectionStateChanged?.Invoke($"Connection error: {error}");
+            socket.OnError += error => ConnectionStateChanged?.Invoke(string.Format(ConnectionErrorFormat, error));
             socket.OnClose += code => HandleClosed(socket, code);
 
             try
@@ -108,7 +117,7 @@ namespace WebRPG
             }
             catch (Exception exception)
             {
-                ConnectionStateChanged?.Invoke($"Connection error: {exception.Message}");
+                ConnectionStateChanged?.Invoke(string.Format(ConnectionErrorFormat, exception.Message));
             }
         }
 
@@ -126,7 +135,7 @@ namespace WebRPG
             }
             catch (JsonException exception)
             {
-                ConnectionStateChanged?.Invoke($"Invalid server packet: {exception.Message}");
+                ConnectionStateChanged?.Invoke(string.Format(InvalidServerPacketFormat, exception.Message));
                 return;
             }
 
@@ -138,11 +147,11 @@ namespace WebRPG
             if (packet.Type == ChatPacketType.Joined)
             {
                 _hasJoined = true;
-                ConnectionStateChanged?.Invoke("Connected");
+                ConnectionStateChanged?.Invoke(ConnectedStatus);
             }
             else if (packet.Type == ChatPacketType.Error)
             {
-                ConnectionStateChanged?.Invoke(packet.Text ?? "Server error");
+                ConnectionStateChanged?.Invoke(packet.Text ?? ServerErrorStatus);
             }
 
             PacketReceived?.Invoke(packet);
@@ -157,7 +166,7 @@ namespace WebRPG
 
             bool hadJoined = _hasJoined;
             _hasJoined = false;
-            ConnectionStateChanged?.Invoke(hadJoined ? "Disconnected. Reconnecting..." : "Connection failed. Retrying...");
+            ConnectionStateChanged?.Invoke(hadJoined ? DisconnectedRetryStatus : ConnectionFailedRetryStatus);
             StartReconnecting();
         }
 
@@ -169,7 +178,7 @@ namespace WebRPG
             }
 
             _hasJoined = false;
-            ConnectionStateChanged?.Invoke($"Connection failed: {error}");
+            ConnectionStateChanged?.Invoke(string.Format(ConnectionFailedFormat, error));
             StartReconnecting();
         }
 
@@ -213,7 +222,7 @@ namespace WebRPG
             {
                 if (!_isShuttingDown)
                 {
-                    ConnectionStateChanged?.Invoke($"Connection failed: {exception.Message}");
+                    ConnectionStateChanged?.Invoke(string.Format(ConnectionFailedFormat, exception.Message));
                 }
             }
             finally

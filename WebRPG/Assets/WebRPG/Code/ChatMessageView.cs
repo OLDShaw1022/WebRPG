@@ -7,6 +7,8 @@ namespace WebRPG
 {
     public sealed class ChatMessageView : MonoBehaviour
     {
+        private const string DisplayTimeFormat = "HH:mm";
+
         [SerializeField] private TMP_Text _author;
         [SerializeField] private TMP_Text _messageText;
         [SerializeField] private TMP_Text _time;
@@ -19,7 +21,7 @@ namespace WebRPG
             DateTimeOffset displayTime = timestampUtc == default
                 ? DateTimeOffset.Now
                 : timestampUtc.ToLocalTime();
-            _time.text = displayTime.ToString("HH:mm", CultureInfo.InvariantCulture);
+            _time.text = displayTime.ToString(DisplayTimeFormat, CultureInfo.InvariantCulture);
         }
     }
 }

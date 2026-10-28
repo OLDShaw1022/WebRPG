@@ -30,6 +30,8 @@ namespace WebRPG
 
     internal sealed class AdventureDynamicLayoutHelper
     {
+        private const string ConnectionNamePrefix = "Connection";
+
         private readonly RectTransform _root;
         private readonly AdventureScrollViewReferences _actorScroll;
         private readonly AdventureActorViewReferences[] _players;
@@ -161,7 +163,7 @@ namespace WebRPG
                         {
                             AdventureSurfaceTemplateView instance = UnityEngine.Object.Instantiate(
                                 _mapConnectionTemplate, _mapLines);
-                            instance.name = "Connection" + connection;
+                            instance.name = ConnectionNamePrefix + connection;
                             AdventureSurfaceViewReferences line = instance.Control;
                             _connections.Add(line);
                         }

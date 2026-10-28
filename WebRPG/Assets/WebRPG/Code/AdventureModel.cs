@@ -6,6 +6,31 @@ namespace WebRPG
 {
     public sealed class AdventureModel
     {
+        private const string RunStartedMessage = "挑戰開始。血量跨戰鬥保留，請選擇路線。";
+        private const string NodeEntryMessagePrefix = "前往「";
+        private const string QuotedNameSentenceSuffix = "」。";
+        private const string SkillAcquiredMessagePrefix = "取得技能：";
+        private const string SentenceTerminator = "。";
+        private const string SkillUpgradeMessageSeparator = " 升至 Lv.";
+        private const string RelicAcquiredMessagePrefix = "取得遺物：";
+        private const string AllRelicsCollectedMessage = "此輪已收集所有遺物，寶箱沒有新遺物。";
+        private const string CampRestMessage = "在營火休息，恢復血量。";
+        private const string EventHealthCostFailureMessage = "事件代價耗盡生命，挑戰失敗。";
+        private const string EventGoldRewardMessagePrefix = "支付生命，取得 ";
+        private const string GoldRewardMessageSuffix = " 金幣。";
+        private const string EventRecoveryMessage = "選擇休養，恢復血量。";
+        private const string AbandonedRunMessage = "已放棄本輪挑戰。";
+        private const string BasicAttackJournalPrefix = "普攻 → ";
+        private const string DamageJournalSeparator = "，傷害 ";
+        private const string SkillAttackJournalSeparator = " → ";
+        private const string EnemyAttackJournalSeparator = " 攻擊，受到 ";
+        private const string EnemyDamageMessageSuffix = " 傷害。";
+        private const string PlayerDefeatedMessage = "生命耗盡，挑戰失敗。";
+        private const string BattleTimeoutMessage = "戰鬥超過時限，挑戰失敗。";
+        private const string BattleVictoryMessagePrefix = "戰鬥勝利，取得 ";
+        private const string RunCompletedMessagePrefix = "三層 Boss 已全部擊敗，挑戰成功！本輪金幣：";
+        private const string FloorEntryMessagePrefix = "進入「";
+
         private readonly AdventureConfiguration _configuration;
         private readonly Random _random;
         private readonly List<AdventureSkillState> _skills = new List<AdventureSkillState>();
@@ -98,7 +123,7 @@ namespace WebRPG
 
             ResetCooldowns();
             Phase = AdventurePhase.Map;
-            Record("挑戰開始。血量跨戰鬥保留，請選擇路線。");
+            Record(RunStartedMessage);
         }
 
         public void SelectNode(int index)
@@ -110,7 +135,7 @@ namespace WebRPG
 
             CurrentNode = AvailableNodes[index];
             _chosenPaths[FloorIndex].Add(index);
-            Record("前往「" + CurrentNode.Name + "」。");
+            Record(NodeEntryMessagePrefix + CurrentNode.Name + QuotedNameSentenceSuffix);
             if (!CurrentNode.IsBattle)
             {
                 Phase = AdventurePhase.NodeChoice;
@@ -158,12 +183,12 @@ namespace WebRPG
             if (owned == null)
             {
                 _skills.Add(new AdventureSkillState(definition));
-                Record("取得技能：" + definition.Name + "。");
+                Record(SkillAcquiredMessagePrefix + definition.Name + SentenceTerminator);
             }
             else
             {
                 owned.Level++;
-                Record(definition.Name + " 升至 Lv." + owned.Level + "。");
+                Record(definition.Name + SkillUpgradeMessageSeparator + owned.Level + SentenceTerminator);
             }
 
             _rewards.Clear();
@@ -203,11 +228,11 @@ namespace WebRPG
                         }
                     }
 
-                    Record("取得遺物：" + relic.Name + "。");
+                    Record(RelicAcquiredMessagePrefix + relic.Name + SentenceTerminator);
                 }
                 else
                 {
-                    Record("此輪已收集所有遺物，寶箱沒有新遺物。");
+                    Record(AllRelicsCollectedMessage);
                 }
             }
             else if (CurrentNode.Type == AdventureNodeType.Camp)
@@ -215,7 +240,7 @@ namespace WebRPG
                 if (choice == 0)
                 {
                     Heal(CurrentNode.Healing);
-                    Record("在營火休息，恢復血量。");
+                    Record(CampRestMessage);
                 }
             }
             else if (CurrentNode.Type == AdventureNodeType.Event)
@@ -225,17 +250,17 @@ namespace WebRPG
                     Health = Math.Max(0, Health - CurrentNode.HealthCost);
                     if (Health == 0)
                     {
-                        Fail("事件代價耗盡生命，挑戰失敗。");
+                        Fail(EventHealthCostFailureMessage);
                         return;
                     }
 
                     Gold += CurrentNode.Gold;
-                    Record("支付生命，取得 " + CurrentNode.Gold + " 金幣。");
+                    Record(EventGoldRewardMessagePrefix + CurrentNode.Gold + GoldRewardMessageSuffix);
                 }
                 else
                 {
                     Heal(CurrentNode.Healing);
-                    Record("選擇休養，恢復血量。");
+                    Record(EventRecoveryMessage);
                 }
             }
 
@@ -247,7 +272,7 @@ namespace WebRPG
             if (Phase == AdventurePhase.Map || Phase == AdventurePhase.Battle ||
                 Phase == AdventurePhase.SkillReward || Phase == AdventurePhase.NodeChoice)
             {
-                Fail("已放棄本輪挑戰。");
+                Fail(AbandonedRunMessage);
             }
         }
 
@@ -263,7 +288,7 @@ namespace WebRPG
                 {
                     int damage = BasicAttackDamage;
                     target.Health = Math.Max(0, target.Health - damage);
-                    Record("普攻 → " + target.Definition.Name + "，傷害 " + damage + "。");
+                    Record(BasicAttackJournalPrefix + target.Definition.Name + DamageJournalSeparator + damage + SentenceTerminator);
                 }
 
                 if (_enemies.All(enemy => enemy.Health == 0))
@@ -296,7 +321,7 @@ namespace WebRPG
                         {
                             amount += _damageBonus;
                             target.Health = Math.Max(0, target.Health - amount);
-                            Record(skill.Definition.Name + " → " + target.Definition.Name + "，傷害 " + amount + "。");
+                            Record(skill.Definition.Name + SkillAttackJournalSeparator + target.Definition.Name + DamageJournalSeparator + amount + SentenceTerminator);
                         }
                     }
                 }
@@ -323,17 +348,17 @@ namespace WebRPG
 
                 enemy.RemainingCooldown += enemy.Definition.Cooldown;
                 Health = Math.Max(0, Health - enemy.Definition.Damage);
-                Record(enemy.Definition.Name + " 攻擊，受到 " + enemy.Definition.Damage + " 傷害。");
+                Record(enemy.Definition.Name + EnemyAttackJournalSeparator + enemy.Definition.Damage + EnemyDamageMessageSuffix);
                 if (Health == 0)
                 {
-                    Fail("生命耗盡，挑戰失敗。");
+                    Fail(PlayerDefeatedMessage);
                     return;
                 }
             }
 
             if (_battleTime >= _configuration.BattleTimeLimit)
             {
-                Fail("戰鬥超過時限，挑戰失敗。");
+                Fail(BattleTimeoutMessage);
             }
         }
 
@@ -341,7 +366,7 @@ namespace WebRPG
         {
             ResetCooldowns();
             Gold += CurrentNode.Gold;
-            Record("戰鬥勝利，取得 " + CurrentNode.Gold + " 金幣。");
+            Record(BattleVictoryMessagePrefix + CurrentNode.Gold + GoldRewardMessageSuffix);
             _rewards.Clear();
             List<SkillDefinition> pool = _configuration.Skills.Where(definition =>
             {
@@ -393,11 +418,11 @@ namespace WebRPG
                 if (FloorIndex >= _configuration.Floors.Length)
                 {
                     Phase = AdventurePhase.Complete;
-                    Record("三層 Boss 已全部擊敗，挑戰成功！本輪金幣：" + Gold + "。");
+                    Record(RunCompletedMessagePrefix + Gold + SentenceTerminator);
                     return;
                 }
 
-                Record("進入「" + _configuration.Floors[FloorIndex].Name + "」。");
+                Record(FloorEntryMessagePrefix + _configuration.Floors[FloorIndex].Name + QuotedNameSentenceSuffix);
             }
 
             Phase = AdventurePhase.Map;

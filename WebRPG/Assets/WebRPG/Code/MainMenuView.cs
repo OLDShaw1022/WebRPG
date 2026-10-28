@@ -7,6 +7,8 @@ namespace WebRPG
     [DisallowMultipleComponent]
     public sealed class MainMenuView : MonoBehaviour, IMainMenuView
     {
+        private const string MissingViewReferencesMessage = "MainMenuView requires button and message references.";
+
         [SerializeField]
         private UnityEngine.UI.Button _singlePlayerButton;
 
@@ -23,7 +25,7 @@ namespace WebRPG
         {
             if (!_singlePlayerButton || !_quitButton || !_message)
             {
-                throw new InvalidOperationException("MainMenuView requires button and message references.");
+                throw new InvalidOperationException(MissingViewReferencesMessage);
             }
 
             _singlePlayerButton.onClick.AddListener(HandleSinglePlayerRequested);

@@ -7,6 +7,11 @@ namespace WebRPG
     [DisallowMultipleComponent]
     public sealed class Main : MonoBehaviour
     {
+        private const string MissingMainMenuPrefabMessage = "Main requires a MainMenuView prefab reference.";
+        private const string MissingAdventureReferencesMessage = "Main requires adventure prefab and configuration references.";
+        private const string AdventureStartFailureMessage = "無法開始冒險，請檢查遊戲設定後重試。";
+        private const string WebGlQuitMessage = "請關閉瀏覽器分頁以離開遊戲。";
+
         [SerializeField]
         private MainMenuView _mainMenuViewPrefab;
 
@@ -26,7 +31,7 @@ namespace WebRPG
         {
             if (!_mainMenuViewPrefab)
             {
-                Debug.LogError("Main requires a MainMenuView prefab reference.", this);
+                Debug.LogError(MissingMainMenuPrefabMessage, this);
                 enabled = false;
                 return;
             }
@@ -77,7 +82,7 @@ namespace WebRPG
             {
                 if (!_adventureViewPrefab || !_adventureConfiguration)
                 {
-                    throw new InvalidOperationException("Main requires adventure prefab and configuration references.");
+                    throw new InvalidOperationException(MissingAdventureReferencesMessage);
                 }
 
                 AdventureConfiguration configuration =
@@ -97,7 +102,7 @@ namespace WebRPG
                     Destroy(_adventureView.gameObject);
                     _adventureView = null;
                 }
-                _mainMenuView.ShowMessage("無法開始冒險，請檢查遊戲設定後重試。");
+                _mainMenuView.ShowMessage(AdventureStartFailureMessage);
                 return false;
             }
         }
@@ -113,7 +118,7 @@ namespace WebRPG
 #if UNITY_EDITOR
             UnityEditor.EditorApplication.isPlaying = false;
 #elif UNITY_WEBGL
-            _mainMenuView.ShowMessage("請關閉瀏覽器分頁以離開遊戲。");
+            _mainMenuView.ShowMessage(WebGlQuitMessage);
 #else
             Application.Quit();
 #endif

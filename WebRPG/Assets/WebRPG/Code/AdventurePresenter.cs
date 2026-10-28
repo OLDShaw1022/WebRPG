@@ -75,6 +75,80 @@ namespace WebRPG
 
     public sealed class AdventurePresenter : IDisposable
     {
+        private const string SkillSlotTitlePrefix = "技能槽 ";
+        private const string UnequippedText = "尚未裝備";
+        private const string SkillLevelSeparator = " Lv.";
+        private const string BasicAttackTitlePrefix = "普攻 · 傷害 ";
+        private const string LocalPlayerName = "本機玩家";
+        private const string EnemyIdPrefix = "enemy:";
+        private const string MapHeading = "挑戰地圖";
+        private const string SummaryPlayerFloorPrefix = "本機玩家 · 第 ";
+        private const string CountSeparator = " / ";
+        private const string SummaryFloorGoldSeparator = " 層 · 金幣 ";
+        private const string SummaryAttackSeparator = " · 攻擊 ";
+        private const string SummarySkillsSeparator = " · 技能 ";
+        private const string SummaryRelicsSeparator = "/6 · 遺物 ";
+        private const string NewLine = "\n";
+        private const string ReturnToAdventureText = "返回挑戰";
+        private const string MapButtonText = "地圖";
+        private const string MapSelectionNotice = "選擇亮框節點前往；路線由下往上推進。";
+        private const string BattleMapNotice = "檢視地圖時戰鬥仍持續進行，節點僅供查看。";
+        private const string ResultMapNotice = "地圖檢視中；返回挑戰繼續領獎或查看結算。";
+        private const string NoRelicsText = "尚未取得";
+        private const string ParagraphSeparator = "\n\n";
+        private const string EffectListSeparator = "、";
+        private const string MaximumHealthBonusPrefix = "生命上限+";
+        private const string DamageBonusPrefix = "傷害+";
+        private const string HealthTitle = "生命";
+        private const string HealthValuePrefix = "生命 ";
+        private const string DefeatedText = "已擊倒";
+        private const string CooldownTextPrefix = "倒數 ";
+        private const string SecondsFormat = "0.0";
+        private const string SecondsSuffix = " 秒";
+        private const string IdleCooldownTextPrefix = "待戰 · ";
+        private const string ReadyHeading = "灰燼之塔 · 單人試玩";
+        private const string NextNodeHeading = "選擇下一個節點";
+        private const string BattleHeading = "自動戰鬥中";
+        private const string SkillRewardHeading = "戰利品 · 選擇一個技能";
+        private const string CompleteHeading = "挑戰成功";
+        private const string FinishedHeading = "挑戰結束";
+        private const string PassedRowText = "已通過";
+        private const string CurrentRowText = "目前所在";
+        private const string UnreachedNodeText = "未到達";
+        private const string ChosenNodeText = "已選擇";
+        private const string SkippedNodeText = "已略過";
+        private const string SelectableNodeText = "可前往";
+        private const string BattleInstructions = "普攻與技能自動施放，依序攻擊第一個存活敵人。";
+        private const string ResultGoldPrefix = "本輪結算：";
+        private const string ResultGoldSuffix = " 金幣\n";
+        private const string ResultSkillsPrefix = "技能 ";
+        private const string ResultRelicsSeparator = " 個 · 遺物 ";
+        private const string ResultCountSuffix = " 個\n";
+        private const string ResultPersistenceNotice = "單人原型：結算只供本輪檢視，不會保存至帳號。";
+        private const string SkillRewardInstructions = "新技能自動裝入空槽；重複技能直接升級。\n六槽裝滿後，只會出現已裝備且未滿級的技能。";
+        private const string ReadyInstructions = "按「開始挑戰」進入塔樓。\n可在任何進行中的階段放棄，該輪會以失敗結算。";
+        private const string NodeChoiceInstructions = "選擇下方行動。寶箱提供被動遺物，事件可交換生命與金幣。";
+        private const string TitleSeparator = " · ";
+        private const string AcquireSkillPrefix = "取得 ";
+        private const string UpgradeSkillPrefix = "升級 ";
+        private const string RewardCooldownSuffix = " 秒\n";
+        private const string DamageEffectPrefix = "傷害 ";
+        private const string HealingEffectPrefix = "治療 ";
+        private const string ChestChoiceText = "開啟寶箱 · 隨機取得一個未持有的遺物";
+        private const string CampRestChoicePrefix = "休息 · 恢復 ";
+        private const string HealthSuffix = " 生命";
+        private const string LeaveNodeChoiceText = "直接離開";
+        private const string EventSacrificeChoicePrefix = "獻祭 ";
+        private const string EventGoldRewardSeparator = " 生命 · 取得 ";
+        private const string GoldSuffix = " 金幣";
+        private const string EventRecoveryChoicePrefix = "休養 · 恢復 ";
+        private const string BattleNodeLabel = "普通戰鬥";
+        private const string EliteNodeLabel = "精英戰鬥";
+        private const string BossNodeLabel = "Boss 戰";
+        private const string ChestNodeLabel = "遺物";
+        private const string CampNodeLabel = "營火";
+        private const string EventNodeLabel = "事件";
+
         private readonly AdventureModel _model;
         private readonly IAdventureView _view;
         private const string LocalPlayerId = "local-player";
@@ -186,23 +260,23 @@ namespace WebRPG
                 {
                     return new AdventureGaugeScreenModel
                     {
-                        Title = "技能槽 " + (index + 1),
-                        Text = "尚未裝備",
+                        Title = SkillSlotTitlePrefix + (index + 1),
+                        Text = UnequippedText,
                         FillAmount = 0
                     };
                 }
 
                 AdventureSkillState skill = _model.Skills[index];
-                return CooldownGauge(skill.Definition.Name + " Lv." + skill.Level,
+                return CooldownGauge(skill.Definition.Name + SkillLevelSeparator + skill.Level,
                     skill.RemainingCooldown, skill.Definition.Cooldown, fighting);
             }).ToArray();
             AdventureGaugeScreenModel localHealth = HealthGauge(_model.Health, _model.MaximumHealth);
-            AdventureGaugeScreenModel localAttack = CooldownGauge("普攻 · 傷害 " + _model.BasicAttackDamage,
+            AdventureGaugeScreenModel localAttack = CooldownGauge(BasicAttackTitlePrefix + _model.BasicAttackDamage,
                 _model.RemainingBasicAttackCooldown, _model.Configuration.BasicAttack.Cooldown, fighting);
             AdventureCharacterScreenModel localPlayer = new AdventureCharacterScreenModel
             {
                 Id = LocalPlayerId,
-                Name = "本機玩家",
+                Name = LocalPlayerName,
                 IsLocalPlayer = true,
                 IsDefeated = _model.Health == 0,
                 Health = localHealth,
@@ -212,11 +286,11 @@ namespace WebRPG
             AdventureCharacterScreenModel[] enemies = fighting
                 ? _model.Enemies.Select((enemy, index) => new AdventureCharacterScreenModel
                 {
-                    Id = "enemy:" + index,
+                    Id = EnemyIdPrefix + index,
                     Name = enemy.Definition.Name,
                     IsDefeated = enemy.Health == 0,
                     Health = HealthGauge(enemy.Health, enemy.Definition.Health),
-                    BasicAttack = CooldownGauge("普攻 · 傷害 " + enemy.Definition.Damage,
+                    BasicAttack = CooldownGauge(BasicAttackTitlePrefix + enemy.Definition.Damage,
                         enemy.RemainingCooldown, enemy.Definition.Cooldown, enemy.Health > 0, enemy.Health == 0),
                     Skills = Array.Empty<AdventureGaugeScreenModel>()
                 }).ToArray() : Array.Empty<AdventureCharacterScreenModel>();
@@ -226,13 +300,13 @@ namespace WebRPG
             _inspectedCharacterId = inspected.Id;
             _view.Render(new AdventureScreenModel
             {
-                Heading = showMap ? "挑戰地圖" : Heading(),
-                Summary = "本機玩家 · 第 " + Math.Min(_model.FloorIndex + 1, _model.Configuration.Floors.Length) +
-                    " / " + _model.Configuration.Floors.Length + " 層 · 金幣 " + _model.Gold +
-                    " · 攻擊 " + _model.BasicAttackDamage + " · 技能 " + _model.Skills.Count +
-                    "/6 · 遺物 " + _model.Relics.Count,
+                Heading = showMap ? MapHeading : Heading(),
+                Summary = SummaryPlayerFloorPrefix + Math.Min(_model.FloorIndex + 1, _model.Configuration.Floors.Length) +
+                    CountSeparator + _model.Configuration.Floors.Length + SummaryFloorGoldSeparator + _model.Gold +
+                    SummaryAttackSeparator + _model.BasicAttackDamage + SummarySkillsSeparator + _model.Skills.Count +
+                    SummaryRelicsSeparator + _model.Relics.Count,
                 Situation = Situation(),
-                Journal = string.Join("\n", _model.Journal.TakeLast(6)),
+                Journal = string.Join(NewLine, _model.Journal.TakeLast(6)),
                 Choices = Choices(),
                 PlayerHealth = localHealth,
                 BasicAttack = localAttack,
@@ -242,20 +316,20 @@ namespace WebRPG
                 ShowBattle = fighting,
                 ShowMap = showMap,
                 CanToggleMap = _model.Phase != AdventurePhase.Ready && _model.Phase != AdventurePhase.Map,
-                MapButtonText = showMap && _model.Phase != AdventurePhase.Map ? "返回挑戰" : "地圖",
+                MapButtonText = showMap && _model.Phase != AdventurePhase.Map ? ReturnToAdventureText : MapButtonText,
                 MapRows = showMap ? MapRows() : Array.Empty<AdventureMapRowScreenModel>(),
                 MapCurrentRow = _model.Phase == AdventurePhase.Complete
                     ? _model.GetFloorRows(_model.Configuration.Floors.Length - 1).Count - 1 : _model.RowIndex,
-                MapNotice = _model.Phase == AdventurePhase.Map ? "選擇亮框節點前往；路線由下往上推進。"
-                    : fighting ? "檢視地圖時戰鬥仍持續進行，節點僅供查看。"
-                    : "地圖檢視中；返回挑戰繼續領獎或查看結算。",
+                MapNotice = _model.Phase == AdventurePhase.Map ? MapSelectionNotice
+                    : fighting ? BattleMapNotice
+                    : ResultMapNotice,
                 InspectedCharacterId = inspected.Id,
                 InspectedCharacterName = inspected.Name,
                 InspectedSkills = new[] { inspected.BasicAttack }.Concat(inspected.Skills).ToArray(),
-                Relics = _model.Relics.Count == 0 ? "尚未取得" :
-                    string.Join("\n\n", _model.Relics.Select(relic => relic.Name + "\n" +
-                        string.Join("、", relic.Effects.Select(effect =>
-                            (effect.Type == AdventureEffectType.MaximumHealth ? "生命上限+" : "傷害+") + effect.Amount)))),
+                Relics = _model.Relics.Count == 0 ? NoRelicsText :
+                    string.Join(ParagraphSeparator, _model.Relics.Select(relic => relic.Name + NewLine +
+                        string.Join(EffectListSeparator, relic.Effects.Select(effect =>
+                            (effect.Type == AdventureEffectType.MaximumHealth ? MaximumHealthBonusPrefix : DamageBonusPrefix) + effect.Amount)))),
                 CanStart = ended,
                 CanAbandon = !ended
             });
@@ -265,8 +339,8 @@ namespace WebRPG
         {
             return new AdventureGaugeScreenModel
             {
-                Title = "生命",
-                Text = "生命 " + current + " / " + maximum,
+                Title = HealthTitle,
+                Text = HealthValuePrefix + current + CountSeparator + maximum,
                 FillAmount = maximum > 0 ? Math.Max(0, Math.Min(1, (float)current / maximum)) : 0
             };
         }
@@ -278,8 +352,8 @@ namespace WebRPG
             return new AdventureGaugeScreenModel
             {
                 Title = title,
-                Text = defeated ? "已擊倒" : active ? "倒數 " + seconds.ToString("0.0") + " 秒"
-                    : "待戰 · " + duration.ToString("0.0") + " 秒",
+                Text = defeated ? DefeatedText : active ? CooldownTextPrefix + seconds.ToString(SecondsFormat) + SecondsSuffix
+                    : IdleCooldownTextPrefix + duration.ToString(SecondsFormat) + SecondsSuffix,
                 FillAmount = active && duration > 0
                     ? Math.Max(0, Math.Min(1, 1 - seconds / duration)) : 0
             };
@@ -289,13 +363,13 @@ namespace WebRPG
         {
             switch (_model.Phase)
             {
-                case AdventurePhase.Ready: return "灰燼之塔 · 單人試玩";
-                case AdventurePhase.Map: return "選擇下一個節點";
-                case AdventurePhase.Battle: return "自動戰鬥中";
-                case AdventurePhase.SkillReward: return "戰利品 · 選擇一個技能";
+                case AdventurePhase.Ready: return ReadyHeading;
+                case AdventurePhase.Map: return NextNodeHeading;
+                case AdventurePhase.Battle: return BattleHeading;
+                case AdventurePhase.SkillReward: return SkillRewardHeading;
                 case AdventurePhase.NodeChoice: return _model.CurrentNode.Name;
-                case AdventurePhase.Complete: return "挑戰成功";
-                default: return "挑戰結束";
+                case AdventurePhase.Complete: return CompleteHeading;
+                default: return FinishedHeading;
             }
         }
 
@@ -307,15 +381,15 @@ namespace WebRPG
             System.Collections.Generic.IReadOnlyList<int> path = _model.GetFloorPath(floor);
             return rows.Select((nodes, row) => new AdventureMapRowScreenModel
             {
-                Status = _model.Phase == AdventurePhase.Complete || row < _model.RowIndex ? "已通過"
-                    : row == _model.RowIndex ? "目前所在" : "未到達",
+                Status = _model.Phase == AdventurePhase.Complete || row < _model.RowIndex ? PassedRowText
+                    : row == _model.RowIndex ? CurrentRowText : UnreachedNodeText,
                 Nodes = nodes.Select((node, index) => new AdventureMapNodeScreenModel
                 {
-                    Title = node.Name + "\n" + NodeLabel(node.Type),
+                    Title = node.Name + NewLine + NodeLabel(node.Type),
                     CanSelect = _model.Phase == AdventurePhase.Map && row == _model.RowIndex,
                     IsChosen = row < path.Count && path[row] == index,
-                    StateText = row < path.Count ? (path[row] == index ? "已選擇" : "已略過")
-                        : row == _model.RowIndex && _model.Phase == AdventurePhase.Map ? "可前往" : "未到達",
+                    StateText = row < path.Count ? (path[row] == index ? ChosenNodeText : SkippedNodeText)
+                        : row == _model.RowIndex && _model.Phase == AdventurePhase.Map ? SelectableNodeText : UnreachedNodeText,
                     ChoiceIndex = index
                 }).ToArray()
             }).ToArray();
@@ -325,24 +399,24 @@ namespace WebRPG
         {
             if (_model.Phase == AdventurePhase.Battle)
             {
-                return "普攻與技能自動施放，依序攻擊第一個存活敵人。";
+                return BattleInstructions;
             }
 
             if (_model.Phase == AdventurePhase.Complete || _model.Phase == AdventurePhase.Failed)
             {
-                return "本輪結算：" + _model.Gold + " 金幣\n" +
-                    "技能 " + _model.Skills.Count + " 個 · 遺物 " + _model.Relics.Count + " 個\n" +
-                    "單人原型：結算只供本輪檢視，不會保存至帳號。";
+                return ResultGoldPrefix + _model.Gold + ResultGoldSuffix +
+                    ResultSkillsPrefix + _model.Skills.Count + ResultRelicsSeparator + _model.Relics.Count + ResultCountSuffix +
+                    ResultPersistenceNotice;
             }
 
             if (_model.Phase == AdventurePhase.SkillReward)
             {
-                return "新技能自動裝入空槽；重複技能直接升級。\n六槽裝滿後，只會出現已裝備且未滿級的技能。";
+                return SkillRewardInstructions;
             }
 
             return _model.Phase == AdventurePhase.Ready
-                ? "按「開始挑戰」進入塔樓。\n可在任何進行中的階段放棄，該輪會以失敗結算。"
-                : "選擇下方行動。寶箱提供被動遺物，事件可交換生命與金幣。";
+                ? ReadyInstructions
+                : NodeChoiceInstructions;
         }
 
         private string[] Choices()
@@ -350,28 +424,28 @@ namespace WebRPG
             switch (_model.Phase)
             {
                 case AdventurePhase.Map:
-                    return _model.AvailableNodes.Select(node => node.Name + " · " + NodeLabel(node.Type)).ToArray();
+                    return _model.AvailableNodes.Select(node => node.Name + TitleSeparator + NodeLabel(node.Type)).ToArray();
                 case AdventurePhase.SkillReward:
                     return _model.Rewards.Select(definition =>
                     {
                         AdventureSkillState owned = _model.Skills.FirstOrDefault(skill => skill.Definition.Id == definition.Id);
                         int level = owned == null ? 1 : owned.Level + 1;
-                        return (owned == null ? "取得 " : "升級 ") + definition.Name + " Lv." + level + " · " +
-                            definition.Cooldown.ToString("0.0") + " 秒\n" + string.Join("、", definition.Effects.Select(effect =>
-                                (effect.Type == AdventureEffectType.Damage ? "傷害 " : "治療 ") +
+                        return (owned == null ? AcquireSkillPrefix : UpgradeSkillPrefix) + definition.Name + SkillLevelSeparator + level + TitleSeparator +
+                            definition.Cooldown.ToString(SecondsFormat) + RewardCooldownSuffix + string.Join(EffectListSeparator, definition.Effects.Select(effect =>
+                                (effect.Type == AdventureEffectType.Damage ? DamageEffectPrefix : HealingEffectPrefix) +
                                 (effect.Amount + effect.PerLevel * (level - 1))));
                     }).ToArray();
                 case AdventurePhase.NodeChoice:
                     NodeDefinition node = _model.CurrentNode;
                     if (node.Type == AdventureNodeType.Chest)
                     {
-                        return new[] { "開啟寶箱 · 隨機取得一個未持有的遺物" };
+                        return new[] { ChestChoiceText };
                     }
 
                     return node.Type == AdventureNodeType.Camp
-                        ? new[] { "休息 · 恢復 " + node.Healing + " 生命", "直接離開" }
-                        : new[] { "獻祭 " + node.HealthCost + " 生命 · 取得 " + node.Gold + " 金幣",
-                            "休養 · 恢復 " + node.Healing + " 生命" };
+                        ? new[] { CampRestChoicePrefix + node.Healing + HealthSuffix, LeaveNodeChoiceText }
+                        : new[] { EventSacrificeChoicePrefix + node.HealthCost + EventGoldRewardSeparator + node.Gold + GoldSuffix,
+                            EventRecoveryChoicePrefix + node.Healing + HealthSuffix };
                 default:
                     return Array.Empty<string>();
             }
@@ -381,12 +455,12 @@ namespace WebRPG
         {
             switch (type)
             {
-                case AdventureNodeType.Battle: return "普通戰鬥";
-                case AdventureNodeType.Elite: return "精英戰鬥";
-                case AdventureNodeType.Boss: return "Boss 戰";
-                case AdventureNodeType.Chest: return "遺物";
-                case AdventureNodeType.Camp: return "營火";
-                default: return "事件";
+                case AdventureNodeType.Battle: return BattleNodeLabel;
+                case AdventureNodeType.Elite: return EliteNodeLabel;
+                case AdventureNodeType.Boss: return BossNodeLabel;
+                case AdventureNodeType.Chest: return ChestNodeLabel;
+                case AdventureNodeType.Camp: return CampNodeLabel;
+                default: return EventNodeLabel;
             }
         }
     }

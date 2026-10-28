@@ -6,6 +6,11 @@ namespace WebRPG
 {
     public sealed class ChatPresenter : IDisposable
     {
+        private const string UsernameLengthHintFormat = "請輸入 1 到 {0} 個字元的使用者名稱。";
+        private const string ConnectingHint = "正在連接聊天室...";
+        private const string ConnectingStatus = "Connecting";
+        private const string ConnectionFailedStatusPrefix = "Connection failed";
+
         private readonly IChatModel _model;
         private readonly IChatView _view;
         private string _connectionId;
@@ -53,11 +58,11 @@ namespace WebRPG
             string username = _view.UsernameText.Trim();
             if (!_model.IsUsernameValid(username))
             {
-                _view.SetLoginHint($"請輸入 1 到 {ChatPacketLimits.UsernameLength} 個字元的使用者名稱。");
+                _view.SetLoginHint(string.Format(UsernameLengthHintFormat, ChatPacketLimits.UsernameLength));
                 return;
             }
 
-            _view.SetLoginHint("正在連接聊天室...");
+            _view.SetLoginHint(ConnectingHint);
             _hasStartedConnecting = true;
             _view.SetConnectEnabled(false);
 
@@ -146,8 +151,8 @@ namespace WebRPG
             _view.SetSendEnabled(isJoined && !_isSending);
             if (!_hasOpenedChat)
             {
-                _view.SetConnectEnabled(!_hasStartedConnecting && !isJoined && status != "Connecting");
-                if (status.StartsWith("Connection failed", StringComparison.Ordinal))
+                _view.SetConnectEnabled(!_hasStartedConnecting && !isJoined && status != ConnectingStatus);
+                if (status.StartsWith(ConnectionFailedStatusPrefix, StringComparison.Ordinal))
                 {
                     _view.SetLoginHint(status);
                 }

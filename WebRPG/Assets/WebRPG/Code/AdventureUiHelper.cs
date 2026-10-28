@@ -5,6 +5,8 @@ namespace WebRPG
 {
     internal static class AdventureUiHelper
     {
+        private const string GaugeTitleSeparator = " · ";
+
         public static void BindClick(AdventureButtonViewReferences control, Action clicked)
         {
             control.Button.onClick.AddListener(() => clicked());
@@ -36,7 +38,7 @@ namespace WebRPG
             float amount = float.IsNaN(model.FillAmount) ? 0 : Mathf.Clamp01(model.FillAmount);
             control.Fill.gameObject.SetActive(amount > 0);
             control.Fill.anchorMax = new Vector2(amount, 1);
-            control.Value.text = includeTitle ? model.Title + " 繚 " + model.Text : model.Text;
+            control.Value.text = includeTitle ? model.Title + GaugeTitleSeparator + model.Text : model.Text;
         }
 
 

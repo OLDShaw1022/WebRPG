@@ -8,6 +8,19 @@ namespace WebRPG
     [DisallowMultipleComponent]
     public sealed class AdventureView : MonoBehaviour, IAdventureView
     {
+        private const string MissingPrefabReferencesMessage = "AdventureView requires complete prefab references.";
+        private const string InspectedSkillsTitleSuffix = " · 技能狀態";
+        private const string PlayerDefeatedText = "已倒下";
+        private const string EnemyDefeatedText = "已擊倒";
+        private const string LocalPlayerBadgeText = "本機";
+        private const string TeammateBadgeText = "隊友";
+        private const string EnemyBadgeText = "敵方";
+        private const string MapNodeNamePrefix = "Node";
+        private const string MapNodeIndexSeparator = "_";
+        private const string NewLine = "\n";
+        private const string JournalHeading = "戰鬥紀錄";
+        private const string RelicsHeading = "本機玩家 · 遺物";
+
         [SerializeField]
         private RectTransform _root;
 
@@ -114,7 +127,7 @@ namespace WebRPG
                 _toolbar.Length != 5 || _players.Length != 4 || _enemies.Length != 4 ||
                 _choices.Length != 3 || _skills.Length != 7)
             {
-                throw new InvalidOperationException("AdventureView requires complete prefab references.");
+                throw new InvalidOperationException(MissingPrefabReferencesMessage);
             }
 
             AdventureUiHelper.BindClick(_toolbar[0], () => StartRequested?.Invoke());
@@ -174,7 +187,7 @@ namespace WebRPG
             _skillPanel.Rect.gameObject.SetActive(!screen.ShowMap);
             _mapPanel.Rect.gameObject.SetActive(screen.ShowMap);
             _situation.text = screen.Situation;
-            _skillHeading.text = screen.InspectedCharacterName + " · 技能狀態";
+            _skillHeading.text = screen.InspectedCharacterName + InspectedSkillsTitleSuffix;
             for (int index = 0; index < _players.Length; index++)
             {
                 RenderActor(_players[index], index < screen.Players.Length ? screen.Players[index] : null);
@@ -230,8 +243,8 @@ namespace WebRPG
             }
             control.Id = character.Id;
             control.Name.text = character.Name;
-            control.Badge.text = character.IsDefeated ? (control.IsPlayer ? "已倒下" : "已擊倒")
-                : control.IsPlayer ? (character.IsLocalPlayer ? "本機" : "隊友") : "敵方";
+            control.Badge.text = character.IsDefeated ? (control.IsPlayer ? PlayerDefeatedText : EnemyDefeatedText)
+                : control.IsPlayer ? (character.IsLocalPlayer ? LocalPlayerBadgeText : TeammateBadgeText) : EnemyBadgeText;
             control.Hit.Outline.effectColor = _screen.InspectedCharacterId == character.Id ? _foreground : _border;
             AdventureUiHelper.SetGauge(control.Health, character.Health, false);
         }
@@ -250,7 +263,7 @@ namespace WebRPG
                 {
                     AdventureMapNodeViewState node = null;
                     AdventureButtonTemplateView instance = Instantiate(_mapNodeTemplate, _mapNodes);
-                    instance.name = "Node" + row + "_" + _mapRows[row].Count;
+                    instance.name = MapNodeNamePrefix + row + MapNodeIndexSeparator + _mapRows[row].Count;
                     AdventureButtonViewReferences button = instance.Control;
                     AdventureUiHelper.BindClick(button, () => ChoiceRequested?.Invoke(node.ChoiceIndex));
                     node = new AdventureMapNodeViewState(button);
@@ -267,7 +280,7 @@ namespace WebRPG
                     }
                     AdventureMapNodeScreenModel data = rows[row].Nodes[index];
                     node.ChoiceIndex = data.ChoiceIndex;
-                    node.Control.Label.text = data.Title + "\n" + data.StateText;
+                    node.Control.Label.text = data.Title + NewLine + data.StateText;
                     if (!node.HasState || node.CanSelect != data.CanSelect || node.IsChosen != data.IsChosen)
                     {
                         node.HasState = true;
@@ -320,7 +333,7 @@ namespace WebRPG
             {
                 return;
             }
-            _detailsHeading.text = _detailsKind == 1 ? "戰鬥紀錄" : "本機玩家 · 遺物";
+            _detailsHeading.text = _detailsKind == 1 ? JournalHeading : RelicsHeading;
             string text = _detailsKind == 1 ? _screen.Journal : _screen.Relics;
             if (_detailsText.text != text)
             {
