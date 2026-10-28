@@ -15,6 +15,7 @@ namespace WebRPG
         private readonly Queue<string> _journal = new Queue<string>();
         private readonly List<IReadOnlyList<IReadOnlyList<NodeDefinition>>> _map =
             new List<IReadOnlyList<IReadOnlyList<NodeDefinition>>>();
+        private readonly List<List<int>> _chosenPaths = new List<List<int>>();
         private float _accumulatedTime;
         private float _battleTime;
         private int _damageBonus;
@@ -33,6 +34,7 @@ namespace WebRPG
         public int Health { get; private set; }
         public int MaximumHealth { get; private set; }
         public int Gold { get; private set; }
+        public int BasicAttackDamage => _configuration.BasicAttack.Damage + _damageBonus;
         public int FloorIndex { get; private set; }
         public int RowIndex { get; private set; }
         public NodeDefinition CurrentNode { get; private set; }
@@ -49,6 +51,16 @@ namespace WebRPG
             ? CurrentFloorRows[RowIndex]
             : Array.Empty<NodeDefinition>();
 
+        public IReadOnlyList<IReadOnlyList<NodeDefinition>> GetFloorRows(int floor)
+        {
+            return floor >= 0 && floor < _map.Count ? _map[floor] : Array.Empty<IReadOnlyList<NodeDefinition>>();
+        }
+
+        public IReadOnlyList<int> GetFloorPath(int floor)
+        {
+            return floor >= 0 && floor < _chosenPaths.Count ? _chosenPaths[floor].AsReadOnly() : Array.Empty<int>();
+        }
+
         public void StartRun()
         {
             if (Phase != AdventurePhase.Ready && Phase != AdventurePhase.Complete && Phase != AdventurePhase.Failed)
@@ -62,9 +74,11 @@ namespace WebRPG
             _relics.Clear();
             _journal.Clear();
             _map.Clear();
+            _chosenPaths.Clear();
             foreach (FloorDefinition floor in _configuration.Floors)
             {
                 _map.Add(Array.AsReadOnly(floor.Rows.Select(DrawNodes).ToArray()));
+                _chosenPaths.Add(new List<int>());
             }
 
             _damageBonus = 0;
@@ -95,6 +109,7 @@ namespace WebRPG
             }
 
             CurrentNode = AvailableNodes[index];
+            _chosenPaths[FloorIndex].Add(index);
             Record("前往「" + CurrentNode.Name + "」。");
             if (!CurrentNode.IsBattle)
             {
@@ -246,7 +261,7 @@ namespace WebRPG
                 AdventureEnemyState target = _enemies.FirstOrDefault(enemy => enemy.Health > 0);
                 if (target != null)
                 {
-                    int damage = _configuration.BasicAttack.Damage + _damageBonus;
+                    int damage = BasicAttackDamage;
                     target.Health = Math.Max(0, target.Health - damage);
                     Record("普攻 → " + target.Definition.Name + "，傷害 " + damage + "。");
                 }

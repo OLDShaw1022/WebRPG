@@ -398,6 +398,7 @@ namespace WebRPG.Tests
             model.SelectNode(0);
             model.Tick(0.5f);
             Assert.That(model.Enemies[0].Health, Is.EqualTo(90));
+            Assert.That(model.BasicAttackDamage, Is.EqualTo(10));
         }
 
         [Test]
@@ -416,6 +417,35 @@ namespace WebRPG.Tests
             configuration = LoadConfiguration();
             configuration.BasicAttack.Cooldown = 0;
             Assert.Throws<ArgumentException>(() => new AdventureModel(configuration, 1));
+        }
+
+        [Test]
+        public void ChosenMapPathRecordsOnlyValidSelectionsAndResetsOnReplay()
+        {
+            AdventureModel model = new AdventureModel(WinningConfiguration(), 32);
+            Assert.That(model.GetFloorRows(0), Is.Empty);
+            Assert.That(model.GetFloorPath(0), Is.Empty);
+            model.StartRun();
+            Assert.That(model.GetFloorRows(0).Count, Is.EqualTo(model.Configuration.Floors[0].Rows.Length));
+            Assert.That(model.GetFloorRows(-1), Is.Empty);
+            Assert.That(model.GetFloorRows(100), Is.Empty);
+            model.SelectNode(-1);
+            Assert.That(model.GetFloorPath(0), Is.Empty);
+            model.SelectNode(0);
+            model.SelectNode(0);
+            Assert.That(model.GetFloorPath(0), Is.EqualTo(new[] { 0 }));
+            model.Tick(5);
+            model.SelectReward(0);
+            model.SelectNode(1);
+            Assert.That(model.GetFloorPath(0), Is.EqualTo(new[] { 0, 1 }));
+            model.ResolveNode(0);
+            Assert.That(model.GetFloorPath(0), Is.EqualTo(new[] { 0, 1 }));
+            model.AbandonRun();
+            model.StartRun();
+            Assert.That(model.GetFloorPath(0), Is.Empty);
+            Assert.That(model.GetFloorPath(-1), Is.Empty);
+            Assert.That(model.GetFloorPath(100), Is.Empty);
+            Assert.That(model.BasicAttackDamage, Is.EqualTo(model.Configuration.BasicAttack.Damage));
         }
 
         private static AdventureConfiguration LoadConfiguration()
