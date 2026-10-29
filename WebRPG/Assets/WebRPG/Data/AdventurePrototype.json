@@ -5,7 +5,7 @@
   ],
   "BasicAttack": {
     "Damage": 6,
-    "Cooldown": 1.5
+    "CastTime": 2.5
   },
   "MaximumMapChoices": 3,
   "SkillSlots": 6,
@@ -13,11 +13,13 @@
   "OwnedSkillWeight": 2,
   "NewSkillWeight": 3,
   "SimulationStep": 0.05,
+  "ProjectileTravelTime": 0.5,
   "BattleTimeLimit": 120,
   "Skills": [
     {
       "Id": "slash",
       "Name": "鐵劍斬擊",
+      "CastTime": 3,
       "Cooldown": 1.2,
       "MaximumLevel": 4,
       "Effects": [
@@ -31,6 +33,7 @@
     {
       "Id": "bolt",
       "Name": "幽火箭",
+      "CastTime": 3.5,
       "Cooldown": 2,
       "MaximumLevel": 4,
       "Effects": [
@@ -44,6 +47,7 @@
     {
       "Id": "drain",
       "Name": "汲血",
+      "CastTime": 3.5,
       "Cooldown": 2.4,
       "MaximumLevel": 4,
       "Effects": [
@@ -62,6 +66,7 @@
     {
       "Id": "mend",
       "Name": "回復術",
+      "CastTime": 4,
       "Cooldown": 3,
       "MaximumLevel": 4,
       "Effects": [
@@ -75,6 +80,7 @@
     {
       "Id": "strike",
       "Name": "碎甲擊",
+      "CastTime": 3.5,
       "Cooldown": 1.8,
       "MaximumLevel": 4,
       "Effects": [
@@ -88,6 +94,7 @@
     {
       "Id": "ember",
       "Name": "燼火",
+      "CastTime": 4.5,
       "Cooldown": 4,
       "MaximumLevel": 4,
       "Effects": [
@@ -101,6 +108,7 @@
     {
       "Id": "dagger",
       "Name": "迅刃",
+      "CastTime": 2,
       "Cooldown": 0.6,
       "MaximumLevel": 4,
       "Effects": [
@@ -114,6 +122,7 @@
     {
       "Id": "judgment",
       "Name": "裁決",
+      "CastTime": 5,
       "Cooldown": 5,
       "MaximumLevel": 4,
       "Effects": [
@@ -171,63 +180,199 @@
       "Name": "荒塚守衛",
       "Health": 30,
       "Damage": 4,
-      "Cooldown": 2.2
+      "CastTime": 3.5,
+      "SpecialSkill": {
+        "Id": "guard1-special",
+        "Name": "骨骼修補",
+        "CastTime": 4,
+        "Cooldown": 8,
+        "BasicAttacksBeforeUse": 2,
+        "Effects": [
+          {
+            "Type": "Heal",
+            "Amount": 8,
+            "PerLevel": 0
+          }
+        ]
+      }
     },
     {
       "Id": "beast1",
       "Name": "枯骨獵犬",
       "Health": 24,
       "Damage": 3,
-      "Cooldown": 1.8
+      "CastTime": 3,
+      "SpecialSkill": {
+        "Id": "beast1-special",
+        "Name": "撕咬",
+        "CastTime": 3.5,
+        "Cooldown": 9,
+        "BasicAttacksBeforeUse": 3,
+        "Effects": [
+          {
+            "Type": "Damage",
+            "Amount": 7,
+            "PerLevel": 0
+          }
+        ]
+      }
     },
     {
       "Id": "boss1",
       "Name": "墓門看守者",
       "Health": 150,
       "Damage": 9,
-      "Cooldown": 2.5
+      "CastTime": 4,
+      "SpecialSkill": {
+        "Id": "boss1-special",
+        "Name": "墓門再生",
+        "CastTime": 5,
+        "Cooldown": 14,
+        "BasicAttacksBeforeUse": 3,
+        "Effects": [
+          {
+            "Type": "Heal",
+            "Amount": 22,
+            "PerLevel": 0
+          }
+        ]
+      }
     },
     {
       "Id": "guard2",
       "Name": "黑鐵守衛",
       "Health": 55,
       "Damage": 6,
-      "Cooldown": 2.2
+      "CastTime": 3.5,
+      "SpecialSkill": {
+        "Id": "guard2-special",
+        "Name": "黑鐵重擊",
+        "CastTime": 4,
+        "Cooldown": 10,
+        "BasicAttacksBeforeUse": 2,
+        "Effects": [
+          {
+            "Type": "Damage",
+            "Amount": 13,
+            "PerLevel": 0
+          }
+        ]
+      }
     },
     {
       "Id": "beast2",
       "Name": "幽影獵犬",
       "Health": 45,
       "Damage": 5,
-      "Cooldown": 1.8
+      "CastTime": 3,
+      "SpecialSkill": {
+        "Id": "beast2-special",
+        "Name": "幽影汲血",
+        "CastTime": 4,
+        "Cooldown": 10,
+        "BasicAttacksBeforeUse": 3,
+        "Effects": [
+          {
+            "Type": "Damage",
+            "Amount": 8,
+            "PerLevel": 0
+          },
+          {
+            "Type": "Heal",
+            "Amount": 5,
+            "PerLevel": 0
+          }
+        ]
+      }
     },
     {
       "Id": "boss2",
       "Name": "灰燼騎士",
       "Health": 250,
       "Damage": 13,
-      "Cooldown": 2.5
+      "CastTime": 4,
+      "SpecialSkill": {
+        "Id": "boss2-special",
+        "Name": "灰燼斬擊",
+        "CastTime": 5,
+        "Cooldown": 12,
+        "BasicAttacksBeforeUse": 2,
+        "Effects": [
+          {
+            "Type": "Damage",
+            "Amount": 26,
+            "PerLevel": 0
+          }
+        ]
+      }
     },
     {
       "Id": "guard3",
       "Name": "王庭亡靈",
       "Health": 80,
       "Damage": 8,
-      "Cooldown": 2.2
+      "CastTime": 3.5,
+      "SpecialSkill": {
+        "Id": "guard3-special",
+        "Name": "亡靈再生",
+        "CastTime": 4.5,
+        "Cooldown": 10,
+        "BasicAttacksBeforeUse": 2,
+        "Effects": [
+          {
+            "Type": "Heal",
+            "Amount": 15,
+            "PerLevel": 0
+          }
+        ]
+      }
     },
     {
       "Id": "beast3",
       "Name": "深淵獵犬",
       "Health": 65,
       "Damage": 7,
-      "Cooldown": 1.8
+      "CastTime": 3,
+      "SpecialSkill": {
+        "Id": "beast3-special",
+        "Name": "深淵撕咬",
+        "CastTime": 4,
+        "Cooldown": 10,
+        "BasicAttacksBeforeUse": 3,
+        "Effects": [
+          {
+            "Type": "Damage",
+            "Amount": 16,
+            "PerLevel": 0
+          }
+        ]
+      }
     },
     {
       "Id": "boss3",
       "Name": "無光之王",
       "Health": 380,
       "Damage": 17,
-      "Cooldown": 2.5
+      "CastTime": 4,
+      "SpecialSkill": {
+        "Id": "boss3-special",
+        "Name": "無光汲血",
+        "CastTime": 5.5,
+        "Cooldown": 16,
+        "BasicAttacksBeforeUse": 3,
+        "Effects": [
+          {
+            "Type": "Damage",
+            "Amount": 28,
+            "PerLevel": 0
+          },
+          {
+            "Type": "Heal",
+            "Amount": 20,
+            "PerLevel": 0
+          }
+        ]
+      }
     }
   ],
   "EnemyGroups": [

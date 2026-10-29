@@ -11,6 +11,8 @@ namespace WebRPG
         public event Action<int> ChoiceRequested;
         public event Action<string> CharacterFocusRequested;
         public event Action MapToggleRequested;
+        public event Action<int> SkillRequested;
+        public event Action<float> BattleSpeedRequested;
         public void Render(AdventureScreenModel screen);
     }
 
@@ -37,6 +39,8 @@ namespace WebRPG
         public string InspectedCharacterName { get; set; }
         public AdventureGaugeScreenModel[] InspectedSkills { get; set; }
         public bool ShowBattle { get; set; }
+        public float BattleSpeed { get; set; } = 1;
+        public AdventureProjectileScreenModel Projectile { get; set; }
         public AdventureIconScreenModel[] Relics { get; set; } = Array.Empty<AdventureIconScreenModel>();
         public bool CanStart { get; set; }
         public bool CanAbandon { get; set; }
@@ -56,6 +60,7 @@ namespace WebRPG
         public string Title { get; set; }
         public string Text { get; set; }
         public float FillAmount { get; set; }
+        public bool CanUse { get; set; }
         public string IconId { get; set; }
         public string Description { get; set; }
         public string CompactText { get; set; }
@@ -69,6 +74,10 @@ namespace WebRPG
         public string Name { get; set; }
         public bool IsLocalPlayer { get; set; }
         public bool IsDefeated { get; set; }
+        public bool IsLocked { get; set; }
+        public AdventureGaugeScreenModel Action { get; set; } = new AdventureGaugeScreenModel();
+        public string ActionDescription { get; set; } = string.Empty;
+        public string SpecialIntent { get; set; } = string.Empty;
         public AdventureGaugeScreenModel Health { get; set; }
         public AdventureGaugeScreenModel BasicAttack { get; set; }
         public AdventureGaugeScreenModel[] Skills { get; set; }
@@ -97,7 +106,6 @@ namespace WebRPG
         private const string SkillSlotTitlePrefix = "技能槽 ";
         private const string UnequippedText = "尚未裝備";
         private const string SkillLevelSeparator = " Lv.";
-        private const string BasicAttackTitlePrefix = "普攻 · 傷害 ";
         private const string LocalPlayerName = "本機玩家";
         private const string EnemyIdPrefix = "enemy:";
         private const string MapHeading = "挑戰地圖";
@@ -113,22 +121,12 @@ namespace WebRPG
         private const string ResultMapNotice = "地圖檢視中；返回挑戰繼續領獎或查看結算。";
         private const string EmptyIconId = "empty";
         private const string EmptySlotName = "空槽";
-        private const string BasicAttackName = "普攻";
-        private const string AttackIconId = "attack";
-        private const string CompactIdleText = "待戰";
-        private const string CompactDefeatedText = "倒下";
-        private const string CompactSecondsSuffix = "秒";
-        private const string SkillCooldownPrefix = "冷卻 ";
         private const string EffectListSeparator = "、";
         private const string MaximumHealthBonusPrefix = "生命上限+";
         private const string DamageBonusPrefix = "傷害+";
         private const string HealthTitle = "生命";
         private const string HealthValuePrefix = "生命 ";
-        private const string DefeatedText = "已擊倒";
-        private const string CooldownTextPrefix = "倒數 ";
         private const string SecondsFormat = "0.0";
-        private const string SecondsSuffix = " 秒";
-        private const string IdleCooldownTextPrefix = "待戰 · ";
         private const string ReadyHeading = "灰燼之塔 · 單人試玩";
         private const string NextNodeHeading = "選擇下一個節點";
         private const string BattleHeading = "自動戰鬥中";
@@ -141,7 +139,7 @@ namespace WebRPG
         private const string ChosenNodeText = "已選擇";
         private const string SkippedNodeText = "已略過";
         private const string SelectableNodeText = "可前往";
-        private const string BattleInstructions = "普攻與技能自動施放，依序攻擊第一個存活敵人。";
+        private const string BattleInstructions = "點擊敵人鎖定；點擊技能施放，完成後自動恢復普攻。";
         private const string ResultGoldPrefix = "本輪結算：";
         private const string ResultGoldSuffix = " 金幣\n";
         private const string ResultSkillsPrefix = "技能 ";
@@ -178,7 +176,6 @@ namespace WebRPG
         private bool _disposed;
         private bool _paused;
         private bool _mapOpen;
-        private string _inspectedCharacterId = LocalPlayerId;
 
         public AdventurePresenter(AdventureModel model, IAdventureView view)
         {
@@ -189,6 +186,8 @@ namespace WebRPG
             _view.ChoiceRequested += HandleChoice;
             _view.CharacterFocusRequested += HandleCharacterFocus;
             _view.MapToggleRequested += HandleMapToggle;
+            _view.SkillRequested += HandleSkill;
+            _view.BattleSpeedRequested += HandleBattleSpeed;
             Refresh();
         }
 
@@ -206,6 +205,7 @@ namespace WebRPG
         public void SetPaused(bool paused)
         {
             _paused = paused;
+            Refresh();
         }
 
         public void Dispose()
@@ -221,12 +221,13 @@ namespace WebRPG
             _view.ChoiceRequested -= HandleChoice;
             _view.CharacterFocusRequested -= HandleCharacterFocus;
             _view.MapToggleRequested -= HandleMapToggle;
+            _view.SkillRequested -= HandleSkill;
+            _view.BattleSpeedRequested -= HandleBattleSpeed;
         }
 
         private void HandleStart()
         {
             _mapOpen = false;
-            _inspectedCharacterId = LocalPlayerId;
             _model.StartRun();
             Refresh();
         }
@@ -262,7 +263,26 @@ namespace WebRPG
 
         private void HandleCharacterFocus(string characterId)
         {
-            _inspectedCharacterId = characterId;
+            if (characterId != null && characterId.StartsWith(EnemyIdPrefix, StringComparison.Ordinal) &&
+                int.TryParse(characterId.Substring(EnemyIdPrefix.Length), out int index))
+            {
+                _model.LockEnemy(index);
+            }
+            Refresh();
+        }
+
+        private void HandleSkill(int index)
+        {
+            if (!_paused)
+            {
+                _model.TryUseSkill(index);
+            }
+            Refresh();
+        }
+
+        private void HandleBattleSpeed(float speed)
+        {
+            _model.SetBattleSpeed(speed);
             Refresh();
         }
 
@@ -274,7 +294,6 @@ namespace WebRPG
             }
 
             _mapOpen = !_mapOpen;
-            _inspectedCharacterId = LocalPlayerId;
             Refresh();
         }
 
@@ -299,20 +318,14 @@ namespace WebRPG
                     };
                 }
 
-                AdventureSkillState skill = _model.Skills[index];
-                AdventureGaugeScreenModel gauge = CooldownGauge(skill.Definition.Name + SkillLevelSeparator + skill.Level,
-                    skill.RemainingCooldown, skill.Definition.Cooldown, fighting);
-                gauge.IconId = skill.Definition.Id;
-                gauge.DisplayName = skill.Definition.Name;
-                gauge.Description = SkillCooldownPrefix + skill.Definition.Cooldown.ToString(SecondsFormat) + SecondsSuffix + NewLine +
-                    string.Join(EffectListSeparator, skill.Definition.Effects.Select(effect =>
-                        (effect.Type == AdventureEffectType.Damage ? DamageEffectPrefix : HealingEffectPrefix) +
-                        (effect.Amount + effect.PerLevel * (skill.Level - 1))));
-                return gauge;
+                bool canUse = fighting && !_paused && _model.PlayerAction.SkillIndex < 0 &&
+                    _model.Skills[index].RemainingCooldown <= 0;
+                return AdventureBattleScreenHelper.SkillGauge(_model.Skills[index], fighting,
+                    _model.PlayerAction, index, canUse);
             }).ToArray();
             AdventureGaugeScreenModel localHealth = HealthGauge(_model.Health, _model.MaximumHealth);
-            AdventureGaugeScreenModel localAttack = CooldownGauge(BasicAttackTitlePrefix + _model.BasicAttackDamage,
-                _model.RemainingBasicAttackCooldown, _model.Configuration.BasicAttack.Cooldown, fighting);
+            AdventureGaugeScreenModel localAttack = AdventureBattleScreenHelper.BasicAttackGauge(_model.BasicAttackDamage,
+                _model.Configuration.BasicAttack.CastTime, _model.PlayerAction, fighting);
             AdventureCharacterScreenModel localPlayer = new AdventureCharacterScreenModel
             {
                 Id = LocalPlayerId,
@@ -320,6 +333,7 @@ namespace WebRPG
                 IsLocalPlayer = true,
                 IsDefeated = _model.Health == 0,
                 Health = localHealth,
+                Action = AdventureBattleScreenHelper.CastGauge(_model.PlayerAction, _model.Health == 0),
                 BasicAttack = localAttack,
                 Skills = slots
             };
@@ -330,14 +344,15 @@ namespace WebRPG
                     Name = enemy.Definition.Name,
                     IsDefeated = enemy.Health == 0,
                     Health = HealthGauge(enemy.Health, enemy.Definition.Health),
-                    BasicAttack = CooldownGauge(BasicAttackTitlePrefix + enemy.Definition.Damage,
-                        enemy.RemainingCooldown, enemy.Definition.Cooldown, enemy.Health > 0, enemy.Health == 0),
+                    IsLocked = index == _model.LockedEnemyIndex,
+                    Action = AdventureBattleScreenHelper.CastGauge(enemy.Action, enemy.Health == 0),
+                    ActionDescription = AdventureBattleScreenHelper.EnemyAction(enemy, _model.Projectile, index),
+                    SpecialIntent = AdventureBattleScreenHelper.EnemyIntent(enemy),
+                    BasicAttack = AdventureBattleScreenHelper.BasicAttackGauge(enemy.Definition.Damage,
+                        enemy.Definition.CastTime, enemy.Action, enemy.Health > 0, enemy.Health == 0),
                     Skills = Array.Empty<AdventureGaugeScreenModel>()
                 }).ToArray() : Array.Empty<AdventureCharacterScreenModel>();
             bool showMap = _mapOpen || _model.Phase == AdventurePhase.Map;
-            AdventureCharacterScreenModel inspected = fighting && !showMap
-                ? enemies.FirstOrDefault(enemy => enemy.Id == _inspectedCharacterId) ?? localPlayer : localPlayer;
-            _inspectedCharacterId = inspected.Id;
             _view.Render(new AdventureScreenModel
             {
                 Heading = showMap ? MapHeading : Heading(),
@@ -353,6 +368,16 @@ namespace WebRPG
                 Players = new[] { localPlayer },
                 Enemies = enemies,
                 ShowBattle = fighting,
+                BattleSpeed = _model.BattleSpeed,
+                Projectile = fighting && _model.Projectile != null ? new AdventureProjectileScreenModel
+                {
+                    SourceCharacterId = _model.Projectile.SourceEnemyIndex < 0 ? LocalPlayerId
+                        : EnemyIdPrefix + _model.Projectile.SourceEnemyIndex,
+                    TargetCharacterId = _model.Projectile.TargetEnemyIndex < 0 ? LocalPlayerId
+                        : EnemyIdPrefix + _model.Projectile.TargetEnemyIndex,
+                    Name = _model.Projectile.Name,
+                    Progress = 1 - _model.Projectile.RemainingTime / _model.Projectile.Duration
+                } : null,
                 ShowMap = showMap,
                 CanToggleMap = _model.Phase != AdventurePhase.Ready && _model.Phase != AdventurePhase.Map,
                 MapButtonText = showMap && _model.Phase != AdventurePhase.Map ? ReturnToAdventureText : MapButtonText,
@@ -362,9 +387,9 @@ namespace WebRPG
                 MapNotice = _model.Phase == AdventurePhase.Map ? MapSelectionNotice
                     : fighting ? BattleMapNotice
                     : ResultMapNotice,
-                InspectedCharacterId = inspected.Id,
-                InspectedCharacterName = inspected.Name,
-                InspectedSkills = new[] { inspected.BasicAttack }.Concat(inspected.Skills).ToArray(),
+                InspectedCharacterId = localPlayer.Id,
+                InspectedCharacterName = localPlayer.Name,
+                InspectedSkills = new[] { localPlayer.BasicAttack }.Concat(slots).ToArray(),
                 Relics = _model.Relics.Select(relic => new AdventureIconScreenModel
                 {
                     Id = relic.Id,
@@ -384,25 +409,6 @@ namespace WebRPG
                 Title = HealthTitle,
                 Text = HealthValuePrefix + current + CountSeparator + maximum,
                 FillAmount = maximum > 0 ? Math.Max(0, Math.Min(1, (float)current / maximum)) : 0
-            };
-        }
-
-        private static AdventureGaugeScreenModel CooldownGauge(string title, float remaining,
-            float duration, bool active, bool defeated = false)
-        {
-            float seconds = Math.Max(0, remaining);
-            return new AdventureGaugeScreenModel
-            {
-                Title = title,
-                IconId = AttackIconId,
-                DisplayName = BasicAttackName,
-                Description = title + NewLine + SkillCooldownPrefix + duration.ToString(SecondsFormat) + SecondsSuffix,
-                CompactText = defeated ? CompactDefeatedText : active
-                    ? seconds.ToString(SecondsFormat) + CompactSecondsSuffix : CompactIdleText,
-                Text = defeated ? DefeatedText : active ? CooldownTextPrefix + seconds.ToString(SecondsFormat) + SecondsSuffix
-                    : IdleCooldownTextPrefix + duration.ToString(SecondsFormat) + SecondsSuffix,
-                FillAmount = active && duration > 0
-                    ? Math.Max(0, Math.Min(1, 1 - seconds / duration)) : 0
             };
         }
 

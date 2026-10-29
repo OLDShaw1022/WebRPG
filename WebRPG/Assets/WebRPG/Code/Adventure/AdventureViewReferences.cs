@@ -31,6 +31,8 @@ namespace WebRPG
         public TextMeshProUGUI Badge;
         public TextMeshProUGUI Name;
         public AdventureGaugeViewReferences Health;
+        public AdventureGaugeViewReferences Cast;
+        public AdventureTooltipTargetView Tooltip;
         public UnityEngine.EventSystems.EventTrigger Trigger;
         public bool IsPlayer;
 
@@ -45,6 +47,7 @@ namespace WebRPG
         public RectTransform Rect;
         public TextMeshProUGUI Title;
         public AdventureGaugeViewReferences Gauge;
+        public UnityEngine.UI.Button Button;
         public AdventureIconView Icon;
         public AdventureTooltipTargetView Tooltip;
     }

@@ -10,6 +10,8 @@ namespace WebRPG
         private const string InvalidPlayerOrRewardSettingsMessage = "Invalid player or reward settings.";
         private const string InvalidSkillWeightsMessage = "Invalid skill weights.";
         private const string InvalidBattleTimingMessage = "Invalid battle timing.";
+        private const string InvalidCastTimeMessage = "Invalid action cast time.";
+        private const string InvalidEnemySkillMessage = "Invalid enemy special skill.";
         private const string InvalidBasicAttackMessage = "Invalid basic attack.";
         private const string InvalidMapChoiceLimitMessage = "Invalid map choice limit.";
         private const string MissingSkillsMessage = "Missing skills.";
@@ -41,6 +43,7 @@ namespace WebRPG
         public int NewSkillWeight { get; set; }
         public float SimulationStep { get; set; }
         public float BattleTimeLimit { get; set; }
+        public float ProjectileTravelTime { get; set; } = 0.5f;
         public SkillDefinition[] Skills { get; set; }
         public RelicDefinition[] Relics { get; set; }
         public EnemyDefinition[] Enemies { get; set; }
@@ -55,8 +58,9 @@ namespace WebRPG
                 (long)OwnedSkillWeight + NewSkillWeight <= int.MaxValue, InvalidSkillWeightsMessage);
             Require(IsPositive(SimulationStep) && IsPositive(BattleTimeLimit) &&
                 SimulationStep <= BattleTimeLimit, InvalidBattleTimingMessage);
-            Require(BasicAttack != null && BasicAttack.Damage > 0 && IsPositive(BasicAttack.Cooldown) &&
-                BasicAttack.Cooldown >= SimulationStep, InvalidBasicAttackMessage);
+            Require(BasicAttack != null && BasicAttack.Damage > 0, InvalidBasicAttackMessage);
+            Require(IsPositive(BasicAttack.CastTime) && BasicAttack.CastTime >= SimulationStep &&
+                IsPositive(ProjectileTravelTime) && ProjectileTravelTime >= SimulationStep, InvalidCastTimeMessage);
             Require(MaximumMapChoices >= 1 && MaximumMapChoices <= 3, InvalidMapChoiceLimitMessage);
             Require(Skills != null && Skills.Length > 0 && Skills.All(skill => skill != null), MissingSkillsMessage);
             Require(Relics != null && Relics.Length > 0 && Relics.All(relic => relic != null), MissingRelicsMessage);
@@ -72,6 +76,7 @@ namespace WebRPG
             {
                 Require(!string.IsNullOrWhiteSpace(skill.Name) && IsPositive(skill.Cooldown) && skill.Cooldown >= SimulationStep && skill.MaximumLevel > 0,
                     InvalidSkillMessagePrefix + skill.Id);
+                Require(IsPositive(skill.CastTime) && skill.CastTime >= SimulationStep, InvalidCastTimeMessage);
                 ValidateEffects(skill.Effects, false);
             }
 
@@ -87,7 +92,16 @@ namespace WebRPG
             foreach (EnemyDefinition enemy in Enemies)
             {
                 Require(!string.IsNullOrWhiteSpace(enemy.Name) && enemy.Health > 0 && enemy.Damage > 0 &&
-                    IsPositive(enemy.Cooldown) && enemy.Cooldown >= SimulationStep, InvalidEnemyMessagePrefix + enemy.Id);
+                    IsPositive(enemy.CastTime) && enemy.CastTime >= SimulationStep, InvalidEnemyMessagePrefix + enemy.Id);
+                if (enemy.SpecialSkill != null)
+                {
+                    EnemySkillDefinition special = enemy.SpecialSkill;
+                    Require(!string.IsNullOrWhiteSpace(special.Id) && !string.IsNullOrWhiteSpace(special.Name) &&
+                        IsPositive(special.CastTime) && special.CastTime >= SimulationStep &&
+                        IsPositive(special.Cooldown) && special.Cooldown >= SimulationStep &&
+                        special.BasicAttacksBeforeUse > 0, InvalidEnemySkillMessage);
+                    ValidateEffects(special.Effects, false);
+                }
             }
 
             foreach (EnemyGroupDefinition group in EnemyGroups)
@@ -179,6 +193,7 @@ namespace WebRPG
         public string Id { get; set; }
         public string Name { get; set; }
         public float Cooldown { get; set; }
+        public float CastTime { get; set; } = 3;
         public int MaximumLevel { get; set; }
         public EffectDefinition[] Effects { get; set; }
     }
@@ -191,11 +206,11 @@ namespace WebRPG
         public EffectDefinition[] Effects { get; set; }
     }
 
-    // 定義普通攻擊的傷害與冷卻時間。
+    // 定義普通攻擊的傷害與施放時間。
     public sealed class BasicAttackDefinition
     {
         public int Damage { get; set; }
-        public float Cooldown { get; set; }
+        public float CastTime { get; set; } = 2;
     }
 
     // 定義敵人群組及其成員清單。
@@ -205,14 +220,26 @@ namespace WebRPG
         public string[] EnemyIds { get; set; }
     }
 
-    // 定義敵人的名稱、生命值、傷害與攻擊冷卻。
+    // 定義敵人的基本攻擊與專屬特殊技能。
     public sealed class EnemyDefinition
     {
         public string Id { get; set; }
         public string Name { get; set; }
         public int Health { get; set; }
         public int Damage { get; set; }
+        public float CastTime { get; set; } = 3;
+        public EnemySkillDefinition SpecialSkill { get; set; }
+    }
+
+    // 定義敵人特殊技能的施放、冷卻與普攻循環。
+    public sealed class EnemySkillDefinition
+    {
+        public string Id { get; set; }
+        public string Name { get; set; }
+        public float CastTime { get; set; }
         public float Cooldown { get; set; }
+        public int BasicAttacksBeforeUse { get; set; }
+        public EffectDefinition[] Effects { get; set; }
     }
 
     // 定義樓層名稱與地圖列設定。

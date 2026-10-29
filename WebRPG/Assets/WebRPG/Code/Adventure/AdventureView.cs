@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using TMPro;
 using UnityEngine;
 
@@ -16,6 +17,11 @@ namespace WebRPG
         private const string LocalPlayerBadgeText = "本機";
         private const string TeammateBadgeText = "隊友";
         private const string EnemyBadgeText = "敵方";
+        private const string LockedBadgeText = "鎖定";
+        private const string PauseSpeedText = "暫停";
+        private const string NormalSpeedText = "1×";
+        private const string DoubleSpeedText = "2×";
+        private const string SelectedSpeedFormat = "[{0}]";
         private const string MapNodeNamePrefix = "Node";
         private const string MapNodeIndexSeparator = "_";
         private const string NewLine = "\n";
@@ -110,6 +116,11 @@ namespace WebRPG
         [SerializeField]
         private Color _insetBackground = new Color32(18, 20, 26, 255);
 
+        [SerializeField] private AdventureButtonViewReferences[] _battleSpeedControls;
+        [SerializeField] private RectTransform _projectile;
+        [SerializeField] private TextMeshProUGUI _projectileLabel;
+        [SerializeField] private Color _targetOutlineColor = new Color32(224, 91, 101, 255);
+        private bool _bound;
         private AdventureDynamicLayoutHelper _layout;
 
         private AdventureScreenModel _screen;
@@ -125,16 +136,34 @@ namespace WebRPG
         public event Action<int> ChoiceRequested;
         public event Action<string> CharacterFocusRequested;
         public event Action MapToggleRequested;
+        public event Action<int> SkillRequested;
+        public event Action<float> BattleSpeedRequested;
 
         private void Awake()
         {
+            if (_bound)
+            {
+                return;
+            }
             if (!_root || !_mapNodeTemplate || !_mapConnectionTemplate ||
                 _toolbar.Length != 2 || _players.Length != 4 || _enemies.Length != 4 ||
-                _choices.Length != 3 || _skills.Length != 7)
+                _choices.Length != 3 || _skills.Length != 7 || _battleSpeedControls.Length != 3 ||
+                !_projectile || !_projectileLabel)
             {
                 throw new InvalidOperationException(MissingPrefabReferencesMessage);
             }
 
+            _bound = true;
+            for (int index = 1; index < _skills.Length; index++)
+            {
+                int slot = index - 1;
+                _skills[index].Button.onClick.AddListener(() => SkillRequested?.Invoke(slot));
+            }
+            for (int index = 0; index < _battleSpeedControls.Length; index++)
+            {
+                int speed = index;
+                AdventureUiHelper.BindClick(_battleSpeedControls[index], () => BattleSpeedRequested?.Invoke(speed));
+            }
             AdventureUiHelper.BindClick(_toolbar[0], ToggleMenu);
             AdventureUiHelper.BindClick(_toolbar[1], () => MapToggleRequested?.Invoke());
             for (int index = 0; index < _choices.Length; index++)
@@ -159,6 +188,7 @@ namespace WebRPG
         private void Update()
         {
             UpdateLayout();
+            RenderProjectile();
         }
 
         public void Render(AdventureScreenModel screen)
@@ -203,6 +233,7 @@ namespace WebRPG
                     _skills[index].Gauge.Value.text = skill.CompactText;
                     _skills[index].Icon.SetIcon(skill.IconId);
                     _skills[index].Tooltip.SetContent(skill.Title, skill.Description, skill.Text);
+                    _skills[index].Button.interactable = skill.CanUse;
                 }
             }
 
@@ -228,6 +259,8 @@ namespace WebRPG
                 _lastMapRow = screen.MapCurrentRow;
             }
 
+            RenderTimeControls();
+            RenderProjectile();
             RenderJournal();
         }
 
@@ -242,8 +275,54 @@ namespace WebRPG
             control.Name.text = character.Name;
             control.Badge.text = character.IsDefeated ? (control.IsPlayer ? PlayerDefeatedText : EnemyDefeatedText)
                 : control.IsPlayer ? (character.IsLocalPlayer ? LocalPlayerBadgeText : TeammateBadgeText) : EnemyBadgeText;
-            control.Hit.Outline.effectColor = _screen.InspectedCharacterId == character.Id ? _foreground : _border;
+            if (character.IsLocked)
+            {
+                control.Badge.text = LockedBadgeText;
+            }
+            control.Hit.Outline.effectColor = character.IsLocked ? _targetOutlineColor : _border;
+            control.Hit.Button.interactable = !character.IsDefeated;
+            AdventureUiHelper.SetGauge(control.Cast, character.Action, false);
+            control.Tooltip.SetContent(character.Name, character.ActionDescription, character.SpecialIntent);
             AdventureUiHelper.SetGauge(control.Health, character.Health, false);
+        }
+
+        private void RenderTimeControls()
+        {
+            string[] labels = { PauseSpeedText, NormalSpeedText, DoubleSpeedText };
+            for (int index = 0; index < _battleSpeedControls.Length; index++)
+            {
+                bool selected = _screen.BattleSpeed == index;
+                _battleSpeedControls[index].Label.text = selected
+                    ? string.Format(SelectedSpeedFormat, labels[index]) : labels[index];
+                _battleSpeedControls[index].Outline.effectColor = selected ? _foreground : _border;
+            }
+        }
+
+        private void RenderProjectile()
+        {
+            if (_screen == null)
+            {
+                return;
+            }
+            AdventureProjectileScreenModel projectile = _screen.Projectile;
+            bool visible = _screen.ShowBattle && !_screen.ShowMap && projectile != null;
+            _projectile.gameObject.SetActive(visible);
+            if (!visible)
+            {
+                return;
+            }
+            AdventureActorViewReferences source = _players.Concat(_enemies)
+                .FirstOrDefault(actor => actor.Id == projectile.SourceCharacterId);
+            AdventureActorViewReferences target = _players.Concat(_enemies)
+                .FirstOrDefault(actor => actor.Id == projectile.TargetCharacterId);
+            if (source == null || target == null)
+            {
+                _projectile.gameObject.SetActive(false);
+                return;
+            }
+            _projectile.position = Vector3.Lerp(source.Badge.rectTransform.position, target.Badge.rectTransform.position,
+                Mathf.Clamp01(projectile.Progress));
+            _projectileLabel.text = projectile.Name;
         }
 
         private void RenderMap(AdventureMapRowScreenModel[] rows)

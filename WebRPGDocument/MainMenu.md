@@ -26,7 +26,7 @@
 
 - Prefab 的 Menu 節點包含 Title、SinglePlayer、Multiplayer、Settings、Quit 與 Message；按鈕文字位於各自的 Label 子節點。
 - 固定版面與動態內容的製作要求以 [Unity 規則](UnityRules.md)為準；helper method 的拆分要求見 [Coding 規則](CodingRules.md)。
-- 配色與字體呈現遵守[美術製作規範](ArtProductionRules.md)。
+- 配色與字體呈現遵守[美術製作規範](ArtProductionRules.md)；主選單與挑戰畫面共用[單人可玩原型](AdventurePrototype.md)記錄的三層字級。
 
 ## 驗收情境
 

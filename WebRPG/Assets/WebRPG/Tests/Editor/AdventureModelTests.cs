@@ -1,10 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using Newtonsoft.Json;
 using NUnit.Framework;
-using UnityEngine;
 
 namespace WebRPG.Tests
 {
@@ -12,31 +9,37 @@ namespace WebRPG.Tests
     public sealed class AdventureModelTests
     {
         [Test]
-        public void DamagePersistsAndCooldownRestartsBetweenBattles()
+        public void DamagePersistsAndSkillsAreReadyAtNextBattle()
         {
-            AdventureConfiguration configuration = LoadConfiguration();
+            AdventureConfiguration configuration = AdventureModelScenarioHelper.LoadConfiguration();
             configuration.SimulationStep = 0.125f;
+            configuration.ProjectileTravelTime = 0.125f;
+            configuration.BasicAttack.CastTime = 10;
+            configuration.Skills[0].CastTime = 1;
             configuration.Skills[0].Cooldown = 1;
             configuration.Skills[0].Effects[0].Amount = 1000;
             foreach (EnemyDefinition enemy in configuration.Enemies)
             {
                 enemy.Health = 20;
                 enemy.Damage = 7;
-                enemy.Cooldown = 0.5f;
+                enemy.CastTime = 0.5f;
+                enemy.SpecialSkill = null;
             }
 
-            SetSingleEnemy(configuration);
+            AdventureModelScenarioHelper.SetSingleEnemy(configuration);
             AdventureModel model = new AdventureModel(configuration, 1);
             model.StartRun();
             model.SelectNode(0);
-            model.Tick(1);
+            Assert.That(model.TryUseSkill(0), Is.True);
+            model.Tick(1.25f);
             Assert.That(model.Health, Is.EqualTo(configuration.StartingHealth - 7));
             Assert.That(model.Phase, Is.EqualTo(AdventurePhase.SkillReward));
-            Assert.That(model.Skills[0].RemainingCooldown, Is.EqualTo(1));
+            Assert.That(model.Skills[0].RemainingCooldown, Is.Zero);
             model.SelectReward(0);
             int health = model.Health;
             model.SelectNode(0);
             Assert.That(model.Health, Is.EqualTo(health));
+            Assert.That(model.Skills[0].RemainingCooldown, Is.Zero);
             model.Tick(0.5f);
             Assert.That(model.Enemies[0].Health, Is.EqualTo(20));
         }
@@ -47,9 +50,9 @@ namespace WebRPG.Tests
         [TestCase(8)]
         public void RewardsAreUniqueAndUseOnlyAvailableCandidates(int available)
         {
-            AdventureConfiguration configuration = WinningConfiguration();
+            AdventureConfiguration configuration = AdventureModelScenarioHelper.WinningConfiguration();
             configuration.Skills = configuration.Skills.Take(available).ToArray();
-            AdventureModel model = WinFirstBattle(configuration);
+            AdventureModel model = AdventureModelScenarioHelper.WinFirstBattle(configuration);
             Assert.That(model.Rewards.Count, Is.EqualTo(Math.Min(available, 3)));
             Assert.That(model.Rewards.Select(skill => skill.Id).Distinct().Count(), Is.EqualTo(model.Rewards.Count));
         }
@@ -57,10 +60,10 @@ namespace WebRPG.Tests
         [Test]
         public void OwnedSkillUpgradesWithoutTakingAnotherSlot()
         {
-            AdventureConfiguration configuration = WinningConfiguration();
+            AdventureConfiguration configuration = AdventureModelScenarioHelper.WinningConfiguration();
             configuration.Skills = configuration.Skills.Take(1).ToArray();
             configuration.Skills[0].MaximumLevel = 2;
-            AdventureModel model = WinFirstBattle(configuration);
+            AdventureModel model = AdventureModelScenarioHelper.WinFirstBattle(configuration);
             model.SelectReward(0);
             Assert.That(model.Skills.Count, Is.EqualTo(1));
             Assert.That(model.Skills[0].Level, Is.EqualTo(2));
@@ -73,10 +76,10 @@ namespace WebRPG.Tests
         [Test]
         public void FullSlotsOnlyOfferOwnedSkillsAndExcludeMaximumLevels()
         {
-            AdventureConfiguration configuration = WinningConfiguration();
+            AdventureConfiguration configuration = AdventureModelScenarioHelper.WinningConfiguration();
             configuration.StartingSkills = configuration.Skills.Take(6).Select(skill => skill.Id).ToArray();
             configuration.Skills[0].MaximumLevel = 1;
-            AdventureModel model = WinFirstBattle(configuration);
+            AdventureModel model = AdventureModelScenarioHelper.WinFirstBattle(configuration);
             Assert.That(model.Rewards, Has.Count.EqualTo(3));
             Assert.That(model.Rewards.All(reward => configuration.StartingSkills.Contains(reward.Id)), Is.True);
             Assert.That(model.Rewards.Any(reward => reward.Id == configuration.Skills[0].Id), Is.False);
@@ -85,21 +88,21 @@ namespace WebRPG.Tests
         [Test]
         public void NewSkillOccupiesNextSlotAndMaximumDeckSkipsReward()
         {
-            AdventureConfiguration configuration = WinningConfiguration();
-            AdventureModel model = WinFirstBattle(configuration);
+            AdventureConfiguration configuration = AdventureModelScenarioHelper.WinningConfiguration();
+            AdventureModel model = AdventureModelScenarioHelper.WinFirstBattle(configuration);
             int rewardIndex = model.Rewards.ToList().FindIndex(skill => skill.Id != configuration.StartingSkills[0]);
             Assert.That(rewardIndex, Is.GreaterThanOrEqualTo(0));
             string selected = model.Rewards[rewardIndex].Id;
             model.SelectReward(rewardIndex);
             Assert.That(model.Skills[1].Definition.Id, Is.EqualTo(selected));
-            configuration = WinningConfiguration();
+            configuration = AdventureModelScenarioHelper.WinningConfiguration();
             configuration.StartingSkills = configuration.Skills.Take(6).Select(skill => skill.Id).ToArray();
             foreach (SkillDefinition skill in configuration.Skills)
             {
                 skill.MaximumLevel = 1;
             }
 
-            model = WinFirstBattle(configuration);
+            model = AdventureModelScenarioHelper.WinFirstBattle(configuration);
             Assert.That(model.Phase, Is.EqualTo(AdventurePhase.Map));
             Assert.That(model.Rewards, Is.Empty);
         }
@@ -107,9 +110,9 @@ namespace WebRPG.Tests
         [Test]
         public void ChestAppliesPassiveHealthAndCampNeverExceedsMaximum()
         {
-            AdventureConfiguration configuration = WinningConfiguration();
+            AdventureConfiguration configuration = AdventureModelScenarioHelper.WinningConfiguration();
             configuration.Relics = configuration.Relics.Take(1).ToArray();
-            AdventureModel model = WinFirstBattle(configuration);
+            AdventureModel model = AdventureModelScenarioHelper.WinFirstBattle(configuration);
             model.SelectReward(0);
             model.SelectNode(1);
             model.ResolveNode(0);
@@ -124,9 +127,9 @@ namespace WebRPG.Tests
         [Test]
         public void EventCostCanFailChallengeWithoutGrantingGold()
         {
-            AdventureConfiguration configuration = WinningConfiguration();
+            AdventureConfiguration configuration = AdventureModelScenarioHelper.WinningConfiguration();
             configuration.StartingHealth = 10;
-            AdventureModel model = WinFirstBattle(configuration);
+            AdventureModel model = AdventureModelScenarioHelper.WinFirstBattle(configuration);
             model.SelectReward(0);
             model.SelectNode(0);
             model.Tick(5);
@@ -144,7 +147,7 @@ namespace WebRPG.Tests
         [Test]
         public void ThreeBossesFinishRunAndReplayClearsProgress()
         {
-            AdventureModel model = new AdventureModel(WinningConfiguration(), 3);
+            AdventureModel model = new AdventureModel(AdventureModelScenarioHelper.WinningConfiguration(), 3);
             model.StartRun();
             for (int action = 0; action < 100 && model.Phase != AdventurePhase.Complete; action++)
             {
@@ -175,12 +178,12 @@ namespace WebRPG.Tests
         [Test]
         public void DeathTimeoutAndAbandonAreTerminalUntilRestart()
         {
-            AdventureConfiguration configuration = WinningConfiguration();
+            AdventureConfiguration configuration = AdventureModelScenarioHelper.WinningConfiguration();
             foreach (EnemyDefinition enemy in configuration.Enemies)
             {
                 enemy.Health = 10000;
                 enemy.Damage = 1000;
-                enemy.Cooldown = 0.125f;
+                enemy.CastTime = 0.125f;
             }
 
             AdventureModel model = new AdventureModel(configuration, 4);
@@ -195,9 +198,9 @@ namespace WebRPG.Tests
             model.StartRun();
             model.AbandonRun();
             Assert.That(model.Phase, Is.EqualTo(AdventurePhase.Failed));
-            configuration = WinningConfiguration();
+            configuration = AdventureModelScenarioHelper.WinningConfiguration();
             configuration.StartingSkills = new[] { "mend" };
-            configuration.BasicAttack.Cooldown = 100;
+            configuration.BasicAttack.CastTime = 100;
             configuration.BattleTimeLimit = 2;
             model = new AdventureModel(configuration, 4);
             model.StartRun();
@@ -209,7 +212,7 @@ namespace WebRPG.Tests
         [Test]
         public void FixedStepDoesNotDependOnFramePartitionAndIgnoresInvalidCommands()
         {
-            AdventureConfiguration configuration = WinningConfiguration();
+            AdventureConfiguration configuration = AdventureModelScenarioHelper.WinningConfiguration();
             AdventureModel first = new AdventureModel(configuration, 9);
             AdventureModel second = new AdventureModel(configuration, 9);
             first.StartRun();
@@ -234,66 +237,65 @@ namespace WebRPG.Tests
         [Test]
         public void InvalidConfigurationFailsBeforeStartingRun()
         {
-            AdventureConfiguration configuration = LoadConfiguration();
+            AdventureConfiguration configuration = AdventureModelScenarioHelper.LoadConfiguration();
             configuration.Skills[0].Cooldown = 0;
             Assert.Throws<ArgumentException>(() => new AdventureModel(configuration, 1));
-            configuration = LoadConfiguration();
+            configuration = AdventureModelScenarioHelper.LoadConfiguration();
             configuration.Floors[0].Rows[0].NodePool[0].EnemyGroupPool = new[] { "missing" };
             Assert.Throws<ArgumentException>(() => new AdventureModel(configuration, 1));
-            configuration = LoadConfiguration();
+            configuration = AdventureModelScenarioHelper.LoadConfiguration();
             configuration.Floors[0].Rows.Last().NodePool[0].Type = AdventureNodeType.Camp;
             Assert.Throws<ArgumentException>(() => new AdventureModel(configuration, 1));
         }
 
         [Test]
-        public void BasicAttackUsesOwnCooldownAndDoesNotOccupySkillSlot()
+        public void BasicAttackUsesCastTimeWithoutCooldownAndDoesNotOccupySkillSlot()
         {
-            AdventureConfiguration configuration = WinningConfiguration();
+            AdventureConfiguration configuration = AdventureModelScenarioHelper.WinningConfiguration();
             configuration.SimulationStep = 0.125f;
             configuration.BasicAttack.Damage = 6;
-            configuration.BasicAttack.Cooldown = 0.5f;
+            configuration.BasicAttack.CastTime = 0.5f;
             configuration.Skills[0].Cooldown = 5;
             foreach (EnemyDefinition enemy in configuration.Enemies)
             {
                 enemy.Health = 100;
             }
 
-            SetSingleEnemy(configuration);
+            AdventureModelScenarioHelper.SetSingleEnemy(configuration);
             AdventureModel model = new AdventureModel(configuration, 21);
             model.StartRun();
             model.SelectNode(0);
-            model.Tick(0.375f);
+            model.Tick(0.5f);
             Assert.That(model.Enemies[0].Health, Is.EqualTo(100));
             model.Tick(0.125f);
             Assert.That(model.Enemies[0].Health, Is.EqualTo(94));
-            Assert.That(model.RemainingBasicAttackCooldown, Is.EqualTo(0.5f));
-            Assert.That(model.Skills[0].RemainingCooldown, Is.EqualTo(4.5f));
+            Assert.That(model.PlayerAction.RemainingCastTime, Is.EqualTo(0.5f));
+            Assert.That(model.Skills[0].RemainingCooldown, Is.Zero);
             Assert.That(model.Skills.Count, Is.EqualTo(1));
-            model.Tick(0.5f);
+            model.Tick(0.625f);
             Assert.That(model.Enemies[0].Health, Is.EqualTo(88));
         }
 
         [Test]
         public void BasicAttackWinsBeforeEnemyInSameStepAndResetsForNextBattle()
         {
-            AdventureConfiguration configuration = WinningConfiguration();
+            AdventureConfiguration configuration = AdventureModelScenarioHelper.WinningConfiguration();
             configuration.SimulationStep = 0.125f;
-            configuration.BasicAttack.Cooldown = 0.5f;
-            configuration.Skills[0].Cooldown = 5;
+            configuration.BasicAttack.CastTime = 0.5f;
             foreach (EnemyDefinition enemy in configuration.Enemies)
             {
-                enemy.Cooldown = 0.5f;
+                enemy.CastTime = 0.5f;
                 enemy.Damage = 1000;
             }
 
-            SetSingleEnemy(configuration);
+            AdventureModelScenarioHelper.SetSingleEnemy(configuration);
             AdventureModel model = new AdventureModel(configuration, 22);
             model.StartRun();
             model.SelectNode(0);
-            model.Tick(0.5f);
+            model.Tick(0.625f);
             Assert.That(model.Phase, Is.EqualTo(AdventurePhase.SkillReward));
             Assert.That(model.Health, Is.EqualTo(configuration.StartingHealth));
-            Assert.That(model.RemainingBasicAttackCooldown, Is.EqualTo(0.5f));
+            Assert.That(model.PlayerAction, Is.Null);
             model.SelectReward(0);
             model.SelectNode(0);
             model.Tick(0.375f);
@@ -305,7 +307,7 @@ namespace WebRPG.Tests
         [TestCase(7)]
         public void RowCountAndGeneratedNodeTypesFollowEachFloorConfiguration(int rows)
         {
-            AdventureConfiguration configuration = WinningConfiguration();
+            AdventureConfiguration configuration = AdventureModelScenarioHelper.WinningConfiguration();
             MapRowDefinition boss = configuration.Floors[0].Rows.Last();
             MapRowDefinition branch = new MapRowDefinition
             {
@@ -338,7 +340,7 @@ namespace WebRPG.Tests
         [TestCase(4)]
         public void EncounterUsesEntireConfiguredGroupIncludingOrderAndDuplicates(int count)
         {
-            AdventureConfiguration configuration = WinningConfiguration();
+            AdventureConfiguration configuration = AdventureModelScenarioHelper.WinningConfiguration();
             string[] members = new[] { "guard1", "beast1", "guard1", "beast1" }.Take(count).ToArray();
             configuration.EnemyGroups = configuration.EnemyGroups.Concat(new[]
             {
@@ -356,7 +358,7 @@ namespace WebRPG.Tests
         [Test]
         public void RandomEncounterNeverCombinesMembersFromDifferentGroups()
         {
-            AdventureConfiguration configuration = WinningConfiguration();
+            AdventureConfiguration configuration = AdventureModelScenarioHelper.WinningConfiguration();
             configuration.EnemyGroups = configuration.EnemyGroups.Concat(new[]
             {
                 new EnemyGroupDefinition { Id = "pair", EnemyIds = new[] { "guard1", "guard1" } },
@@ -380,8 +382,8 @@ namespace WebRPG.Tests
         [Test]
         public void DamageRelicAlsoAppliesToBasicAttack()
         {
-            AdventureConfiguration configuration = WinningConfiguration();
-            configuration.BasicAttack.Cooldown = 0.5f;
+            AdventureConfiguration configuration = AdventureModelScenarioHelper.WinningConfiguration();
+            configuration.BasicAttack.CastTime = 0.375f;
             configuration.SimulationStep = 0.125f;
             configuration.Relics = configuration.Relics.Where(relic => relic.Id == "fang").ToArray();
             configuration.Enemies.First(enemy => enemy.Id == "beast1").Health = 100;
@@ -392,7 +394,7 @@ namespace WebRPG.Tests
             }).ToArray();
             configuration.Floors[0].Rows[0].NodePool[0].EnemyGroupPool = new[] { "weak" };
             configuration.Floors[0].Rows[2].NodePool[0].EnemyGroupPool = new[] { "strong" };
-            AdventureModel model = WinFirstBattle(configuration);
+            AdventureModel model = AdventureModelScenarioHelper.WinFirstBattle(configuration);
             model.SelectReward(0);
             model.SelectNode(1);
             model.ResolveNode(0);
@@ -405,25 +407,25 @@ namespace WebRPG.Tests
         [Test]
         public void InvalidRowsGroupsAndBasicAttackAreRejected()
         {
-            AdventureConfiguration configuration = LoadConfiguration();
+            AdventureConfiguration configuration = AdventureModelScenarioHelper.LoadConfiguration();
             configuration.Floors[0].Rows[0].NodeCount = 2;
             Assert.Throws<ArgumentException>(() => new AdventureModel(configuration, 1));
-            configuration = LoadConfiguration();
+            configuration = AdventureModelScenarioHelper.LoadConfiguration();
             configuration.EnemyGroups[0].EnemyIds = Array.Empty<string>();
             Assert.Throws<ArgumentException>(() => new AdventureModel(configuration, 1));
             configuration.EnemyGroups[0].EnemyIds = Enumerable.Repeat("guard1", 5).ToArray();
             Assert.Throws<ArgumentException>(() => new AdventureModel(configuration, 1));
             configuration.EnemyGroups[0].EnemyIds = new[] { "missing" };
             Assert.Throws<ArgumentException>(() => new AdventureModel(configuration, 1));
-            configuration = LoadConfiguration();
-            configuration.BasicAttack.Cooldown = 0;
+            configuration = AdventureModelScenarioHelper.LoadConfiguration();
+            configuration.BasicAttack.CastTime = 0;
             Assert.Throws<ArgumentException>(() => new AdventureModel(configuration, 1));
         }
 
         [Test]
         public void ChosenMapPathRecordsOnlyValidSelectionsAndResetsOnReplay()
         {
-            AdventureModel model = new AdventureModel(WinningConfiguration(), 32);
+            AdventureModel model = new AdventureModel(AdventureModelScenarioHelper.WinningConfiguration(), 32);
             Assert.That(model.GetFloorRows(0), Is.Empty);
             Assert.That(model.GetFloorPath(0), Is.Empty);
             model.StartRun();
@@ -449,40 +451,5 @@ namespace WebRPG.Tests
             Assert.That(model.BasicAttackDamage, Is.EqualTo(model.Configuration.BasicAttack.Damage));
         }
 
-        private static AdventureConfiguration LoadConfiguration()
-        {
-            return JsonConvert.DeserializeObject<AdventureConfiguration>(File.ReadAllText(
-                Path.Combine(Application.dataPath, "WebRPG/Data/AdventurePrototype.json")));
-        }
-
-        private static AdventureConfiguration WinningConfiguration()
-        {
-            AdventureConfiguration configuration = LoadConfiguration();
-            foreach (EnemyDefinition enemy in configuration.Enemies)
-            {
-                enemy.Health = 1;
-                enemy.Damage = 1;
-                enemy.Cooldown = 100;
-            }
-
-            return configuration;
-        }
-
-        private static AdventureModel WinFirstBattle(AdventureConfiguration configuration)
-        {
-            AdventureModel model = new AdventureModel(configuration, 11);
-            model.StartRun();
-            model.SelectNode(0);
-            model.Tick(5);
-            return model;
-        }
-
-        private static void SetSingleEnemy(AdventureConfiguration configuration)
-        {
-            foreach (EnemyGroupDefinition group in configuration.EnemyGroups)
-            {
-                group.EnemyIds = new[] { group.EnemyIds[0] };
-            }
-        }
     }
 }

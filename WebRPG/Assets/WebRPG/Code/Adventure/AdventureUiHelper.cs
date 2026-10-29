@@ -16,23 +16,7 @@ namespace WebRPG
         public static void BindActor(AdventureActorViewReferences actor, Action<string> focus)
         {
             BindClick(actor.Hit, () => focus(actor.Id));
-            AddTrigger(actor.Trigger, UnityEngine.EventSystems.EventTriggerType.PointerEnter, () => focus(actor.Id));
-            AddTrigger(actor.Trigger, UnityEngine.EventSystems.EventTriggerType.PointerExit, () => focus(null));
-            AddTrigger(actor.Trigger, UnityEngine.EventSystems.EventTriggerType.Select, () => focus(actor.Id));
-            AddTrigger(actor.Trigger, UnityEngine.EventSystems.EventTriggerType.Deselect, () => focus(null));
         }
-
-        private static void AddTrigger(UnityEngine.EventSystems.EventTrigger trigger,
-            UnityEngine.EventSystems.EventTriggerType type, Action action)
-        {
-            UnityEngine.EventSystems.EventTrigger.Entry entry = new UnityEngine.EventSystems.EventTrigger.Entry
-            {
-                eventID = type
-            };
-            entry.callback.AddListener(data => action());
-            trigger.triggers.Add(entry);
-        }
-
 
         public static void SetGauge(AdventureGaugeViewReferences control, AdventureGaugeScreenModel model, bool includeTitle)
         {

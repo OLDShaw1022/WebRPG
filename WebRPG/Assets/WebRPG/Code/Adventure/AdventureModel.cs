@@ -32,6 +32,9 @@ namespace WebRPG
         private const string RunCompletedMessagePrefix = "三層 Boss 已全部擊敗，挑戰成功！本輪金幣：";
         private const string FloorEntryMessagePrefix = "進入「";
 
+        private const string BasicAttackName = "普攻";
+        private const string HealingJournalSeparator = " 回復生命 ";
+
         private readonly AdventureConfiguration _configuration;
         private readonly Random _random;
         private readonly List<AdventureSkillState> _skills = new List<AdventureSkillState>();
@@ -45,6 +48,7 @@ namespace WebRPG
         private float _accumulatedTime;
         private float _battleTime;
         private int _damageBonus;
+        private long _projectileSequence;
 
         public AdventureModel(AdventureConfiguration configuration, int seed)
         {
@@ -65,7 +69,10 @@ namespace WebRPG
         public int RowIndex { get; private set; }
         public NodeDefinition CurrentNode { get; private set; }
         public EnemyGroupDefinition CurrentEnemyGroup { get; private set; }
-        public float RemainingBasicAttackCooldown { get; private set; }
+        public AdventureActionState PlayerAction { get; private set; }
+        public AdventureProjectileState Projectile { get; private set; }
+        public int LockedEnemyIndex { get; private set; } = -1;
+        public float BattleSpeed { get; private set; } = 1;
         public IReadOnlyList<IReadOnlyList<NodeDefinition>> CurrentFloorRows => FloorIndex < _map.Count
             ? _map[FloorIndex] : Array.Empty<IReadOnlyList<NodeDefinition>>();
         public IReadOnlyList<AdventureSkillState> Skills => _skills.AsReadOnly();
@@ -108,6 +115,8 @@ namespace WebRPG
             }
 
             _damageBonus = 0;
+            _projectileSequence = 0;
+            BattleSpeed = 1;
             _accumulatedTime = 0;
             _battleTime = 0;
             MaximumHealth = _configuration.StartingHealth;
@@ -155,6 +164,12 @@ namespace WebRPG
             _accumulatedTime = 0;
             _battleTime = 0;
             Phase = AdventurePhase.Battle;
+            SelectLivingTarget();
+            StartPlayerBasicAttack();
+            foreach (AdventureEnemyState enemy in _enemies)
+            {
+                StartEnemyAction(enemy);
+            }
         }
 
         public void Tick(float seconds)
@@ -164,7 +179,7 @@ namespace WebRPG
                 return;
             }
 
-            _accumulatedTime += seconds;
+            _accumulatedTime += seconds * BattleSpeed;
             while (Phase == AdventurePhase.Battle && _accumulatedTime >= _configuration.SimulationStep)
             {
                 _accumulatedTime -= _configuration.SimulationStep;
@@ -277,90 +292,242 @@ namespace WebRPG
             }
         }
 
+        public void LockEnemy(int index)
+        {
+            if (Phase == AdventurePhase.Battle && index >= 0 && index < _enemies.Count &&
+                _enemies[index].Health > 0)
+            {
+                LockedEnemyIndex = index;
+            }
+        }
+
+        public bool TryUseSkill(int index)
+        {
+            if (Phase != AdventurePhase.Battle || index < 0 || index >= _skills.Count ||
+                PlayerAction == null || PlayerAction.SkillIndex >= 0 || _skills[index].RemainingCooldown > 0)
+            {
+                return false;
+            }
+
+            AdventureSkillState skill = _skills[index];
+            PlayerAction = new AdventureActionState(skill.Definition.Name, skill.Definition.CastTime, index);
+            return true;
+        }
+
+        public void SetBattleSpeed(float speed)
+        {
+            if (speed == 0 || speed == 1 || speed == 2)
+            {
+                BattleSpeed = speed;
+            }
+        }
+
         private void SimulateStep(float step)
         {
-            _battleTime += step;
-            RemainingBasicAttackCooldown -= step;
-            if (RemainingBasicAttackCooldown <= 0)
+            if (Projectile != null)
             {
-                RemainingBasicAttackCooldown += _configuration.BasicAttack.Cooldown;
-                AdventureEnemyState target = _enemies.FirstOrDefault(enemy => enemy.Health > 0);
-                if (target != null)
+                Projectile.RemainingTime = Math.Max(0, Projectile.RemainingTime - step);
+                if (Projectile.RemainingTime == 0)
                 {
-                    int damage = BasicAttackDamage;
-                    target.Health = Math.Max(0, target.Health - damage);
-                    Record(BasicAttackJournalPrefix + target.Definition.Name + DamageJournalSeparator + damage + SentenceTerminator);
+                    ResolveProjectile();
+                    if (Phase == AdventurePhase.Battle)
+                    {
+                        LaunchReadyAction();
+                    }
                 }
-
-                if (_enemies.All(enemy => enemy.Health == 0))
-                {
-                    WinBattle();
-                    return;
-                }
+                return;
             }
 
+            _battleTime += step;
             foreach (AdventureSkillState skill in _skills)
             {
-                skill.RemainingCooldown -= step;
-                if (skill.RemainingCooldown > 0)
-                {
-                    continue;
-                }
-
-                skill.RemainingCooldown += skill.Definition.Cooldown;
-                foreach (EffectDefinition effect in skill.Definition.Effects)
-                {
-                    int amount = effect.Amount + effect.PerLevel * (skill.Level - 1);
-                    if (effect.Type == AdventureEffectType.Heal)
-                    {
-                        Heal(amount);
-                    }
-                    else if (effect.Type == AdventureEffectType.Damage)
-                    {
-                        AdventureEnemyState target = _enemies.FirstOrDefault(enemy => enemy.Health > 0);
-                        if (target != null)
-                        {
-                            amount += _damageBonus;
-                            target.Health = Math.Max(0, target.Health - amount);
-                            Record(skill.Definition.Name + SkillAttackJournalSeparator + target.Definition.Name + DamageJournalSeparator + amount + SentenceTerminator);
-                        }
-                    }
-                }
-
-                if (_enemies.All(enemy => enemy.Health == 0))
-                {
-                    WinBattle();
-                    return;
-                }
+                skill.RemainingCooldown = Math.Max(0, skill.RemainingCooldown - step);
             }
-
+            PlayerAction.RemainingCastTime = Math.Max(0, PlayerAction.RemainingCastTime - step);
             foreach (AdventureEnemyState enemy in _enemies)
             {
                 if (enemy.Health == 0)
                 {
                     continue;
                 }
-
-                enemy.RemainingCooldown -= step;
-                if (enemy.RemainingCooldown > 0)
-                {
-                    continue;
-                }
-
-                enemy.RemainingCooldown += enemy.Definition.Cooldown;
-                Health = Math.Max(0, Health - enemy.Definition.Damage);
-                Record(enemy.Definition.Name + EnemyAttackJournalSeparator + enemy.Definition.Damage + EnemyDamageMessageSuffix);
-                if (Health == 0)
-                {
-                    Fail(PlayerDefeatedMessage);
-                    return;
-                }
+                enemy.RemainingSpecialCooldown = Math.Max(0, enemy.RemainingSpecialCooldown - step);
+                enemy.Action.RemainingCastTime = Math.Max(0, enemy.Action.RemainingCastTime - step);
             }
 
             if (_battleTime >= _configuration.BattleTimeLimit)
             {
                 Fail(BattleTimeoutMessage);
+                return;
             }
+            LaunchReadyAction();
+        }
+
+        private void LaunchReadyAction()
+        {
+            if (PlayerAction.RemainingCastTime == 0)
+            {
+                LaunchPlayerAction();
+                return;
+            }
+            for (int index = 0; index < _enemies.Count; index++)
+            {
+                AdventureEnemyState enemy = _enemies[index];
+                if (enemy.Health > 0 && enemy.Action.RemainingCastTime == 0)
+                {
+                    LaunchEnemyAction(index);
+                    return;
+                }
+            }
+        }
+
+        private void LaunchPlayerAction()
+        {
+            SelectLivingTarget();
+            int damage = 0;
+            int healing = 0;
+            string name = PlayerAction.Name;
+            bool basicAttack = PlayerAction.SkillIndex < 0;
+            if (basicAttack)
+            {
+                damage = BasicAttackDamage;
+            }
+            else
+            {
+                AdventureSkillState skill = _skills[PlayerAction.SkillIndex];
+                foreach (EffectDefinition effect in skill.Definition.Effects)
+                {
+                    int amount = effect.Amount + effect.PerLevel * (skill.Level - 1);
+                    if (effect.Type == AdventureEffectType.Damage)
+                    {
+                        damage += amount + _damageBonus;
+                    }
+                    else if (effect.Type == AdventureEffectType.Heal)
+                    {
+                        healing += amount;
+                    }
+                }
+                skill.RemainingCooldown = skill.Definition.Cooldown;
+            }
+            Projectile = new AdventureProjectileState(++_projectileSequence, -1,
+                damage > 0 ? LockedEnemyIndex : -1, name, damage, healing,
+                _configuration.ProjectileTravelTime, basicAttack, false);
+            StartPlayerBasicAttack();
+        }
+
+        private void LaunchEnemyAction(int index)
+        {
+            AdventureEnemyState enemy = _enemies[index];
+            int damage = enemy.Action.IsSpecial ? 0 : enemy.Definition.Damage;
+            int healing = 0;
+            if (enemy.Action.IsSpecial)
+            {
+                EnemySkillDefinition special = enemy.Definition.SpecialSkill;
+                foreach (EffectDefinition effect in special.Effects)
+                {
+                    if (effect.Type == AdventureEffectType.Damage)
+                    {
+                        damage += effect.Amount;
+                    }
+                    else if (effect.Type == AdventureEffectType.Heal)
+                    {
+                        healing += effect.Amount;
+                    }
+                }
+                enemy.RemainingSpecialCooldown = special.Cooldown;
+            }
+            Projectile = new AdventureProjectileState(++_projectileSequence, index,
+                damage > 0 ? -1 : index, enemy.Action.Name, damage, healing,
+                _configuration.ProjectileTravelTime, !enemy.Action.IsSpecial, enemy.Action.IsSpecial);
+        }
+
+        private void ResolveProjectile()
+        {
+            AdventureProjectileState projectile = Projectile;
+            Projectile = null;
+            if (projectile.SourceEnemyIndex < 0)
+            {
+                if (projectile.Damage > 0 && projectile.TargetEnemyIndex >= 0)
+                {
+                    AdventureEnemyState target = _enemies[projectile.TargetEnemyIndex];
+                    target.Health = Math.Max(0, target.Health - projectile.Damage);
+                    if (target.Health == 0)
+                    {
+                        target.Action = null;
+                    }
+                    Record(projectile.Name + SkillAttackJournalSeparator + target.Definition.Name +
+                        DamageJournalSeparator + projectile.Damage + SentenceTerminator);
+                }
+                Heal(projectile.Healing);
+            }
+            else
+            {
+                AdventureEnemyState source = _enemies[projectile.SourceEnemyIndex];
+                Health = Math.Max(0, Health - projectile.Damage);
+                source.Health = Math.Min(source.Definition.Health, source.Health + projectile.Healing);
+                if (projectile.IsSpecial)
+                {
+                    source.BasicAttacksUntilSpecial = source.Definition.SpecialSkill.BasicAttacksBeforeUse;
+                }
+                else if (source.Definition.SpecialSkill != null)
+                {
+                    source.BasicAttacksUntilSpecial = Math.Max(0, source.BasicAttacksUntilSpecial - 1);
+                }
+                if (projectile.Damage > 0)
+                {
+                    Record(source.Definition.Name + EnemyAttackJournalSeparator +
+                        projectile.Damage + EnemyDamageMessageSuffix);
+                }
+                if (projectile.Healing > 0)
+                {
+                    Record(source.Definition.Name + HealingJournalSeparator +
+                        projectile.Healing + SentenceTerminator);
+                }
+                StartEnemyAction(source);
+            }
+            if (Health == 0)
+            {
+                Fail(PlayerDefeatedMessage);
+                return;
+            }
+            if (_enemies.All(enemy => enemy.Health == 0))
+            {
+                WinBattle();
+                return;
+            }
+            SelectLivingTarget();
+        }
+
+        private void SelectLivingTarget()
+        {
+            if (LockedEnemyIndex >= 0 && LockedEnemyIndex < _enemies.Count &&
+                _enemies[LockedEnemyIndex].Health > 0)
+            {
+                return;
+            }
+            LockedEnemyIndex = -1;
+            for (int index = 0; index < _enemies.Count; index++)
+            {
+                if (_enemies[index].Health > 0 && (LockedEnemyIndex < 0 ||
+                    _enemies[index].Health < _enemies[LockedEnemyIndex].Health))
+                {
+                    LockedEnemyIndex = index;
+                }
+            }
+        }
+
+        private void StartPlayerBasicAttack()
+        {
+            PlayerAction = new AdventureActionState(BasicAttackName, _configuration.BasicAttack.CastTime);
+        }
+
+        private void StartEnemyAction(AdventureEnemyState enemy)
+        {
+            EnemySkillDefinition special = enemy.Definition.SpecialSkill;
+            bool useSpecial = special != null && enemy.BasicAttacksUntilSpecial == 0 &&
+                enemy.RemainingSpecialCooldown == 0;
+            enemy.Action = useSpecial
+                ? new AdventureActionState(special.Name, special.CastTime, -1, true)
+                : new AdventureActionState(BasicAttackName, enemy.Definition.CastTime);
         }
 
         private void WinBattle()
@@ -450,10 +617,12 @@ namespace WebRPG
 
         private void ResetCooldowns()
         {
-            RemainingBasicAttackCooldown = _configuration.BasicAttack.Cooldown;
+            PlayerAction = null;
+            Projectile = null;
+            LockedEnemyIndex = -1;
             foreach (AdventureSkillState skill in _skills)
             {
-                skill.RemainingCooldown = skill.Definition.Cooldown;
+                skill.RemainingCooldown = 0;
             }
         }
 
@@ -486,7 +655,7 @@ namespace WebRPG
         public AdventureSkillState(SkillDefinition definition)
         {
             Definition = definition;
-            RemainingCooldown = definition.Cooldown;
+            RemainingCooldown = 0;
         }
 
         public SkillDefinition Definition { get; }
@@ -494,18 +663,20 @@ namespace WebRPG
         public float RemainingCooldown { get; internal set; }
     }
 
-    // 記錄冒險敵人的設定、目前生命值與剩餘冷卻時間。
+    // 記錄敵人的生命、施放動作與特殊技能循環。
     public sealed class AdventureEnemyState
     {
         public AdventureEnemyState(EnemyDefinition definition)
         {
             Definition = definition;
             Health = definition.Health;
-            RemainingCooldown = definition.Cooldown;
+            BasicAttacksUntilSpecial = definition.SpecialSkill?.BasicAttacksBeforeUse ?? 0;
         }
 
         public EnemyDefinition Definition { get; }
         public int Health { get; internal set; }
-        public float RemainingCooldown { get; internal set; }
+        public AdventureActionState Action { get; internal set; }
+        public int BasicAttacksUntilSpecial { get; internal set; }
+        public float RemainingSpecialCooldown { get; internal set; }
     }
 }

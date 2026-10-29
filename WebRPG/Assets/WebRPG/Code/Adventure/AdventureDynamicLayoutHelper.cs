@@ -16,9 +16,9 @@ namespace WebRPG
         public float FactionGap = 64;
         public float SkillWidth = 88;
         public float SkillHeight = 112;
-        public float RelicWidth = 104;
-        public float RelicHeight = 80;
-        public float RelicSpacing = 12;
+        public float RelicWidth = 88;
+        public float RelicHeight = 56;
+        public float RelicSpacing = 8;
         public float SkillSpacing = 12;
         public float SkillPadding = 8;
         public float MapRowHeight = 144;
@@ -151,21 +151,23 @@ namespace WebRPG
         private void LayoutRelics()
         {
             int count = _screen.Relics.Length;
-            if (count == 0)
-            {
-                return;
-            }
-            float available = Mathf.Max(1, _relicArea.Rect.rect.width - 16);
-            int columns = Mathf.Clamp(Mathf.FloorToInt((available + _settings.RelicSpacing) /
-                (_settings.RelicWidth + _settings.RelicSpacing)), 1, count);
+            float viewportWidth = Mathf.Max(1, _relicArea.Rect.rect.width);
+            float contentWidth = Mathf.Max(viewportWidth, 16 + count * _settings.RelicWidth +
+                Mathf.Max(0, count - 1) * _settings.RelicSpacing);
+            RectTransform content = _relicArea.Content;
+            content.anchorMin = content.anchorMax = new Vector2(0, 1);
+            content.pivot = new Vector2(0, 1);
+            content.sizeDelta = new Vector2(contentWidth, _relicArea.Rect.rect.height);
+            content.anchoredPosition = new Vector2(
+                Mathf.Clamp(content.anchoredPosition.x, viewportWidth - contentWidth, 0), 0);
             for (int index = 0; index < count; index++)
             {
                 RectTransform rect = _relicIcons[index].Rect;
                 rect.anchorMin = rect.anchorMax = new Vector2(0, 1);
                 rect.pivot = new Vector2(0, 1);
                 rect.sizeDelta = new Vector2(_settings.RelicWidth, _settings.RelicHeight);
-                rect.anchoredPosition = new Vector2(8 + (index % columns) * (_settings.RelicWidth + _settings.RelicSpacing),
-                    -4 - (index / columns) * (_settings.RelicHeight + 4));
+                rect.anchoredPosition = new Vector2(
+                    8 + index * (_settings.RelicWidth + _settings.RelicSpacing), -4);
             }
         }
 

@@ -174,9 +174,9 @@ namespace WebRPG.Tests
                     instance.MenuRequested += menu.Open;
                     instance.transform.Find("LocalPlayerHud/Menu").GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
                     Assert.That(instance.transform.Find("PauseMenu").gameObject.activeSelf, Is.True);
-                    float cooldown = model.RemainingBasicAttackCooldown;
+                    float cooldown = model.PlayerAction.RemainingCastTime;
                     presenter.Tick(.5f);
-                    Assert.That(model.RemainingBasicAttackCooldown, Is.EqualTo(cooldown));
+                    Assert.That(model.PlayerAction.RemainingCastTime, Is.EqualTo(cooldown));
                     instance.transform.Find("PauseMenu/MenuPanel/Settings").GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
                     Assert.That(instance.transform.Find("PauseMenu/SettingsPanel").gameObject.activeSelf, Is.True);
                     instance.transform.Find("PauseMenu/SettingsPanel/Back").GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
@@ -187,7 +187,7 @@ namespace WebRPG.Tests
                     Assert.That(model.Phase, Is.EqualTo(AdventurePhase.Battle));
                     instance.transform.Find("PauseMenu/MenuPanel/Resume").GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
                     presenter.Tick(.1f);
-                    Assert.That(model.RemainingBasicAttackCooldown, Is.LessThan(cooldown));
+                    Assert.That(model.PlayerAction.RemainingCastTime, Is.LessThan(cooldown));
                     menu.Open();
                     instance.transform.Find("PauseMenu/MenuPanel/ReturnToMainMenu").GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
                     instance.transform.Find("PauseMenu/ConfirmReturn/Confirm").GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
@@ -201,9 +201,11 @@ namespace WebRPG.Tests
             }
         }
 
-        [TestCase(1280, 720)]
-        [TestCase(1920, 1080)]
-        public void AllActorsAndIconsFitWithoutScrollingAndKeepFixedSizes(int width, int height)
+        [TestCase(1280, 720, 3)]
+        [TestCase(1920, 1080, 3)]
+        [TestCase(1280, 720, 12)]
+        [TestCase(1920, 1080, 12)]
+        public void ActorsAndSkillsStayFixedWhileRelicsUseOneScrollableRow(int width, int height, int relicCount)
         {
             AdventureView instance = UnityEngine.Object.Instantiate(AssetDatabase.LoadAssetAtPath<AdventureView>(
                 "Assets/WebRPG/Prefabs/AdventureCanvas.prefab"));
@@ -227,7 +229,7 @@ namespace WebRPG.Tests
                     Choices = Array.Empty<string>(), ShowBattle = true,
                     Players = Enumerable.Repeat(actor, 4).ToArray(), Enemies = Enumerable.Repeat(actor, 4).ToArray(),
                     InspectedSkills = Enumerable.Repeat(gauge, 7).ToArray(), InspectedCharacterName = "本機玩家",
-                    Relics = Enumerable.Range(0, 3).Select(index => new AdventureIconScreenModel
+                    Relics = Enumerable.Range(0, relicCount).Select(index => new AdventureIconScreenModel
                     {
                         Id = "heart", Title = "石心護符", Description = "生命上限+30"
                     }).ToArray()
@@ -238,8 +240,13 @@ namespace WebRPG.Tests
                 Canvas.ForceUpdateCanvases();
                 RectTransform arena = instance.transform.Find("BattleScreen") as RectTransform;
                 RectTransform versus = arena.Find("Versus") as RectTransform;
-                Assert.That(versus.anchoredPosition, Is.EqualTo(Vector2.zero));
+                Assert.That(versus.anchoredPosition, Is.EqualTo(new Vector2(0, -22)));
                 Assert.That(versus.anchorMin, Is.EqualTo(new Vector2(.5f, .5f)));
+                Vector3[] relicPanelCorners = new Vector3[4];
+                Vector3[] timeControlCorners = new Vector3[4];
+                (instance.transform.Find("Relics") as RectTransform).GetWorldCorners(relicPanelCorners);
+                (arena.Find("TimeControls") as RectTransform).GetWorldCorners(timeControlCorners);
+                Assert.That(relicPanelCorners[0].y, Is.GreaterThan(timeControlCorners[1].y));
                 Rect visibleBounds = arena.rect;
                 visibleBounds.min -= Vector2.one * .01f;
                 visibleBounds.max += Vector2.one * .01f;
@@ -254,7 +261,7 @@ namespace WebRPG.Tests
                         Assert.That(visibleBounds.Contains(arena.InverseTransformPoint(corner)), Is.True, card.name);
                     }
                 }
-                foreach (string path in new[] { "BattleScreen", "InspectedSkills", "Relics" })
+                foreach (string path in new[] { "BattleScreen", "InspectedSkills" })
                 {
                     Assert.That(instance.transform.Find(path).GetComponentsInChildren<UnityEngine.UI.ScrollRect>(true)
                         .All(scroll => !scroll.enabled), Is.True, path);
@@ -274,12 +281,14 @@ namespace WebRPG.Tests
                     TMPro.TextMeshProUGUI value = skill.Find("Cooldown/Value").GetComponent<TMPro.TextMeshProUGUI>();
                     Assert.That(value.GetPreferredValues().y, Is.LessThanOrEqualTo(value.rectTransform.rect.height), skill.name);
                 }
-                Transform relics = instance.transform.Find("Relics/Label");
+                Transform relics = instance.transform.Find("Relics/Viewport/Content");
                 AdventureIconItemView[] relicIcons = relics.GetComponentsInChildren<AdventureIconItemView>();
-                Assert.That(relicIcons, Has.Length.EqualTo(3));
+                Assert.That(relicIcons, Has.Length.EqualTo(relicCount));
                 foreach (AdventureIconItemView relic in relicIcons)
                 {
-                    Assert.That(relic.Rect.sizeDelta, Is.EqualTo(new Vector2(104, 80)));
+                    Assert.That(relic.Rect.sizeDelta, Is.EqualTo(new Vector2(88, 56)));
+                    Assert.That(relic.Rect.anchoredPosition.y,
+                        Is.EqualTo(relicIcons[0].Rect.anchoredPosition.y));
                     TMPro.TextMeshProUGUI name = relic.transform.Find("Label").GetComponent<TMPro.TextMeshProUGUI>();
                     Assert.That(name.gameObject.activeInHierarchy, Is.True);
                     Assert.That(name.text, Is.EqualTo("石心護符"));
@@ -287,6 +296,22 @@ namespace WebRPG.Tests
                     Assert.That(name.GetPreferredValues().y, Is.LessThanOrEqualTo(name.rectTransform.rect.height));
                     Assert.That(relic.transform.Find("Icon").GetComponent<UnityEngine.UI.Image>().sprite, Is.Null);
                 }
+                UnityEngine.UI.ScrollRect relicScroll = instance.transform.Find("Relics")
+                    .GetComponent<UnityEngine.UI.ScrollRect>();
+                Assert.That(relicScroll.enabled, Is.True);
+                Assert.That(relicScroll.horizontal, Is.True);
+                Assert.That(relicScroll.vertical, Is.False);
+                Assert.That(relicScroll.viewport.GetComponent<UnityEngine.UI.Mask>().enabled, Is.True);
+                relicScroll.horizontalNormalizedPosition = 1;
+                Canvas.ForceUpdateCanvases();
+                Vector3[] viewportCorners = new Vector3[4];
+                Vector3[] lastRelicCorners = new Vector3[4];
+                relicScroll.viewport.GetWorldCorners(viewportCorners);
+                relicIcons[relicCount - 1].Rect.GetWorldCorners(lastRelicCorners);
+                Assert.That(lastRelicCorners[0].x, Is.GreaterThanOrEqualTo(viewportCorners[0].x - .05f));
+                Assert.That(lastRelicCorners[2].x, Is.LessThanOrEqualTo(viewportCorners[2].x + .05f));
+                relicScroll.horizontalNormalizedPosition = 0;
+                Canvas.ForceUpdateCanvases();
                 AdventureTooltipTargetView target = relicIcons[0].GetComponent<AdventureTooltipTargetView>();
                 target.OnPointerEnter(null);
                 Assert.That(instance.transform.Find("TooltipHost/Tooltip").gameObject.activeSelf, Is.True);
@@ -325,7 +350,7 @@ namespace WebRPG.Tests
                 RectTransform panel = instance.transform.Find("TooltipHost/Tooltip") as RectTransform;
                 target.SetContent("技能", "測試說明", "倒數 1.0 秒");
                 UnityEngine.EventSystems.PointerEventData pointer = new UnityEngine.EventSystems.PointerEventData(null);
-                Vector2 center = root.rect.center;
+                Vector2 center = root.rect.center - new Vector2(0, 80);
                 pointer.position = RectTransformUtility.WorldToScreenPoint(null, root.TransformPoint(center));
                 target.OnPointerEnter(pointer);
                 Vector3 before = root.InverseTransformPoint(panel.position);

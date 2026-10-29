@@ -61,6 +61,18 @@ namespace WebRPG.Tests
                 remove { }
             }
 
+            public event Action<int> SkillRequested
+            {
+                add { }
+                remove { }
+            }
+
+            public event Action<float> BattleSpeedRequested
+            {
+                add { }
+                remove { }
+            }
+
             public AdventureScreenModel Screen { get; private set; }
 
             public void Render(AdventureScreenModel screen)
