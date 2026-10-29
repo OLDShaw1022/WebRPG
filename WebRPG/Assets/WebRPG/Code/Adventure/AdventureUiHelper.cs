@@ -1,9 +1,9 @@
-// 提供冒險介面的事件綁定、數值條更新與按鈕狀態設定。
 using System;
 using UnityEngine;
 
 namespace WebRPG
 {
+    // 提供冒險介面的事件綁定、數值條更新與按鈕狀態設定。
     internal static class AdventureUiHelper
     {
         private const string GaugeTitleSeparator = " · ";

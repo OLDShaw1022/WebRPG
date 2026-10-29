@@ -1,4 +1,3 @@
-// 驗證冒險操作事件、數值條、角色檢視與地圖畫面資料。
 using System;
 using System.IO;
 using System.Linq;
@@ -8,6 +7,7 @@ using UnityEngine;
 
 namespace WebRPG.Tests
 {
+    // 驗證冒險操作事件、數值條、角色檢視與地圖畫面資料。
     public sealed class AdventurePresenterTests
     {
         [Test]
@@ -247,6 +247,7 @@ namespace WebRPG.Tests
                 Path.Combine(Application.dataPath, "WebRPG/Data/AdventurePrototype.json")));
         }
 
+        // 模擬冒險畫面操作並保存呈現資料，供 Presenter 測試使用。
         private sealed class TestAdventureView : IAdventureView
         {
             public event Action StartRequested;

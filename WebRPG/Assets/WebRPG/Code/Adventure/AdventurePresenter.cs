@@ -1,9 +1,9 @@
-// 處理冒險介面操作，並將遊戲狀態轉換為畫面資料。
 using System;
 using System.Linq;
 
 namespace WebRPG
 {
+    // 定義冒險畫面的操作事件與資料呈現介面。
     public interface IAdventureView
     {
         public event Action StartRequested;
@@ -14,6 +14,7 @@ namespace WebRPG
         public void Render(AdventureScreenModel screen);
     }
 
+    // 承載冒險畫面的文字、角色、地圖與操作狀態。
     public sealed class AdventureScreenModel
     {
         public string Heading { get; set; }
@@ -41,6 +42,7 @@ namespace WebRPG
         public bool CanAbandon { get; set; }
     }
 
+    // 承載數值條的標題、顯示文字與填滿比例。
     public sealed class AdventureGaugeScreenModel
     {
         public string Title { get; set; }
@@ -48,6 +50,7 @@ namespace WebRPG
         public float FillAmount { get; set; }
     }
 
+    // 承載角色身分、存活狀態、生命值與技能畫面資料。
     public sealed class AdventureCharacterScreenModel
     {
         public string Id { get; set; }
@@ -59,12 +62,14 @@ namespace WebRPG
         public AdventureGaugeScreenModel[] Skills { get; set; }
     }
 
+    // 承載地圖列的狀態文字與節點畫面資料。
     public sealed class AdventureMapRowScreenModel
     {
         public string Status { get; set; }
         public AdventureMapNodeScreenModel[] Nodes { get; set; }
     }
 
+    // 承載地圖節點的標題、狀態與選取資訊。
     public sealed class AdventureMapNodeScreenModel
     {
         public string Title { get; set; }
@@ -74,6 +79,7 @@ namespace WebRPG
         public int ChoiceIndex { get; set; }
     }
 
+    // 處理冒險介面操作，並將遊戲狀態轉換為畫面資料。
     public sealed class AdventurePresenter : IDisposable
     {
         private const string SkillSlotTitlePrefix = "技能槽 ";

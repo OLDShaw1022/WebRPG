@@ -1,10 +1,10 @@
-// 定義冒險介面各類控制項的元件參照與地圖節點顯示狀態。
 using System;
 using TMPro;
 using UnityEngine;
 
 namespace WebRPG
 {
+    // 保存介面面板的矩形、圖片與外框參照。
     [Serializable]
     public sealed class AdventureSurfaceViewReferences
     {
@@ -13,6 +13,7 @@ namespace WebRPG
         public UnityEngine.UI.Outline Outline;
     }
 
+    // 保存介面按鈕的矩形、文字與外框參照。
     [Serializable]
     public sealed class AdventureButtonViewReferences
     {
@@ -22,6 +23,7 @@ namespace WebRPG
         public UnityEngine.UI.Outline Outline;
     }
 
+    // 保存角色控制項參照及角色身分資訊。
     [Serializable]
     public sealed class AdventureActorViewReferences
     {
@@ -36,6 +38,7 @@ namespace WebRPG
         public string Id;
     }
 
+    // 保存技能卡片的矩形、標題與數值條參照。
     [Serializable]
     public sealed class AdventureSkillViewReferences
     {
@@ -44,6 +47,7 @@ namespace WebRPG
         public AdventureGaugeViewReferences Gauge;
     }
 
+    // 保存數值條的矩形、填色區域與文字參照。
     [Serializable]
     public sealed class AdventureGaugeViewReferences
     {
@@ -52,6 +56,7 @@ namespace WebRPG
         public TextMeshProUGUI Value;
     }
 
+    // 保存捲動區域的矩形、視窗、內容與捲動元件參照。
     [Serializable]
     public sealed class AdventureScrollViewReferences
     {
@@ -61,6 +66,7 @@ namespace WebRPG
         public UnityEngine.UI.ScrollRect Scroll;
     }
 
+    // 保存地圖節點控制項及其選取與顯示狀態。
     internal sealed class AdventureMapNodeViewState
     {
         public AdventureMapNodeViewState(AdventureButtonViewReferences control)

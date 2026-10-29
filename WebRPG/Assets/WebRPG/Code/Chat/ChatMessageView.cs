@@ -1,4 +1,3 @@
-// 顯示單則聊天訊息的作者、內容與本地時間。
 using System;
 using System.Globalization;
 using TMPro;
@@ -6,6 +5,7 @@ using UnityEngine;
 
 namespace WebRPG
 {
+    // 顯示單則聊天訊息的作者、內容與本地時間。
     public sealed class ChatMessageView : MonoBehaviour
     {
         private const string DisplayTimeFormat = "HH:mm";

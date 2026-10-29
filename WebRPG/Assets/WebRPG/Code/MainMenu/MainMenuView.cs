@@ -1,10 +1,10 @@
-// 顯示主選單提示，並轉送單人遊戲與離開按鈕事件。
 using System;
 using TMPro;
 using UnityEngine;
 
 namespace WebRPG
 {
+    // 顯示主選單提示，並轉送單人遊戲與離開按鈕事件。
     [DisallowMultipleComponent]
     public sealed class MainMenuView : MonoBehaviour, IMainMenuView
     {

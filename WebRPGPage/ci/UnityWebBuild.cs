@@ -1,4 +1,3 @@
-// 檢查 Unity 與 WebGL 建置設定，產生供持續整合部署的遊戲檔案。
 using System;
 using System.IO;
 using System.Linq;
@@ -8,6 +7,7 @@ using UnityEngine;
 
 namespace WebRPG.ContinuousIntegration
 {
+    // 檢查 Unity 與 WebGL 建置設定，產生供持續整合部署的遊戲檔案。
     public static class UnityWebBuild
     {
         public static void Build()

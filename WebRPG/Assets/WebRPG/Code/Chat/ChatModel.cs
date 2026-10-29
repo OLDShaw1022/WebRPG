@@ -1,4 +1,3 @@
-// 管理聊天室 WebSocket 連線、訊息收送與斷線重連。
 using System;
 using System.Threading;
 using NativeWebSocket;
@@ -8,6 +7,7 @@ using WebRPGShared;
 
 namespace WebRPG
 {
+    // 管理聊天室 WebSocket 連線、訊息收送與斷線重連。
     public sealed class ChatModel : IChatModel
     {
         private const string ConnectingStatus = "Connecting";

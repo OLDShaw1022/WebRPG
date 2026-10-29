@@ -1,9 +1,9 @@
-// 使用 PostgreSQL 建立聊天資料表、儲存訊息並查詢近期紀錄。
 using Npgsql;
 using WebRPGShared;
 
 namespace WebRPGServer;
 
+// 使用 PostgreSQL 建立聊天資料表、儲存訊息並查詢近期紀錄。
 public sealed class PostgresChatMessageStore : IChatMessageStore
 {
     private readonly NpgsqlDataSource _dataSource;

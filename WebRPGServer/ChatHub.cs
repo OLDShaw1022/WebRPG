@@ -1,4 +1,3 @@
-// 管理聊天室連線、封包驗證、訊息廣播與歷史訊息載入。
 using System.Collections.Concurrent;
 using System.Net.WebSockets;
 using System.Text;
@@ -7,6 +6,7 @@ using WebRPGShared;
 
 namespace WebRPGServer;
 
+// 管理聊天室連線、封包驗證、訊息廣播與歷史訊息載入。
 public sealed class ChatHub
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -259,6 +259,7 @@ public sealed class ChatHub
         return isTextMessage ? Encoding.UTF8.GetString(message.ToArray()) : string.Empty;
     }
 
+    // 保存聊天連線身分、WebSocket 與訊息傳送鎖。
     private sealed class ChatSession
     {
         public ChatSession(string connectionId, string username, WebSocket socket)

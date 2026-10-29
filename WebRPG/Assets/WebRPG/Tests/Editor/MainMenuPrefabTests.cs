@@ -1,10 +1,10 @@
-// 驗證主選單 Prefab 已包含必要控制項與畫面元件參照。
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
 
 namespace WebRPG.Tests
 {
+    // 驗證主選單 Prefab 已包含必要控制項與畫面元件參照。
     public sealed class MainMenuPrefabTests
     {
         [Test]

@@ -1,4 +1,3 @@
-// 將標準輸出與錯誤輸出轉送至 Unity 日誌，並在銷毀時還原。
 using System;
 using System.IO;
 using System.Text;
@@ -6,6 +5,7 @@ using UnityEngine;
 
 namespace WebRPG
 {
+    // 將標準輸出與錯誤輸出轉送至 Unity 日誌，並在銷毀時還原。
     public class UnityConsoleRedirector : MonoBehaviour
     {
         private TextWriter _originalStandardOutput;
@@ -34,6 +34,7 @@ namespace WebRPG
             }
         }
 
+        // 將文字輸出依行緩衝後轉送至對應的 Unity 日誌。
         private class UnityTextWriter : TextWriter
         {
             private readonly LogType _logType;

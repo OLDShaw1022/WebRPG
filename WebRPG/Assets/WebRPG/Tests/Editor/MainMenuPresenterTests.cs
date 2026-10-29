@@ -1,9 +1,9 @@
-// 驗證主選單的冒險啟動、失敗重試、離開與事件解除。
 using System;
 using NUnit.Framework;
 
 namespace WebRPG.Tests
 {
+    // 驗證主選單的冒險啟動、失敗重試、離開與事件解除。
     public sealed class MainMenuPresenterTests
     {
         [Test]
@@ -62,6 +62,7 @@ namespace WebRPG.Tests
             Assert.That(starts, Is.Zero);
         }
 
+        // 模擬主選單操作並記錄隱藏狀態，供 Presenter 測試使用。
         private sealed class TestMainMenuView : IMainMenuView
         {
             public event Action SinglePlayerRequested;

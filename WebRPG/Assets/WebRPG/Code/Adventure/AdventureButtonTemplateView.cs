@@ -1,8 +1,8 @@
-// 提供冒險介面動態按鈕範本的元件參照。
 using UnityEngine;
 
 namespace WebRPG
 {
+    // 提供冒險介面動態按鈕範本的元件參照。
     [DisallowMultipleComponent]
     public sealed class AdventureButtonTemplateView : MonoBehaviour
     {

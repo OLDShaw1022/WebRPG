@@ -1,10 +1,10 @@
-// 管理冒險進度、戰鬥模擬、路線選擇與獎勵結算。
 using System;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace WebRPG
 {
+    // 管理冒險進度、戰鬥模擬、路線選擇與獎勵結算。
     public sealed class AdventureModel
     {
         private const string RunStartedMessage = "挑戰開始。血量跨戰鬥保留，請選擇路線。";
@@ -480,6 +480,7 @@ namespace WebRPG
         }
     }
 
+    // 記錄冒險技能的設定、目前等級與剩餘冷卻時間。
     public sealed class AdventureSkillState
     {
         public AdventureSkillState(SkillDefinition definition)
@@ -493,6 +494,7 @@ namespace WebRPG
         public float RemainingCooldown { get; internal set; }
     }
 
+    // 記錄冒險敵人的設定、目前生命值與剩餘冷卻時間。
     public sealed class AdventureEnemyState
     {
         public AdventureEnemyState(EnemyDefinition definition)

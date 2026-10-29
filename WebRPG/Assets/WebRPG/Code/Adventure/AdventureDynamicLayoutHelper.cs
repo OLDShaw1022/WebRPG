@@ -1,4 +1,3 @@
-// 依畫面尺寸調整角色、技能與地圖節點的動態排列。
 using System;
 using System.Collections.Generic;
 using TMPro;
@@ -6,6 +5,7 @@ using UnityEngine;
 
 namespace WebRPG
 {
+    // 定義角色、技能與地圖動態排列使用的尺寸和間距。
     [Serializable]
     public sealed class AdventureDynamicLayoutSettings
     {
@@ -29,6 +29,7 @@ namespace WebRPG
         public float ConnectionThickness = 2;
     }
 
+    // 依畫面尺寸調整角色、技能與地圖節點的動態排列。
     internal sealed class AdventureDynamicLayoutHelper
     {
         private const string ConnectionNamePrefix = "Connection";

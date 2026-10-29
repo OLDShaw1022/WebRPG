@@ -1,8 +1,8 @@
-// 定義客戶端與伺服器共用的聊天封包、訊息類型與長度限制。
 using System;
 
 namespace WebRPGShared
 {
+    // 定義客戶端與伺服器交換的聊天訊息資料。
     [Serializable]
     public sealed class ChatPacket
     {
@@ -13,6 +13,7 @@ namespace WebRPGShared
         public DateTimeOffset TimestampUtc { get; set; }
     }
 
+    // 定義聊天協定使用的訊息類型常數。
     public static class ChatPacketType
     {
         public const string Join = "Join";
@@ -21,6 +22,7 @@ namespace WebRPGShared
         public const string Error = "Error";
     }
 
+    // 定義聊天使用者名稱與訊息的長度上限。
     public static class ChatPacketLimits
     {
         public const int UsernameLength = 24;

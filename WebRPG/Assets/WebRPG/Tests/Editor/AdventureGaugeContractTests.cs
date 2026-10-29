@@ -1,4 +1,3 @@
-// 驗證冒險畫面資料提供初始滿血的結構化生命值條。
 using System;
 using System.IO;
 using Newtonsoft.Json;
@@ -7,6 +6,7 @@ using UnityEngine;
 
 namespace WebRPG.Tests
 {
+    // 驗證冒險畫面資料提供初始滿血的結構化生命值條。
     public sealed class AdventureGaugeContractTests
     {
         [Test]
@@ -28,6 +28,7 @@ namespace WebRPG.Tests
             }
         }
 
+        // 擷取冒險畫面資料，供數值條契約測試驗證。
         private sealed class GaugeCaptureView : IAdventureView
         {
             public event Action StartRequested

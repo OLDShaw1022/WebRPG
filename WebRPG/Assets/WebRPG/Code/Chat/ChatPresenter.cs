@@ -1,10 +1,10 @@
-// 協調聊天室登入、訊息傳送與連線狀態的畫面更新。
 using System;
 using UnityEngine;
 using WebRPGShared;
 
 namespace WebRPG
 {
+    // 協調聊天室登入、訊息傳送與連線狀態的畫面更新。
     public sealed class ChatPresenter : IDisposable
     {
         private const string UsernameLengthHintFormat = "請輸入 1 到 {0} 個字元的使用者名稱。";

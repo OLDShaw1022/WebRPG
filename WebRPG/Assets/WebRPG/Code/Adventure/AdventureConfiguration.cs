@@ -1,10 +1,10 @@
-// 定義並驗證冒險的玩家、技能、敵人、獎勵與地圖設定。
 using System;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace WebRPG
 {
+    // 定義並驗證冒險的玩家、技能、敵人、獎勵與地圖設定。
     public sealed class AdventureConfiguration
     {
         private const string InvalidPlayerOrRewardSettingsMessage = "Invalid player or reward settings.";
@@ -165,6 +165,7 @@ namespace WebRPG
     public enum AdventureEffectType { Damage, Heal, MaximumHealth, DamageBonus }
     public enum AdventurePhase { Ready, Map, Battle, SkillReward, NodeChoice, Complete, Failed }
 
+    // 定義效果種類、基礎數值與每級成長量。
     public sealed class EffectDefinition
     {
         public AdventureEffectType Type { get; set; }
@@ -172,6 +173,7 @@ namespace WebRPG
         public int PerLevel { get; set; }
     }
 
+    // 定義技能識別、名稱、冷卻、等級上限與效果。
     public sealed class SkillDefinition
     {
         public string Id { get; set; }
@@ -181,6 +183,7 @@ namespace WebRPG
         public EffectDefinition[] Effects { get; set; }
     }
 
+    // 定義遺物識別、名稱與被動效果。
     public sealed class RelicDefinition
     {
         public string Id { get; set; }
@@ -188,18 +191,21 @@ namespace WebRPG
         public EffectDefinition[] Effects { get; set; }
     }
 
+    // 定義普通攻擊的傷害與冷卻時間。
     public sealed class BasicAttackDefinition
     {
         public int Damage { get; set; }
         public float Cooldown { get; set; }
     }
 
+    // 定義敵人群組及其成員清單。
     public sealed class EnemyGroupDefinition
     {
         public string Id { get; set; }
         public string[] EnemyIds { get; set; }
     }
 
+    // 定義敵人的名稱、生命值、傷害與攻擊冷卻。
     public sealed class EnemyDefinition
     {
         public string Id { get; set; }
@@ -209,18 +215,21 @@ namespace WebRPG
         public float Cooldown { get; set; }
     }
 
+    // 定義樓層名稱與地圖列設定。
     public sealed class FloorDefinition
     {
         public string Name { get; set; }
         public MapRowDefinition[] Rows { get; set; }
     }
 
+    // 定義地圖列的節點數量與候選節點。
     public sealed class MapRowDefinition
     {
         public int NodeCount { get; set; }
         public NodeDefinition[] NodePool { get; set; }
     }
 
+    // 定義地圖節點的類型、遭遇與獎勵或代價。
     public sealed class NodeDefinition
     {
         public string Name { get; set; }

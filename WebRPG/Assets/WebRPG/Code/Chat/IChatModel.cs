@@ -1,10 +1,10 @@
-// 定義聊天室資料層的連線、傳送與狀態通知介面。
 using System;
 using UnityEngine;
 using WebRPGShared;
 
 namespace WebRPG
 {
+    // 定義聊天室資料層的連線、傳送與狀態通知介面。
     public interface IChatModel
     {
         public event Action<ChatPacket> PacketReceived;

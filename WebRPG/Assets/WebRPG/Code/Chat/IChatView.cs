@@ -1,9 +1,9 @@
-// 定義聊天室畫面的輸入、操作事件與顯示更新介面。
 using System;
 using WebRPGShared;
 
 namespace WebRPG
 {
+    // 定義聊天室畫面的輸入、操作事件與顯示更新介面。
     public interface IChatView
     {
         public event Action ConnectRequested;

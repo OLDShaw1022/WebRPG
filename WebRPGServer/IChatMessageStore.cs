@@ -1,8 +1,8 @@
-// 定義聊天訊息儲存區的初始化、寫入與歷史查詢介面。
 using WebRPGShared;
 
 namespace WebRPGServer;
 
+// 定義聊天訊息儲存區的初始化、寫入與歷史查詢介面。
 public interface IChatMessageStore
 {
     public Task InitializeAsync(CancellationToken cancellationToken);

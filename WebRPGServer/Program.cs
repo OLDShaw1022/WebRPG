@@ -1,9 +1,9 @@
-// 啟動聊天伺服器，設定資料庫服務與 /ws WebSocket 端點。
 using System.Net.WebSockets;
 using Npgsql;
 
 namespace WebRPGServer;
 
+// 啟動聊天伺服器，設定資料庫服務與 /ws WebSocket 端點。
 public static class Program
 {
     public static async Task Main(string[] arguments)
