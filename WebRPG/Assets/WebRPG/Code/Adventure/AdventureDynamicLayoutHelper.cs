@@ -9,16 +9,16 @@ namespace WebRPG
     [Serializable]
     public sealed class AdventureDynamicLayoutSettings
     {
-        public float NarrowWidth = 1100;
         public float CharacterWidth = 176;
-        public float NarrowCharacterWidth = 144;
-        public float CharacterHeight = 214;
+        public float CharacterHeight = 170;
         public float CharacterSpacing = 16;
         public float CharacterPadding = 16;
-        public float FactionGap = 40;
-        public float SkillWidth = 160;
-        public float NarrowSkillWidth = 144;
-        public float SkillHeight = 80;
+        public float FactionGap = 64;
+        public float SkillWidth = 88;
+        public float SkillHeight = 112;
+        public float RelicWidth = 104;
+        public float RelicHeight = 80;
+        public float RelicSpacing = 12;
         public float SkillSpacing = 12;
         public float SkillPadding = 8;
         public float MapRowHeight = 144;
@@ -35,11 +35,13 @@ namespace WebRPG
         private const string ConnectionNamePrefix = "Connection";
 
         private readonly RectTransform _root;
-        private readonly AdventureScrollViewReferences _actorScroll;
+        private readonly AdventureContentViewReferences _actorArea;
         private readonly AdventureActorViewReferences[] _players;
         private readonly AdventureActorViewReferences[] _enemies;
         private readonly TextMeshProUGUI _versus;
-        private readonly AdventureScrollViewReferences _skillScroll;
+        private readonly AdventureContentViewReferences _skillArea;
+        private readonly AdventureContentViewReferences _relicArea;
+        private readonly List<AdventureIconItemView> _relicIcons;
         private readonly AdventureSkillViewReferences[] _skills;
         private readonly AdventureScrollViewReferences _mapScroll;
         private readonly RectTransform _mapLines;
@@ -51,20 +53,23 @@ namespace WebRPG
         private readonly Color _controlHighlight;
         private AdventureScreenModel _screen;
 
-        public AdventureDynamicLayoutHelper(RectTransform root, AdventureScrollViewReferences actorScroll,
+        public AdventureDynamicLayoutHelper(RectTransform root, AdventureContentViewReferences actorArea,
             AdventureActorViewReferences[] players, AdventureActorViewReferences[] enemies, TextMeshProUGUI versus,
-            AdventureScrollViewReferences skillScroll, AdventureSkillViewReferences[] skills,
+            AdventureContentViewReferences skillArea, AdventureSkillViewReferences[] skills,
+            AdventureContentViewReferences relicArea, List<AdventureIconItemView> relicIcons,
             AdventureScrollViewReferences mapScroll, RectTransform mapLines,
             List<List<AdventureMapNodeViewState>> mapRows, List<AdventureSurfaceViewReferences> connections,
             AdventureSurfaceTemplateView mapConnectionTemplate, AdventureDynamicLayoutSettings settings,
             Color foreground, Color controlHighlight)
         {
             _root = root;
-            _actorScroll = actorScroll;
+            _actorArea = actorArea;
             _players = players;
             _enemies = enemies;
             _versus = versus;
-            _skillScroll = skillScroll;
+            _skillArea = skillArea;
+            _relicArea = relicArea;
+            _relicIcons = relicIcons;
             _skills = skills;
             _mapScroll = mapScroll;
             _mapLines = mapLines;
@@ -79,9 +84,9 @@ namespace WebRPG
         public void Update(AdventureScreenModel screen)
         {
             _screen = screen;
-            bool narrow = _root.rect.width < _settings.NarrowWidth;
-            LayoutCharacters(narrow ? _settings.NarrowCharacterWidth : _settings.CharacterWidth);
-            LayoutSkills(narrow ? _settings.NarrowSkillWidth : _settings.SkillWidth);
+            LayoutCharacters();
+            LayoutSkills();
+            LayoutRelics();
             LayoutMap();
         }
 
@@ -91,42 +96,76 @@ namespace WebRPG
             LayoutMap();
         }
 
-        private void LayoutCharacters(float width)
+        private void LayoutCharacters()
         {
-            int playerCount = _screen.Players.Length;
-            int enemyCount = _screen.Enemies.Length;
-            int count = playerCount + enemyCount;
-            float extra = playerCount > 0 && enemyCount > 0 ? _settings.FactionGap : 0;
-            float group = count * width + Math.Max(0, count - 1) * _settings.CharacterSpacing + extra;
-            float contentWidth = Mathf.Max(_actorScroll.Viewport.rect.width, group + 2 * _settings.CharacterPadding);
-            SetHorizontalContent(_actorScroll.Content, contentWidth);
-            float start = (contentWidth - group) / 2;
-            for (int index = 0; index < playerCount; index++)
-            {
-                PlaceCard(_players[index].Hit.Rect, start + width / 2 + index * (width + _settings.CharacterSpacing), width, _settings.CharacterHeight);
-            }
-
-            for (int index = 0; index < enemyCount; index++)
-            {
-                float x = start + (playerCount + index) * (width + _settings.CharacterSpacing) + extra + width / 2;
-                PlaceCard(_enemies[index].Hit.Rect, x, width, _settings.CharacterHeight);
-            }
-
-            _versus.gameObject.SetActive(extra > 0);
-            float separator = start + playerCount * width + Math.Max(0, playerCount - 1) * _settings.CharacterSpacing + _settings.CharacterSpacing + extra / 2 - 8;
-            PlaceCard(_versus.rectTransform, separator, 44, 36);
+            float available = Mathf.Max(1, _actorArea.Rect.rect.width - 2 * _settings.CharacterPadding);
+            float half = Mathf.Max(1, (available - _settings.FactionGap) / 2);
+            LayoutFaction(_players, _screen.Players.Length, half, -available / 2);
+            LayoutFaction(_enemies, _screen.Enemies.Length, half, _settings.FactionGap / 2);
+            _versus.gameObject.SetActive(_screen.Players.Length > 0 && _screen.Enemies.Length > 0);
         }
 
-        private void LayoutSkills(float width)
+        private void LayoutFaction(AdventureActorViewReferences[] actors, int count, float available, float left)
         {
-            int count = _screen.InspectedSkills.Length;
-            float group = count * width + Math.Max(0, count - 1) * _settings.SkillSpacing;
-            float contentWidth = Mathf.Max(_skillScroll.Viewport.rect.width, group + 2 * _settings.SkillPadding);
-            SetHorizontalContent(_skillScroll.Content, contentWidth);
-            float start = (contentWidth - group) / 2;
+            if (count == 0)
+            {
+                return;
+            }
+            int columns = Math.Min(2, count);
+            int rows = Mathf.CeilToInt((float)count / columns);
+            float width = _settings.CharacterWidth;
+            float height = _settings.CharacterHeight;
             for (int index = 0; index < count; index++)
             {
-                PlaceCard(_skills[index].Rect, start + width / 2 + index * (width + _settings.SkillSpacing), width, _settings.SkillHeight);
+                int row = index / columns;
+                int rowCount = Mathf.Min(columns, count - row * columns);
+                float groupWidth = rowCount * width + (rowCount - 1) * _settings.CharacterSpacing;
+                float x = left + (available - groupWidth) / 2 + width / 2 + (index % columns) * (width + _settings.CharacterSpacing);
+                float y = ((rows - 1) / 2f - row) * (height + _settings.CharacterSpacing);
+                RectTransform rect = actors[index].Hit.Rect;
+                rect.anchorMin = rect.anchorMax = new Vector2(.5f, .5f);
+                rect.pivot = new Vector2(.5f, .5f);
+                rect.anchoredPosition = new Vector2(x, y);
+                rect.sizeDelta = new Vector2(Mathf.Max(1, width), Mathf.Max(1, height));
+            }
+        }
+
+        private void LayoutSkills()
+        {
+            int count = _screen.InspectedSkills.Length;
+            if (count == 0)
+            {
+                return;
+            }
+            float width = _settings.SkillWidth;
+            float spacing = _settings.SkillSpacing;
+            float group = count * width + (count - 1) * spacing;
+            float start = (_skillArea.Rect.rect.width - group) / 2;
+            for (int index = 0; index < count; index++)
+            {
+                PlaceCard(_skills[index].Rect, start + width / 2 + index * (width + spacing), width,
+                    _settings.SkillHeight);
+            }
+        }
+
+        private void LayoutRelics()
+        {
+            int count = _screen.Relics.Length;
+            if (count == 0)
+            {
+                return;
+            }
+            float available = Mathf.Max(1, _relicArea.Rect.rect.width - 16);
+            int columns = Mathf.Clamp(Mathf.FloorToInt((available + _settings.RelicSpacing) /
+                (_settings.RelicWidth + _settings.RelicSpacing)), 1, count);
+            for (int index = 0; index < count; index++)
+            {
+                RectTransform rect = _relicIcons[index].Rect;
+                rect.anchorMin = rect.anchorMax = new Vector2(0, 1);
+                rect.pivot = new Vector2(0, 1);
+                rect.sizeDelta = new Vector2(_settings.RelicWidth, _settings.RelicHeight);
+                rect.anchoredPosition = new Vector2(8 + (index % columns) * (_settings.RelicWidth + _settings.RelicSpacing),
+                    -4 - (index / columns) * (_settings.RelicHeight + 4));
             }
         }
 
@@ -191,14 +230,6 @@ namespace WebRPG
             {
                 _connections[index].Rect.gameObject.SetActive(false);
             }
-        }
-
-        private static void SetHorizontalContent(RectTransform content, float width)
-        {
-            content.anchorMin = new Vector2(0, 0);
-            content.anchorMax = new Vector2(0, 1);
-            content.pivot = new Vector2(0, 0.5f);
-            content.sizeDelta = new Vector2(width, 0);
         }
 
         private static void PlaceCard(RectTransform rect, float x, float width, float height)

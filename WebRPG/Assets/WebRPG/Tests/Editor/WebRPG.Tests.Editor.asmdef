@@ -2,7 +2,8 @@
     "name": "WebRPG.Tests.Editor",
     "rootNamespace": "WebRPG.Tests",
     "references": [
-        "WebRPG"
+        "WebRPG",
+        "Unity.TextMeshPro"
     ],
     "includePlatforms": [
         "Editor"

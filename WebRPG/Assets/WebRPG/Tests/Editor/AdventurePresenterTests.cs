@@ -36,6 +36,21 @@ namespace WebRPG.Tests
         }
 
         [Test]
+        public void SummaryOrdersPlayerHealthGoldAndFloorWithoutCombatCounts()
+        {
+            AdventureConfiguration configuration = LoadConfiguration();
+            TestAdventureView view = new TestAdventureView();
+            using (AdventurePresenter presenter = new AdventurePresenter(new AdventureModel(configuration, 1), view))
+            {
+                string expected = string.Format("本機玩家 · 生命 {0} / {0} · 金幣 0 · 第 1 / {1} 層",
+                    configuration.StartingHealth, configuration.Floors.Length);
+                Assert.That(view.Screen.Summary, Is.EqualTo(expected));
+                view.Start();
+                Assert.That(view.Screen.Summary, Is.EqualTo(expected));
+            }
+        }
+
+        [Test]
         public void InitialScreenHasFullHealthAndIdleGaugesForAllSixSlots()
         {
             AdventureConfiguration configuration = LoadConfiguration();
@@ -46,6 +61,9 @@ namespace WebRPG.Tests
                 Assert.That(view.Screen.PlayerHealth.FillAmount, Is.EqualTo(1));
                 Assert.That(view.Screen.PlayerHealth.Text, Does.Contain(configuration.StartingHealth.ToString()));
                 Assert.That(view.Screen.BasicAttack.FillAmount, Is.Zero);
+                Assert.That(view.Screen.BasicAttack.DisplayName, Is.EqualTo("普攻"));
+                Assert.That(view.Screen.Skills[0].DisplayName, Is.EqualTo("空槽"));
+                Assert.That(view.Screen.Skills.Skip(1).All(skill => skill.DisplayName == "空槽"), Is.True);
                 Assert.That(view.Screen.BasicAttack.Text, Does.Contain("待戰"));
                 Assert.That(view.Screen.ShowBattle, Is.False);
                 Assert.That(view.Screen.Enemies, Is.Empty);
@@ -54,6 +72,7 @@ namespace WebRPG.Tests
                 view.Start();
                 Assert.That(view.Screen.ShowMap, Is.True);
                 Assert.That(view.Screen.Skills[0].Title, Does.Contain(configuration.Skills[0].Name));
+                Assert.That(view.Screen.Skills[0].DisplayName, Is.EqualTo(configuration.Skills[0].Name));
                 Assert.That(view.Screen.Skills.Skip(1).All(skill => skill.Text == "尚未裝備"), Is.True);
             }
         }

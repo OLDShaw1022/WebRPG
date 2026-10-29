@@ -45,6 +45,8 @@ namespace WebRPG
         public RectTransform Rect;
         public TextMeshProUGUI Title;
         public AdventureGaugeViewReferences Gauge;
+        public AdventureIconView Icon;
+        public AdventureTooltipTargetView Tooltip;
     }
 
     // 保存數值條的矩形、填色區域與文字參照。
@@ -54,6 +56,14 @@ namespace WebRPG
         public RectTransform Rect;
         public RectTransform Fill;
         public TextMeshProUGUI Value;
+    }
+
+    // 保存不捲動區域的可見矩形與動態內容參照。
+    [Serializable]
+    public sealed class AdventureContentViewReferences
+    {
+        public RectTransform Rect;
+        public RectTransform Content;
     }
 
     // 保存捲動區域的矩形、視窗、內容與捲動元件參照。

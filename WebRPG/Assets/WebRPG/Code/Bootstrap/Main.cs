@@ -24,6 +24,7 @@ namespace WebRPG
 
         private AdventureView _adventureView;
         private AdventurePresenter _adventurePresenter;
+        private AdventureMenuPresenter _adventureMenuPresenter;
 
         private MainMenuView _mainMenuView;
         private MainMenuPresenter _mainMenuPresenter;
@@ -92,6 +93,10 @@ namespace WebRPG
                 model.StartRun();
                 _adventureView = Instantiate(_adventureViewPrefab);
                 _adventurePresenter = new AdventurePresenter(model, _adventureView);
+                _adventureMenuPresenter = new AdventureMenuPresenter(new AdventureMenuModel(true),
+                    _adventureView.Menu, _adventurePresenter.SetPaused, _adventureView.RequestAbandon,
+                    _adventureView.RequestStart, ReturnToMainMenu);
+                _adventureView.MenuRequested += _adventureMenuPresenter.Open;
                 return true;
             }
             catch (Exception exception)
@@ -110,8 +115,28 @@ namespace WebRPG
 
         private void DisposeAdventure()
         {
+            if (_adventureView && _adventureMenuPresenter != null)
+            {
+                _adventureView.MenuRequested -= _adventureMenuPresenter.Open;
+            }
+            _adventureMenuPresenter?.Dispose();
+            _adventureMenuPresenter = null;
             _adventurePresenter?.Dispose();
             _adventurePresenter = null;
+        }
+
+        private void ReturnToMainMenu()
+        {
+            DisposeAdventure();
+            if (_adventureView)
+            {
+                Destroy(_adventureView.gameObject);
+                _adventureView = null;
+            }
+            _mainMenuPresenter?.Dispose();
+            _mainMenuPresenter = new MainMenuPresenter(new MainMenuModel(), _mainMenuView, StartAdventure, QuitGame);
+            _mainMenuView.ShowMessage(string.Empty);
+            _mainMenuView.gameObject.SetActive(true);
         }
 
         private void QuitGame()

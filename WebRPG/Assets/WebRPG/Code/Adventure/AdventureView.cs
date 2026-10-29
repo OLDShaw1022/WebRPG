@@ -20,7 +20,7 @@ namespace WebRPG
         private const string MapNodeIndexSeparator = "_";
         private const string NewLine = "\n";
         private const string JournalHeading = "戰鬥紀錄";
-        private const string RelicsHeading = "本機玩家 · 遺物";
+        private const string RelicNamePrefix = "Relic";
 
         [SerializeField]
         private RectTransform _root;
@@ -29,19 +29,23 @@ namespace WebRPG
         [SerializeField]
         private AdventureSurfaceViewReferences _header;
         [SerializeField]
-        private TextMeshProUGUI _heading;
+        private TextMeshProUGUI _noRelics;
+        [SerializeField]
+        private AdventureContentViewReferences _relicArea;
+        [SerializeField]
+        private AdventureIconItemView _relicTemplate;
+        [SerializeField]
+        private AdventureTooltipView _tooltip;
+        [SerializeField]
+        private AdventureMenuView _menu;
         [SerializeField]
         private TextMeshProUGUI _summary;
-        [SerializeField]
-        private AdventureGaugeViewReferences _localHealth;
-        [SerializeField]
-        private AdventureGaugeViewReferences _localAttack;
         [SerializeField]
         private AdventureButtonViewReferences[] _toolbar;
         [SerializeField]
         private RectTransform _arena;
         [SerializeField]
-        private AdventureScrollViewReferences _actorScroll;
+        private AdventureContentViewReferences _actorArea;
         [SerializeField]
         private TextMeshProUGUI _versus;
         [SerializeField]
@@ -59,7 +63,7 @@ namespace WebRPG
         [SerializeField]
         private TextMeshProUGUI _skillHeading;
         [SerializeField]
-        private AdventureScrollViewReferences _skillScroll;
+        private AdventureContentViewReferences _skillArea;
         [SerializeField]
         private AdventureSkillViewReferences[] _skills;
         [SerializeField]
@@ -82,8 +86,6 @@ namespace WebRPG
         private TextMeshProUGUI _detailsText;
         [SerializeField]
         private AdventureScrollViewReferences _detailsScroll;
-        [SerializeField]
-        private AdventureButtonViewReferences _closeDetails;
         [SerializeField]
         private AdventureButtonTemplateView _mapNodeTemplate;
 
@@ -112,10 +114,12 @@ namespace WebRPG
 
         private AdventureScreenModel _screen;
         private Vector2 _lastSize = new Vector2(-1, -1);
-        private int _detailsKind;
+        private readonly List<AdventureIconItemView> _relicIcons = new List<AdventureIconItemView>();
         private int _lastMapRow = -1;
         private bool _layoutDirty = true;
 
+        public AdventureMenuView Menu => _menu;
+        public event Action MenuRequested;
         public event Action StartRequested;
         public event Action AbandonRequested;
         public event Action<int> ChoiceRequested;
@@ -125,18 +129,14 @@ namespace WebRPG
         private void Awake()
         {
             if (!_root || !_mapNodeTemplate || !_mapConnectionTemplate ||
-                _toolbar.Length != 5 || _players.Length != 4 || _enemies.Length != 4 ||
+                _toolbar.Length != 2 || _players.Length != 4 || _enemies.Length != 4 ||
                 _choices.Length != 3 || _skills.Length != 7)
             {
                 throw new InvalidOperationException(MissingPrefabReferencesMessage);
             }
 
-            AdventureUiHelper.BindClick(_toolbar[0], () => StartRequested?.Invoke());
-            AdventureUiHelper.BindClick(_toolbar[1], () => AbandonRequested?.Invoke());
-            AdventureUiHelper.BindClick(_toolbar[2], () => MapToggleRequested?.Invoke());
-            AdventureUiHelper.BindClick(_toolbar[3], () => OpenDetails(2));
-            AdventureUiHelper.BindClick(_toolbar[4], () => OpenDetails(1));
-            AdventureUiHelper.BindClick(_closeDetails, () => OpenDetails(0));
+            AdventureUiHelper.BindClick(_toolbar[0], ToggleMenu);
+            AdventureUiHelper.BindClick(_toolbar[1], () => MapToggleRequested?.Invoke());
             for (int index = 0; index < _choices.Length; index++)
             {
                 int choice = index;
@@ -151,8 +151,8 @@ namespace WebRPG
                 AdventureUiHelper.BindActor(actor, id => CharacterFocusRequested?.Invoke(id));
             }
 
-            _layout = new AdventureDynamicLayoutHelper(_root, _actorScroll, _players, _enemies,
-                _versus, _skillScroll, _skills, _mapScroll, _mapLines, _mapRows, _connections,
+            _layout = new AdventureDynamicLayoutHelper(_root, _actorArea, _players, _enemies,
+                _versus, _skillArea, _skills, _relicArea, _relicIcons, _mapScroll, _mapLines, _mapRows, _connections,
                 _mapConnectionTemplate, _layoutSettings, _foreground, _controlHighlight);
         }
 
@@ -165,24 +165,20 @@ namespace WebRPG
         {
             bool modeChanged = _screen == null || _screen.ShowMap != screen.ShowMap ||
                 _screen.ShowBattle != screen.ShowBattle;
-            bool inspectionChanged = _screen == null || _screen.InspectedCharacterId != screen.InspectedCharacterId;
             _layoutDirty |= modeChanged || _screen == null ||
                 _screen.Players.Length != screen.Players.Length || _screen.Enemies.Length != screen.Enemies.Length ||
                 _screen.InspectedSkills.Length != screen.InspectedSkills.Length ||
-                _screen.Choices.Length != screen.Choices.Length;
+                _screen.Choices.Length != screen.Choices.Length || _screen.Relics.Length != screen.Relics.Length;
             _screen = screen;
             if (modeChanged)
             {
-                _detailsKind = 0;
+                _tooltip.HideAll();
             }
-            _heading.text = screen.Heading;
             _summary.text = screen.Summary;
-            AdventureUiHelper.SetGauge(_localHealth, screen.PlayerHealth, false);
-            AdventureUiHelper.SetGauge(_localAttack, screen.BasicAttack, true);
-            AdventureUiHelper.SetEnabled(_toolbar[0], screen.CanStart, _foreground, _secondary);
-            AdventureUiHelper.SetEnabled(_toolbar[1], screen.CanAbandon, _foreground, _secondary);
-            AdventureUiHelper.SetEnabled(_toolbar[2], screen.CanToggleMap, _foreground, _secondary);
-            _toolbar[2].Label.text = screen.MapButtonText;
+            RenderRelics(screen.Relics);
+            _menu.SetRunState(screen.CanAbandon, screen.CanStart);
+            AdventureUiHelper.SetEnabled(_toolbar[1], screen.CanToggleMap, _foreground, _secondary);
+            _toolbar[1].Label.text = screen.MapButtonText;
             _arena.gameObject.SetActive(!screen.ShowMap && screen.ShowBattle);
             _actionPanel.Rect.gameObject.SetActive(!screen.ShowMap && !screen.ShowBattle);
             _skillPanel.Rect.gameObject.SetActive(!screen.ShowMap);
@@ -201,8 +197,12 @@ namespace WebRPG
                 _skills[index].Rect.gameObject.SetActive(visible);
                 if (visible)
                 {
-                    _skills[index].Title.text = screen.InspectedSkills[index].Title;
-                    AdventureUiHelper.SetGauge(_skills[index].Gauge, screen.InspectedSkills[index], false);
+                    _skills[index].Title.text = screen.InspectedSkills[index].DisplayName;
+                    AdventureGaugeScreenModel skill = screen.InspectedSkills[index];
+                    AdventureUiHelper.SetGauge(_skills[index].Gauge, skill, false);
+                    _skills[index].Gauge.Value.text = skill.CompactText;
+                    _skills[index].Icon.SetIcon(skill.IconId);
+                    _skills[index].Tooltip.SetContent(skill.Title, skill.Description, skill.Text);
                 }
             }
 
@@ -221,10 +221,6 @@ namespace WebRPG
                 RenderMap(screen.MapRows);
             }
             UpdateLayout();
-            if (inspectionChanged)
-            {
-                _skillScroll.Scroll.horizontalNormalizedPosition = 0;
-            }
             if (screen.ShowMap && (modeChanged || _lastMapRow != screen.MapCurrentRow))
             {
                 _mapScroll.Scroll.verticalNormalizedPosition = screen.MapRows.Length > 1
@@ -232,7 +228,7 @@ namespace WebRPG
                 _lastMapRow = screen.MapCurrentRow;
             }
 
-            RenderDetails();
+            RenderJournal();
         }
 
         private void RenderActor(AdventureActorViewReferences control, AdventureCharacterScreenModel character)
@@ -317,33 +313,59 @@ namespace WebRPG
             _layout.Update(_screen);
         }
 
-        private void OpenDetails(int kind)
+        private void ToggleMenu()
         {
-            _detailsKind = _detailsKind == kind ? 0 : kind;
-            RenderDetails();
+            _tooltip.HideAll();
+            MenuRequested?.Invoke();
         }
 
-        private void RenderDetails()
+        public void RequestAbandon()
         {
-            if (_screen == null)
-            {
-                return;
-            }
-            _details.Rect.gameObject.SetActive(_detailsKind != 0);
-            if (_detailsKind == 0)
-            {
-                return;
-            }
-            _detailsHeading.text = _detailsKind == 1 ? JournalHeading : RelicsHeading;
-            string text = _detailsKind == 1 ? _screen.Journal : _screen.Relics;
-            if (_detailsText.text != text)
-            {
-                _detailsText.text = text;
-                UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(_detailsScroll.Content);
-                _detailsScroll.Scroll.verticalNormalizedPosition = _detailsKind == 1 ? 0 : 1;
-            }
+            _tooltip.HideAll();
+            AbandonRequested?.Invoke();
+        }
 
-            _details.Rect.SetAsLastSibling();
+        public void RequestStart()
+        {
+            _tooltip.HideAll();
+            StartRequested?.Invoke();
+        }
+
+        private void RenderRelics(AdventureIconScreenModel[] relics)
+        {
+            _noRelics.enabled = relics.Length == 0;
+            while (_relicIcons.Count < relics.Length)
+            {
+                AdventureIconItemView item = Instantiate(_relicTemplate, _relicArea.Content);
+                item.name = RelicNamePrefix + _relicIcons.Count;
+                _relicIcons.Add(item);
+            }
+            for (int index = 0; index < _relicIcons.Count; index++)
+            {
+                bool visible = index < relics.Length;
+                _relicIcons[index].gameObject.SetActive(visible);
+                if (visible)
+                {
+                    _relicIcons[index].Render(relics[index]);
+                }
+            }
+        }
+
+        private void RenderJournal()
+        {
+            _details.Rect.gameObject.SetActive(true);
+            _detailsHeading.text = JournalHeading;
+            if (_detailsText.text != _screen.Journal)
+            {
+                bool followLatest = _detailsScroll.Scroll.verticalNormalizedPosition <= 0.01f ||
+                    _detailsText.text.Length == 0;
+                _detailsText.text = _screen.Journal;
+                UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(_detailsScroll.Content);
+                if (followLatest)
+                {
+                    _detailsScroll.Scroll.verticalNormalizedPosition = 0;
+                }
+            }
         }
 
     }

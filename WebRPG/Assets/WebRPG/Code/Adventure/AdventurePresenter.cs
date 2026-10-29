@@ -37,9 +37,17 @@ namespace WebRPG
         public string InspectedCharacterName { get; set; }
         public AdventureGaugeScreenModel[] InspectedSkills { get; set; }
         public bool ShowBattle { get; set; }
-        public string Relics { get; set; }
+        public AdventureIconScreenModel[] Relics { get; set; } = Array.Empty<AdventureIconScreenModel>();
         public bool CanStart { get; set; }
         public bool CanAbandon { get; set; }
+    }
+
+    // 承載遺物圖示的識別、名稱與被動效果。
+    public sealed class AdventureIconScreenModel
+    {
+        public string Id { get; set; }
+        public string Title { get; set; }
+        public string Description { get; set; }
     }
 
     // 承載數值條的標題、顯示文字與填滿比例。
@@ -48,6 +56,10 @@ namespace WebRPG
         public string Title { get; set; }
         public string Text { get; set; }
         public float FillAmount { get; set; }
+        public string IconId { get; set; }
+        public string Description { get; set; }
+        public string CompactText { get; set; }
+        public string DisplayName { get; set; }
     }
 
     // 承載角色身分、存活狀態、生命值與技能畫面資料。
@@ -89,20 +101,24 @@ namespace WebRPG
         private const string LocalPlayerName = "本機玩家";
         private const string EnemyIdPrefix = "enemy:";
         private const string MapHeading = "挑戰地圖";
-        private const string SummaryPlayerFloorPrefix = "本機玩家 · 第 ";
         private const string CountSeparator = " / ";
-        private const string SummaryFloorGoldSeparator = " 層 · 金幣 ";
-        private const string SummaryAttackSeparator = " · 攻擊 ";
-        private const string SummarySkillsSeparator = " · 技能 ";
-        private const string SummaryRelicsSeparator = "/6 · 遺物 ";
+        private const string SummaryGoldPrefix = " · 金幣 ";
+        private const string SummaryFloorPrefix = " · 第 ";
+        private const string SummaryFloorSuffix = " 層";
         private const string NewLine = "\n";
         private const string ReturnToAdventureText = "返回挑戰";
         private const string MapButtonText = "地圖";
         private const string MapSelectionNotice = "選擇亮框節點前往；路線由下往上推進。";
         private const string BattleMapNotice = "檢視地圖時戰鬥仍持續進行，節點僅供查看。";
         private const string ResultMapNotice = "地圖檢視中；返回挑戰繼續領獎或查看結算。";
-        private const string NoRelicsText = "尚未取得";
-        private const string ParagraphSeparator = "\n\n";
+        private const string EmptyIconId = "empty";
+        private const string EmptySlotName = "空槽";
+        private const string BasicAttackName = "普攻";
+        private const string AttackIconId = "attack";
+        private const string CompactIdleText = "待戰";
+        private const string CompactDefeatedText = "倒下";
+        private const string CompactSecondsSuffix = "秒";
+        private const string SkillCooldownPrefix = "冷卻 ";
         private const string EffectListSeparator = "、";
         private const string MaximumHealthBonusPrefix = "生命上限+";
         private const string DamageBonusPrefix = "傷害+";
@@ -133,7 +149,7 @@ namespace WebRPG
         private const string ResultCountSuffix = " 個\n";
         private const string ResultPersistenceNotice = "單人原型：結算只供本輪檢視，不會保存至帳號。";
         private const string SkillRewardInstructions = "新技能自動裝入空槽；重複技能直接升級。\n六槽裝滿後，只會出現已裝備且未滿級的技能。";
-        private const string ReadyInstructions = "按「開始挑戰」進入塔樓。\n可在任何進行中的階段放棄，該輪會以失敗結算。";
+        private const string ReadyInstructions = "從右上選單開始新一輪挑戰。\n可在選單中放棄進行中的挑戰，該輪會以失敗結算。";
         private const string NodeChoiceInstructions = "選擇下方行動。寶箱提供被動遺物，事件可交換生命與金幣。";
         private const string TitleSeparator = " · ";
         private const string AcquireSkillPrefix = "取得 ";
@@ -160,6 +176,7 @@ namespace WebRPG
         private readonly IAdventureView _view;
         private const string LocalPlayerId = "local-player";
         private bool _disposed;
+        private bool _paused;
         private bool _mapOpen;
         private string _inspectedCharacterId = LocalPlayerId;
 
@@ -177,13 +194,18 @@ namespace WebRPG
 
         public void Tick(float seconds)
         {
-            if (_disposed || _model.Phase != AdventurePhase.Battle)
+            if (_disposed || _paused || _model.Phase != AdventurePhase.Battle)
             {
                 return;
             }
 
             _model.Tick(seconds);
             Refresh();
+        }
+
+        public void SetPaused(bool paused)
+        {
+            _paused = paused;
         }
 
         public void Dispose()
@@ -269,13 +291,24 @@ namespace WebRPG
                     {
                         Title = SkillSlotTitlePrefix + (index + 1),
                         Text = UnequippedText,
+                        IconId = EmptyIconId,
+                        DisplayName = EmptySlotName,
+                        Description = UnequippedText,
+                        CompactText = string.Empty,
                         FillAmount = 0
                     };
                 }
 
                 AdventureSkillState skill = _model.Skills[index];
-                return CooldownGauge(skill.Definition.Name + SkillLevelSeparator + skill.Level,
+                AdventureGaugeScreenModel gauge = CooldownGauge(skill.Definition.Name + SkillLevelSeparator + skill.Level,
                     skill.RemainingCooldown, skill.Definition.Cooldown, fighting);
+                gauge.IconId = skill.Definition.Id;
+                gauge.DisplayName = skill.Definition.Name;
+                gauge.Description = SkillCooldownPrefix + skill.Definition.Cooldown.ToString(SecondsFormat) + SecondsSuffix + NewLine +
+                    string.Join(EffectListSeparator, skill.Definition.Effects.Select(effect =>
+                        (effect.Type == AdventureEffectType.Damage ? DamageEffectPrefix : HealingEffectPrefix) +
+                        (effect.Amount + effect.PerLevel * (skill.Level - 1))));
+                return gauge;
             }).ToArray();
             AdventureGaugeScreenModel localHealth = HealthGauge(_model.Health, _model.MaximumHealth);
             AdventureGaugeScreenModel localAttack = CooldownGauge(BasicAttackTitlePrefix + _model.BasicAttackDamage,
@@ -308,12 +341,11 @@ namespace WebRPG
             _view.Render(new AdventureScreenModel
             {
                 Heading = showMap ? MapHeading : Heading(),
-                Summary = SummaryPlayerFloorPrefix + Math.Min(_model.FloorIndex + 1, _model.Configuration.Floors.Length) +
-                    CountSeparator + _model.Configuration.Floors.Length + SummaryFloorGoldSeparator + _model.Gold +
-                    SummaryAttackSeparator + _model.BasicAttackDamage + SummarySkillsSeparator + _model.Skills.Count +
-                    SummaryRelicsSeparator + _model.Relics.Count,
+                Summary = LocalPlayerName + TitleSeparator + localHealth.Text + SummaryGoldPrefix + _model.Gold +
+                    SummaryFloorPrefix + Math.Min(_model.FloorIndex + 1, _model.Configuration.Floors.Length) +
+                    CountSeparator + _model.Configuration.Floors.Length + SummaryFloorSuffix,
                 Situation = Situation(),
-                Journal = string.Join(NewLine, _model.Journal.TakeLast(6)),
+                Journal = string.Join(NewLine, _model.Journal),
                 Choices = Choices(),
                 PlayerHealth = localHealth,
                 BasicAttack = localAttack,
@@ -333,10 +365,13 @@ namespace WebRPG
                 InspectedCharacterId = inspected.Id,
                 InspectedCharacterName = inspected.Name,
                 InspectedSkills = new[] { inspected.BasicAttack }.Concat(inspected.Skills).ToArray(),
-                Relics = _model.Relics.Count == 0 ? NoRelicsText :
-                    string.Join(ParagraphSeparator, _model.Relics.Select(relic => relic.Name + NewLine +
-                        string.Join(EffectListSeparator, relic.Effects.Select(effect =>
-                            (effect.Type == AdventureEffectType.MaximumHealth ? MaximumHealthBonusPrefix : DamageBonusPrefix) + effect.Amount)))),
+                Relics = _model.Relics.Select(relic => new AdventureIconScreenModel
+                {
+                    Id = relic.Id,
+                    Title = relic.Name,
+                    Description = string.Join(EffectListSeparator, relic.Effects.Select(effect =>
+                        (effect.Type == AdventureEffectType.MaximumHealth ? MaximumHealthBonusPrefix : DamageBonusPrefix) + effect.Amount))
+                }).ToArray(),
                 CanStart = ended,
                 CanAbandon = !ended
             });
@@ -359,6 +394,11 @@ namespace WebRPG
             return new AdventureGaugeScreenModel
             {
                 Title = title,
+                IconId = AttackIconId,
+                DisplayName = BasicAttackName,
+                Description = title + NewLine + SkillCooldownPrefix + duration.ToString(SecondsFormat) + SecondsSuffix,
+                CompactText = defeated ? CompactDefeatedText : active
+                    ? seconds.ToString(SecondsFormat) + CompactSecondsSuffix : CompactIdleText,
                 Text = defeated ? DefeatedText : active ? CooldownTextPrefix + seconds.ToString(SecondsFormat) + SecondsSuffix
                     : IdleCooldownTextPrefix + duration.ToString(SecondsFormat) + SecondsSuffix,
                 FillAmount = active && duration > 0
