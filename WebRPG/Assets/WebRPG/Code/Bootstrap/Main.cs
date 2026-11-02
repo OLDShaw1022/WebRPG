@@ -40,6 +40,11 @@ namespace WebRPG
         private MainMenuView _mainMenuView;
         private MainMenuPresenter _mainMenuPresenter;
 
+        private void Awake()
+        {
+            Application.runInBackground = true;
+        }
+
         private void Start()
         {
             if (!_mainMenuViewPrefab)
