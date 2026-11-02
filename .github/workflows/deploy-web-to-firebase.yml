@@ -60,6 +60,14 @@ jobs:
           sudo rm -rf /usr/local/lib/android
           df -h /
 
+      - name: Cache Unity Library
+        uses: actions/cache@v4
+        with:
+          path: WebRPG/Library
+          key: ${{ runner.os }}-WebRPG-WebGL-Library-v1-${{ hashFiles('WebRPG/ProjectSettings/ProjectVersion.txt', 'WebRPG/Packages/manifest.json', 'WebRPG/Packages/packages-lock.json', 'WebRPGPage/ci/UnityWebBuild.cs', '.github/workflows/deploy-web-to-firebase.yml') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-WebRPG-WebGL-Library-v1-${{ hashFiles('WebRPG/ProjectSettings/ProjectVersion.txt', 'WebRPG/Packages/manifest.json', 'WebRPG/Packages/packages-lock.json', 'WebRPGPage/ci/UnityWebBuild.cs', '.github/workflows/deploy-web-to-firebase.yml') }}-
+
       - name: Build Unity Web
         uses: game-ci/unity-builder@v4
         env:
