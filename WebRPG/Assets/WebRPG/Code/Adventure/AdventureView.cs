@@ -199,14 +199,21 @@ namespace WebRPG
                 _screen.Players.Length != screen.Players.Length || _screen.Enemies.Length != screen.Enemies.Length ||
                 _screen.InspectedSkills.Length != screen.InspectedSkills.Length ||
                 _screen.Choices.Length != screen.Choices.Length || _screen.Relics.Length != screen.Relics.Length;
+            AdventureScreenModel previous = _screen;
             _screen = screen;
             if (modeChanged)
             {
                 _tooltip.HideAll();
             }
             _summary.text = screen.Summary;
-            RenderRelics(screen.Relics);
-            _menu.SetRunState(screen.CanAbandon, screen.CanStart);
+            if (previous == null || !ReferenceEquals(previous.Relics, screen.Relics))
+            {
+                RenderRelics(screen.Relics);
+            }
+            if (previous == null || previous.CanAbandon != screen.CanAbandon || previous.CanStart != screen.CanStart)
+            {
+                _menu.SetRunState(screen.CanAbandon, screen.CanStart);
+            }
             AdventureUiHelper.SetEnabled(_toolbar[1], screen.CanToggleMap, _foreground, _secondary);
             _toolbar[1].Label.text = screen.MapButtonText;
             _arena.gameObject.SetActive(!screen.ShowMap && screen.ShowBattle);
@@ -247,8 +254,9 @@ namespace WebRPG
                 }
             }
 
-            if (screen.ShowMap)
+            if (screen.ShowMap && (previous == null || !ReferenceEquals(previous.MapRows, screen.MapRows)))
             {
+                _layoutDirty = true;
                 RenderMap(screen.MapRows);
             }
             UpdateLayout();

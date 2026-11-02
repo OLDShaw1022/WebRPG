@@ -8,6 +8,42 @@ namespace WebRPG.Tests
     public sealed class AdventurePresenterTests
     {
         [Test]
+        public void BattleTicksReuseMapRelicsChoicesAndJournalUntilTheirContentChanges()
+        {
+            AdventureConfiguration configuration = AdventureBattleTestHelper.Configuration();
+            AdventureModel model = AdventureBattleTestHelper.StartBattle(configuration);
+            TestAdventureView view = new TestAdventureView();
+            using (AdventurePresenter presenter = new AdventurePresenter(model, view))
+            {
+                view.ToggleMap();
+                AdventureScreenModel before = view.Screen;
+                float remaining = model.PlayerAction.RemainingCastTime;
+                presenter.Tick(configuration.SimulationStep);
+                Assert.That(model.PlayerAction.RemainingCastTime, Is.LessThan(remaining));
+                Assert.That(view.Screen.MapRows, Is.SameAs(before.MapRows));
+                Assert.That(view.Screen.Relics, Is.SameAs(before.Relics));
+                Assert.That(view.Screen.Choices, Is.SameAs(before.Choices));
+                Assert.That(view.Screen.Journal, Is.SameAs(before.Journal));
+                view.ToggleMap();
+                view.ToggleMap();
+                Assert.That(view.Screen.MapRows, Is.SameAs(before.MapRows));
+            }
+        }
+
+        [Test]
+        public void ReadOnlyCollectionsAreStableAndReflectRunChanges()
+        {
+            AdventureModel model = new AdventureModel(AdventureModelScenarioHelper.LoadConfiguration(), 1);
+            var skills = model.Skills;
+            Assert.That(model.Skills, Is.SameAs(skills));
+            Assert.That(model.Relics, Is.SameAs(model.Relics));
+            Assert.That(model.Rewards, Is.SameAs(model.Rewards));
+            model.StartRun();
+            Assert.That(skills.Count, Is.EqualTo(model.Configuration.StartingSkills.Length));
+            Assert.That(model.Journal, Is.SameAs(model.Journal));
+        }
+
+        [Test]
         public void ViewActionsReachModelAndDisposeUnsubscribes()
         {
             AdventureConfiguration configuration = AdventureModelScenarioHelper.LoadConfiguration();

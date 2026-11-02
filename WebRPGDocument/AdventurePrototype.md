@@ -18,7 +18,9 @@
 | --- | --- |
 | [Main.cs](../WebRPG/Assets/WebRPG/Code/Bootstrap/Main.cs) | 啟動時顯示主選單；選擇單人遊玩後建立冒險 Model、呼叫 StartRun，再建立 View 與 Presenter，逐幀推進並管理釋放。 |
 | [AdventureConfiguration.cs](../WebRPG/Assets/WebRPG/Code/Adventure/AdventureConfiguration.cs) | JSON 對應資料結構與設定驗證。 |
-| [AdventureModel.cs](../WebRPG/Assets/WebRPG/Code/Adventure/AdventureModel.cs) | 純 C# 挑戰狀態、地圖生成、戰鬥、獎勵、節點處理與已選路徑。 |
+| [AdventureModel.cs](../WebRPG/Assets/WebRPG/Code/Adventure/AdventureModel.cs) | 純 C# 挑戰狀態、地圖生成、獎勵、節點處理與已選路徑；建立單場戰鬥並依結果推進挑戰。 |
+| [AdventureBattleModel.cs](../WebRPG/Assets/WebRPG/Code/Adventure/AdventureBattleModel.cs) | 純 C# 單場戰鬥狀態、固定步長、角色動作、冷卻、鎖定目標與投射物結算。 |
+| [AdventureScreenContentHelper.cs](../WebRPG/Assets/WebRPG/Code/Adventure/AdventureScreenContentHelper.cs) | 依內容變更快取摘要、紀錄、選項、遺物與地圖資料，避免戰鬥逐幀重建。 |
 | [AdventurePresenter.cs](../WebRPG/Assets/WebRPG/Code/Adventure/AdventurePresenter.cs) | 將 View 操作轉為 Model 指令，產生本機 HUD、角色檢視、讀條與地圖顯示資料。 |
 | [AdventureView.cs](../WebRPG/Assets/WebRPG/Code/Adventure/AdventureView.cs) | 綁定 Prefab 中的固定元件、顯示畫面資料並送出互動事件；依地圖資料生成節點與連線範本實例。 |
 | [AdventureCanvas.prefab](../WebRPG/Assets/WebRPG/Prefabs/AdventureCanvas.prefab) | 保存 HUD、橫排遺物、戰鬥區、選項區、技能列、地圖容器、右側紀錄、中央選單與遮罩、共用提示窗及地圖範本，固定版面可在 Prefab Mode 編輯。 |
