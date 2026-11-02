@@ -42,6 +42,7 @@ namespace WebRPG
         public float BattleSpeed { get; set; } = 1;
         public AdventureProjectileScreenModel Projectile { get; set; }
         public AdventureIconScreenModel[] Relics { get; set; } = Array.Empty<AdventureIconScreenModel>();
+        public bool ShowResultActions { get; set; }
         public bool CanStart { get; set; }
         public bool CanAbandon { get; set; }
     }
@@ -347,6 +348,7 @@ namespace WebRPG
                 InspectedCharacterName = localPlayer.Name,
                 InspectedSkills = new[] { localPlayer.BasicAttack }.Concat(slots).ToArray(),
                 Relics = _content.RelicIcons,
+                ShowResultActions = _model.Phase == AdventurePhase.Complete || _model.Phase == AdventurePhase.Failed,
                 CanStart = ended,
                 CanAbandon = !ended
             });

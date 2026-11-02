@@ -42,6 +42,84 @@ namespace WebRPG.Tests
             Assert.That(serialized.FindProperty("_choices").arraySize, Is.EqualTo(3));
         }
 
+        [TestCase(false)]
+        [TestCase(true)]
+        public void ResultButtonsRestartRunAndConfirmReturnAfterVictoryOrDefeat(bool won)
+        {
+            AdventureView instance = UnityEngine.Object.Instantiate(AssetDatabase.LoadAssetAtPath<AdventureView>(
+                "Assets/WebRPG/Prefabs/AdventureCanvas.prefab"));
+            try
+            {
+                typeof(AdventureView).GetMethod("Awake", BindingFlags.Instance | BindingFlags.NonPublic)
+                    .Invoke(instance, null);
+                typeof(AdventureMenuView).GetMethod("Awake", BindingFlags.Instance | BindingFlags.NonPublic)
+                    .Invoke(instance.Menu, null);
+                Transform restart = instance.transform.Find("Actions/Choices/Restart");
+                Transform returnButton = instance.transform.Find("Actions/Choices/ReturnToMainMenu");
+                Assert.That(restart, Is.Not.Null, "Settlement must expose restart directly.");
+                Assert.That(returnButton, Is.Not.Null, "Settlement must expose return directly.");
+                AdventureConfiguration configuration = AdventureModelScenarioHelper.WinningConfiguration();
+                if (!won)
+                {
+                    configuration.StartingHealth = 1;
+                    configuration.BasicAttack.CastTime = 100;
+                    foreach (EnemyDefinition enemy in configuration.Enemies)
+                    {
+                        enemy.CastTime = .125f;
+                    }
+                }
+                AdventureModel model = new AdventureModel(configuration, 11);
+                int returned = 0;
+                using (AdventurePresenter presenter = new AdventurePresenter(model, instance))
+                using (AdventureMenuPresenter menu = new AdventureMenuPresenter(new AdventureMenuModel(true),
+                    instance.Menu, presenter.SetPaused, instance.RequestAbandon, instance.RequestStart, () => returned++))
+                {
+                    Assert.That(restart.gameObject.activeSelf, Is.False);
+                    Assert.That(returnButton.gameObject.activeSelf, Is.False);
+                    instance.RequestStart();
+                    for (int step = 0; step < 500 && model.Phase != AdventurePhase.Complete && model.Phase != AdventurePhase.Failed; step++)
+                    {
+                        Assert.That(restart.gameObject.activeSelf, Is.False, model.Phase.ToString());
+                        Assert.That(returnButton.gameObject.activeSelf, Is.False, model.Phase.ToString());
+                        switch (model.Phase)
+                        {
+                            case AdventurePhase.Map: model.SelectNode(0); break;
+                            case AdventurePhase.SkillReward: model.SelectReward(0); break;
+                            case AdventurePhase.NodeChoice: model.ResolveNode(0); break;
+                            case AdventurePhase.Battle: model.Tick(5); break;
+                        }
+                        presenter.SetPaused(false);
+                    }
+                    Assert.That(model.Phase, Is.EqualTo(won ? AdventurePhase.Complete : AdventurePhase.Failed));
+                    Assert.That(restart.gameObject.activeInHierarchy, Is.True);
+                    Assert.That(returnButton.gameObject.activeInHierarchy, Is.True);
+                    Assert.That(restart.GetComponentInChildren<TMPro.TextMeshProUGUI>().text, Is.EqualTo("重新挑戰"));
+                    Assert.That(returnButton.GetComponentInChildren<TMPro.TextMeshProUGUI>().text, Is.EqualTo("回主選單"));
+                    returnButton.GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
+                    Assert.That(returned, Is.Zero);
+                    Assert.That(instance.transform.Find("PauseMenu/ConfirmReturn").gameObject.activeInHierarchy, Is.True);
+                    instance.transform.Find("PauseMenu/ConfirmReturn/Cancel").GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
+                    menu.Close();
+                    Assert.That(model.Phase, Is.EqualTo(won ? AdventurePhase.Complete : AdventurePhase.Failed));
+                    restart.GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
+                    Assert.That(model.Phase, Is.EqualTo(AdventurePhase.Map));
+                    Assert.That(model.Health, Is.EqualTo(configuration.StartingHealth));
+                    Assert.That(model.Gold, Is.Zero);
+                    Assert.That(model.Relics, Is.Empty);
+                    Assert.That(restart.gameObject.activeSelf, Is.False);
+                    Assert.That(returnButton.gameObject.activeSelf, Is.False);
+                    instance.RequestAbandon();
+                    returnButton.GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
+                    instance.transform.Find("PauseMenu/ConfirmReturn/Confirm").GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
+                    Assert.That(returned, Is.EqualTo(1));
+                }
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(instance.gameObject);
+            }
+        }
+
         [Test]
         public void AwakeBindsExistingControlsWithoutCreatingFixedHierarchy()
         {

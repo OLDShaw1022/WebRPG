@@ -33,10 +33,15 @@ namespace WebRPG
             AdventureUiHelper.BindClick(_abandon, () => AbandonRequested?.Invoke());
             AdventureUiHelper.BindClick(_restart, () => RestartRequested?.Invoke());
             AdventureUiHelper.BindClick(_openSettings, () => SettingsRequested?.Invoke());
-            AdventureUiHelper.BindClick(_return, () => ReturnRequested?.Invoke());
+            AdventureUiHelper.BindClick(_return, RequestReturn);
             AdventureUiHelper.BindClick(_confirm, () => ConfirmReturnRequested?.Invoke());
             AdventureUiHelper.BindClick(_cancel, () => BackRequested?.Invoke());
             AdventureUiHelper.BindClick(_back, () => BackRequested?.Invoke());
+        }
+
+        public void RequestReturn()
+        {
+            ReturnRequested?.Invoke();
         }
 
         public void SetRunState(bool canAbandon, bool canRestart)

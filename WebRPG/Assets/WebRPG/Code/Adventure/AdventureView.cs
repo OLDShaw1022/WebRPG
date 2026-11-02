@@ -65,6 +65,10 @@ namespace WebRPG
         [SerializeField]
         private AdventureButtonViewReferences[] _choices;
         [SerializeField]
+        private AdventureButtonViewReferences _resultRestart;
+        [SerializeField]
+        private AdventureButtonViewReferences _resultReturn;
+        [SerializeField]
         private AdventureSurfaceViewReferences _skillPanel;
         [SerializeField]
         private TextMeshProUGUI _skillHeading;
@@ -148,7 +152,7 @@ namespace WebRPG
             if (!_root || !_mapNodeTemplate || !_mapConnectionTemplate ||
                 _toolbar.Length != 2 || _players.Length != 4 || _enemies.Length != 4 ||
                 _choices.Length != 3 || _skills.Length != 7 || _battleSpeedControls.Length != 3 ||
-                !_projectile || !_projectileLabel)
+                !_projectile || !_projectileLabel || !_resultRestart.Button || !_resultReturn.Button)
             {
                 throw new InvalidOperationException(MissingPrefabReferencesMessage);
             }
@@ -164,6 +168,8 @@ namespace WebRPG
                 int speed = index;
                 AdventureUiHelper.BindClick(_battleSpeedControls[index], () => BattleSpeedRequested?.Invoke(speed));
             }
+            AdventureUiHelper.BindClick(_resultRestart, RequestStart);
+            AdventureUiHelper.BindClick(_resultReturn, _menu.RequestReturn);
             AdventureUiHelper.BindClick(_toolbar[0], ToggleMenu);
             AdventureUiHelper.BindClick(_toolbar[1], () => MapToggleRequested?.Invoke());
             for (int index = 0; index < _choices.Length; index++)
@@ -221,6 +227,8 @@ namespace WebRPG
             _skillPanel.Rect.gameObject.SetActive(!screen.ShowMap);
             _mapPanel.Rect.gameObject.SetActive(screen.ShowMap);
             _situation.text = screen.Situation;
+            _resultRestart.Rect.gameObject.SetActive(screen.ShowResultActions);
+            _resultReturn.Rect.gameObject.SetActive(screen.ShowResultActions);
             _skillHeading.text = screen.InspectedCharacterName + InspectedSkillsTitleSuffix;
             for (int index = 0; index < _players.Length; index++)
             {
