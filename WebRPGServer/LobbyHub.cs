@@ -56,7 +56,19 @@ public sealed class LobbyHub
                         await LobbySocketHelper.SendAsync(socket, welcome, _options.SendTimeoutSeconds);
                         continue;
                     }
+                    if (request.Type == LobbyPacketType.Adventure)
+                    {
+                        AdventurePacket adventure = _registry.ExecuteAdventure(playerId, request.Adventure);
+                        adventure.RequestId = request.RequestId ?? string.Empty;
+                        await BroadcastAdventureAsync(adventure, _registry.GetRoomPlayers(playerId));
+                        if (adventure.Type == AdventurePacketType.Start) await BroadcastAsync(string.Empty);
+                        continue;
+                    }
+                    string[] affected = _registry.GetRoomPlayers(playerId);
+                    AdventurePacket? failure = request.Type == LobbyPacketType.LeaveRoom
+                        ? _registry.FailAdventure(playerId) : null;
                     bool changed = _registry.Execute(playerId, request);
+                    if (failure != null) await BroadcastAdventureAsync(failure, affected);
                     await LobbySocketHelper.SendAsync(socket, _registry.Snapshot(playerId, request.RequestId ?? string.Empty),
                         _options.SendTimeoutSeconds);
                     if (changed) await BroadcastAsync(playerId);
@@ -77,7 +89,10 @@ public sealed class LobbyHub
             {
                 if (registered)
                 {
+                    string[] affected = _registry.GetRoomPlayers(playerId);
+                    AdventurePacket? failure = _registry.FailAdventure(playerId);
                     _sessions.Remove(playerId);
+                    if (failure != null) await BroadcastAdventureAsync(failure, affected);
                     _registry.Disconnect(playerId);
                     await BroadcastAsync(playerId);
                 }
@@ -96,6 +111,18 @@ public sealed class LobbyHub
     {
         await Task.WhenAll(_sessions.Where(pair => pair.Key != excludedPlayerId).Select(pair =>
             LobbySocketHelper.SendAsync(pair.Value, _registry.Snapshot(pair.Key), _options.SendTimeoutSeconds)));
+    }
+
+    private async Task BroadcastAdventureAsync(AdventurePacket adventure, string[] playerIds)
+    {
+        LobbyPacket packet = new LobbyPacket
+        {
+            Type = LobbyPacketType.Adventure,
+            PlayerId = adventure.PlayerId,
+            Adventure = adventure
+        };
+        await Task.WhenAll(playerIds.Where(_sessions.ContainsKey).Select(playerId =>
+            LobbySocketHelper.SendAsync(_sessions[playerId], packet, _options.SendTimeoutSeconds)));
     }
 
     private async Task SendErrorAsync(WebSocket socket, string requestId, string error)

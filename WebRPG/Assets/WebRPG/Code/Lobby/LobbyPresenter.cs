@@ -42,6 +42,7 @@ namespace WebRPG
         private const string NotReadyLabel = "未準備";
         private const string CancelReadyLabel = "取消準備";
         private const string SetReadyLabel = "準備";
+        private const string StartAdventureLabel = "開始冒險";
         private const string NoRoomMessage = "尚未加入房間。\n可從公開列表加入，或輸入房間 ID。";
         private const string NewLine = "\n";
         private readonly ILobbyModel _model;
@@ -89,6 +90,12 @@ namespace WebRPG
         private void Leave() => _model.SendAsync(new LobbyPacket { Type = LobbyPacketType.LeaveRoom }).Forget();
         private void Ready()
         {
+            LobbyRoomSnapshot room = _model.Room;
+            if (room != null && room.LeaderId == _model.PlayerId && room.Members.All(member => member.IsReady))
+            {
+                _model.SendAdventureAsync(new AdventurePacket { Type = AdventurePacketType.Start }).Forget();
+                return;
+            }
             bool ready = _model.Room?.Members.Any(member => member.PlayerId == _model.PlayerId && member.IsReady) ?? false;
             _model.SendAsync(new LobbyPacket { Type = LobbyPacketType.SetReady, IsReady = !ready }).Forget();
         }
@@ -98,6 +105,7 @@ namespace WebRPG
         {
             LobbyRoomSnapshot room = _model.Room;
             bool ready = room?.Members.Any(member => member.PlayerId == _model.PlayerId && member.IsReady) ?? false;
+            bool canStart = room != null && room.LeaderId == _model.PlayerId && room.Members.All(member => member.IsReady);
             string members = room == null ? NoRoomMessage : string.Format(RoomFormat, room.Name, room.Id,
                 room.IsPublic ? PublicLabel : PrivateLabel,
                 string.Join(NewLine, room.Members.Select(member => string.Format(MemberFormat,
@@ -107,7 +115,7 @@ namespace WebRPG
             {
                 Connected = _model.IsConnected, Busy = _model.IsBusy, InRoom = room != null,
                 Status = _model.Status, Members = members,
-                ReadyLabel = ready ? CancelReadyLabel : SetReadyLabel, Rooms = _model.Rooms
+                ReadyLabel = canStart ? StartAdventureLabel : ready ? CancelReadyLabel : SetReadyLabel, Rooms = _model.Rooms
             });
         }
     }

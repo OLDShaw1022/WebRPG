@@ -17,6 +17,7 @@ namespace WebRPGShared
         public string Error { get; set; } = string.Empty;
         public LobbyRoomSummary[] Rooms { get; set; } = Array.Empty<LobbyRoomSummary>();
         public LobbyRoomSnapshot Room { get; set; }
+        public AdventurePacket Adventure { get; set; }
     }
 
     // 提供公開房間列表中可顯示的摘要。
@@ -62,6 +63,7 @@ namespace WebRPGShared
         public const string SetReady = "SetReady";
         public const string State = "State";
         public const string Error = "Error";
+        public const string Adventure = "Adventure";
     }
 
     // 定義協定可接受的文字與人數上限。

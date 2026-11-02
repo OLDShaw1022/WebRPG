@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using WebRPGShared;
 
 namespace WebRPG
 {
@@ -45,6 +46,8 @@ namespace WebRPG
         public bool ShowResultActions { get; set; }
         public bool CanStart { get; set; }
         public bool CanAbandon { get; set; }
+        public bool CanChoose { get; set; } = true;
+        public bool CanChangeBattleSpeed { get; set; } = true;
     }
 
     // 承載遺物圖示的識別、名稱與被動效果。
@@ -129,15 +132,18 @@ namespace WebRPG
         private readonly AdventureModel _model;
         private readonly AdventureScreenContentHelper _content;
         private readonly IAdventureView _view;
+        private readonly MultiplayerAdventureSession _network;
         private const string LocalPlayerId = "local-player";
         private bool _disposed;
         private bool _paused;
         private bool _mapOpen;
 
-        public AdventurePresenter(AdventureModel model, IAdventureView view)
+
+        public AdventurePresenter(AdventureModel model, IAdventureView view, MultiplayerAdventureSession network = null)
         {
             _model = model ?? throw new ArgumentNullException(nameof(model));
             _view = view ?? throw new ArgumentNullException(nameof(view));
+            _network = network;
             _content = new AdventureScreenContentHelper(_model);
             _view.StartRequested += HandleStart;
             _view.AbandonRequested += HandleAbandon;
@@ -146,17 +152,18 @@ namespace WebRPG
             _view.MapToggleRequested += HandleMapToggle;
             _view.SkillRequested += HandleSkill;
             _view.BattleSpeedRequested += HandleBattleSpeed;
+            if (_network != null)
+            {
+                _network.Changed += Refresh;
+            }
             Refresh();
         }
 
         public void Tick(float seconds)
         {
-            if (_disposed || _paused || _model.Phase != AdventurePhase.Battle)
-            {
-                return;
-            }
-
-            _model.Tick(seconds);
+            if (_disposed) return;
+            if (_network != null) _network.Tick(seconds);
+            else if (!_paused && _model.Phase == AdventurePhase.Battle) _model.Tick(seconds);
             Refresh();
         }
 
@@ -181,10 +188,15 @@ namespace WebRPG
             _view.MapToggleRequested -= HandleMapToggle;
             _view.SkillRequested -= HandleSkill;
             _view.BattleSpeedRequested -= HandleBattleSpeed;
+            if (_network != null)
+            {
+                _network.Changed -= Refresh;
+            }
         }
 
         private void HandleStart()
         {
+            if (_network != null) return;
             _mapOpen = false;
             _model.StartRun();
             Refresh();
@@ -192,6 +204,11 @@ namespace WebRPG
 
         private void HandleAbandon()
         {
+            if (_network != null)
+            {
+                _network.SendCommand(AdventureCommand.Abandon);
+                return;
+            }
             _mapOpen = false;
             _model.AbandonRun();
             Refresh();
@@ -199,6 +216,16 @@ namespace WebRPG
 
         private void HandleChoice(int index)
         {
+            if (_network != null)
+            {
+                switch (_model.Phase)
+                {
+                    case AdventurePhase.Map: _network.SendCommand(AdventureCommand.Vote, index); break;
+                    case AdventurePhase.NodeChoice: _network.SendCommand(AdventureCommand.Resolve, index); break;
+                    case AdventurePhase.SkillReward: _network.SendCommand(AdventureCommand.Reward, index); break;
+                }
+                return;
+            }
             switch (_model.Phase)
             {
                 case AdventurePhase.Map:
@@ -224,7 +251,8 @@ namespace WebRPG
             if (characterId != null && characterId.StartsWith(EnemyIdPrefix, StringComparison.Ordinal) &&
                 int.TryParse(characterId.Substring(EnemyIdPrefix.Length), out int index))
             {
-                _model.LockEnemy(index);
+                if (_network == null) _model.LockEnemy(index);
+                else _network.SendCommand(AdventureCommand.Target, index);
             }
             Refresh();
         }
@@ -233,13 +261,15 @@ namespace WebRPG
         {
             if (!_paused)
             {
-                _model.TryUseSkill(index);
+                if (_network == null) _model.TryUseSkill(index);
+                else _network.SendCommand(AdventureCommand.Skill, index);
             }
             Refresh();
         }
 
         private void HandleBattleSpeed(float speed)
         {
+            if (_network != null) return;
             _model.SetBattleSpeed(speed);
             Refresh();
         }
@@ -276,7 +306,7 @@ namespace WebRPG
                     };
                 }
 
-                bool canUse = fighting && !_paused && _model.PlayerAction.SkillIndex < 0 &&
+                bool canUse = fighting && _model.Health > 0 && !_paused && _model.PlayerAction.SkillIndex < 0 &&
                     _model.Skills[index].RemainingCooldown <= 0;
                 return AdventureBattleScreenHelper.SkillGauge(_model.Skills[index], fighting,
                     _model.PlayerAction, index, canUse);
@@ -286,10 +316,10 @@ namespace WebRPG
                 _model.Configuration.BasicAttack.CastTime, _model.PlayerAction, fighting);
             AdventureCharacterScreenModel localPlayer = new AdventureCharacterScreenModel
             {
-                Id = LocalPlayerId,
-                Name = LocalPlayerName,
+                Id = _network?.PlayerId ?? LocalPlayerId,
+                Name = string.IsNullOrEmpty(_network?.LocalName) ? LocalPlayerName : _network.LocalName,
                 IsLocalPlayer = true,
-                IsDefeated = _model.Health == 0,
+                IsDefeated = _model.Health == 0 || _model.Phase == AdventurePhase.Failed,
                 Health = localHealth,
                 Action = AdventureBattleScreenHelper.CastGauge(_model.PlayerAction, _model.Health == 0),
                 BasicAttack = localAttack,
@@ -312,25 +342,38 @@ namespace WebRPG
                 }).ToArray() : Array.Empty<AdventureCharacterScreenModel>();
             bool showMap = _mapOpen || _model.Phase == AdventurePhase.Map;
             _content.Refresh(showMap);
+            AdventureMapRowScreenModel[] mapRows = _network == null ? _content.Rows : showMap ? _content.Rows.Select(row => new AdventureMapRowScreenModel
+            {
+                Status = row.Status,
+                Nodes = row.Nodes.Select(node => new AdventureMapNodeScreenModel
+                {
+                    Title = node.Title,
+                    StateText = node.StateText,
+                    CanSelect = node.CanSelect && (_network == null ||
+                        _network.CanVote),
+                    IsChosen = node.IsChosen,
+                    ChoiceIndex = node.ChoiceIndex
+                }).ToArray()
+            }).ToArray() : Array.Empty<AdventureMapRowScreenModel>();
             _view.Render(new AdventureScreenModel
             {
                 Heading = showMap ? MapHeading : _content.HeadingText,
                 Summary = _content.SummaryText,
-                Situation = _content.SituationText,
+                Situation = _network == null ? _content.SituationText : _network.Status,
                 Journal = _content.JournalText,
                 Choices = _content.ChoiceLabels,
                 PlayerHealth = localHealth,
                 BasicAttack = localAttack,
                 Skills = slots,
-                Players = new[] { localPlayer },
+                Players = _network?.GetPartyCharacters(localPlayer) ?? new[] { localPlayer },
                 Enemies = enemies,
                 ShowBattle = fighting,
                 BattleSpeed = _model.BattleSpeed,
                 Projectile = fighting && _model.Projectile != null ? new AdventureProjectileScreenModel
                 {
-                    SourceCharacterId = _model.Projectile.SourceEnemyIndex < 0 ? LocalPlayerId
+                    SourceCharacterId = _model.Projectile.SourceEnemyIndex < 0 ? (_network?.ProjectileSourceId ?? localPlayer.Id)
                         : EnemyIdPrefix + _model.Projectile.SourceEnemyIndex,
-                    TargetCharacterId = _model.Projectile.TargetEnemyIndex < 0 ? LocalPlayerId
+                    TargetCharacterId = _model.Projectile.TargetEnemyIndex < 0 ? (_network?.ProjectileTargetId ?? localPlayer.Id)
                         : EnemyIdPrefix + _model.Projectile.TargetEnemyIndex,
                     Name = _model.Projectile.Name,
                     Progress = 1 - _model.Projectile.RemainingTime / _model.Projectile.Duration
@@ -338,19 +381,24 @@ namespace WebRPG
                 ShowMap = showMap,
                 CanToggleMap = _model.Phase != AdventurePhase.Ready && _model.Phase != AdventurePhase.Map,
                 MapButtonText = showMap && _model.Phase != AdventurePhase.Map ? ReturnToAdventureText : MapButtonText,
-                MapRows = showMap ? _content.Rows : Array.Empty<AdventureMapRowScreenModel>(),
+                MapRows = mapRows,
                 MapCurrentRow = _model.Phase == AdventurePhase.Complete
                     ? _model.GetFloorRows(_model.Configuration.Floors.Length - 1).Count - 1 : _model.RowIndex,
-                MapNotice = _model.Phase == AdventurePhase.Map ? MapSelectionNotice
+                MapNotice = _network != null && _model.Phase == AdventurePhase.Map ? _network.Status
+                    : _model.Phase == AdventurePhase.Map ? MapSelectionNotice
                     : fighting ? BattleMapNotice
                     : ResultMapNotice,
                 InspectedCharacterId = localPlayer.Id,
                 InspectedCharacterName = localPlayer.Name,
                 InspectedSkills = new[] { localPlayer.BasicAttack }.Concat(slots).ToArray(),
                 Relics = _content.RelicIcons,
-                ShowResultActions = _model.Phase == AdventurePhase.Complete || _model.Phase == AdventurePhase.Failed,
-                CanStart = ended,
-                CanAbandon = !ended
+                ShowResultActions = (_model.Phase == AdventurePhase.Complete && (_network == null || _network.IsComplete)) ||
+                    _model.Phase == AdventurePhase.Failed,
+                CanStart = ended && _network == null,
+                CanAbandon = !ended,
+                CanChoose = _network == null || _model.Phase == AdventurePhase.SkillReward ||
+                    _model.Phase == AdventurePhase.NodeChoice || _network.CanVote,
+                CanChangeBattleSpeed = _network == null
             });
         }
 

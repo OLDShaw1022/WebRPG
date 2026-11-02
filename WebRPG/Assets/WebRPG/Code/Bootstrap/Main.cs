@@ -1,6 +1,7 @@
 using System;
 using Newtonsoft.Json;
 using UnityEngine;
+using WebRPGShared;
 
 namespace WebRPG
 {
@@ -19,6 +20,7 @@ namespace WebRPG
         private LobbyView _lobbyView;
         private LobbyModel _lobbyModel;
         private LobbyPresenter _lobbyPresenter;
+        private MultiplayerAdventureSession _multiplayerAdventureSession;
 
         private const string WebGlQuitMessage = "請關閉瀏覽器分頁以離開遊戲。";
 
@@ -87,6 +89,11 @@ namespace WebRPG
 
         private bool StartAdventure()
         {
+            return StartAdventure(Environment.TickCount, false);
+        }
+
+        private bool StartAdventure(int seed, bool multiplayer)
+        {
             if (_adventurePresenter != null)
             {
                 return false;
@@ -101,12 +108,21 @@ namespace WebRPG
 
                 AdventureConfiguration configuration =
                     JsonConvert.DeserializeObject<AdventureConfiguration>(_adventureConfiguration.text);
-                AdventureModel model = new AdventureModel(configuration, Environment.TickCount);
-                model.StartRun();
+                AdventureModel model;
+                if (multiplayer)
+                {
+                    _multiplayerAdventureSession = new MultiplayerAdventureSession(_lobbyModel, seed, configuration);
+                    model = _multiplayerAdventureSession.LocalModel;
+                }
+                else
+                {
+                    model = new AdventureModel(configuration, seed);
+                    model.StartRun();
+                }
                 _adventureView = Instantiate(_adventureViewPrefab);
-                _adventurePresenter = new AdventurePresenter(model, _adventureView);
-                _adventureMenuPresenter = new AdventureMenuPresenter(new AdventureMenuModel(true),
-                    _adventureView.Menu, _adventurePresenter.SetPaused, _adventureView.RequestAbandon,
+                _adventurePresenter = new AdventurePresenter(model, _adventureView, _multiplayerAdventureSession);
+                _adventureMenuPresenter = new AdventureMenuPresenter(new AdventureMenuModel(!multiplayer),
+                    _adventureView.Menu, multiplayer ? _ => { } : _adventurePresenter.SetPaused, _adventureView.RequestAbandon,
                     _adventureView.RequestStart, ReturnToMainMenu);
                 _adventureView.MenuRequested += _adventureMenuPresenter.Open;
                 return true;
@@ -135,11 +151,14 @@ namespace WebRPG
             _adventureMenuPresenter = null;
             _adventurePresenter?.Dispose();
             _adventurePresenter = null;
+            _multiplayerAdventureSession?.Dispose();
+            _multiplayerAdventureSession = null;
         }
 
         private void ReturnToMainMenu()
         {
             DisposeAdventure();
+            if (_lobbyModel != null) DisposeLobby();
             if (_adventureView)
             {
                 Destroy(_adventureView.gameObject);
@@ -163,6 +182,7 @@ namespace WebRPG
                 configuration.Validate();
                 _lobbyView = Instantiate(_lobbyViewPrefab);
                 _lobbyModel = new LobbyModel(configuration, Application.isEditor);
+                _lobbyModel.AdventureReceived += HandleAdventurePacket;
                 _lobbyPresenter = new LobbyPresenter(_lobbyModel, _lobbyView, ReturnFromLobby);
                 return true;
             }
@@ -175,6 +195,19 @@ namespace WebRPG
             }
         }
 
+        private void HandleAdventurePacket(AdventurePacket packet)
+        {
+            if (packet?.Type != AdventurePacketType.Start || _adventurePresenter != null ||
+                !int.TryParse(packet.Payload, System.Globalization.NumberStyles.Integer,
+                    System.Globalization.CultureInfo.InvariantCulture, out int seed))
+            {
+                return;
+            }
+
+            if (_lobbyView) _lobbyView.gameObject.SetActive(false);
+            if (!StartAdventure(seed, true) && _lobbyView) _lobbyView.gameObject.SetActive(true);
+        }
+
         private void ReturnFromLobby()
         {
             DisposeLobby();
@@ -183,6 +216,7 @@ namespace WebRPG
 
         private void DisposeLobby()
         {
+            if (_lobbyModel != null) _lobbyModel.AdventureReceived -= HandleAdventurePacket;
             _lobbyPresenter?.Dispose();
             _lobbyPresenter = null;
             if (_lobbyModel != null) _lobbyModel.DisposeAsync().Forget();

@@ -18,6 +18,7 @@ internal static class Program
             await RunRemoteAsync(new Uri(arguments[1]), remoteTimeout.Token);
             return;
         }
+        MultiplayerProtocolTests.Run();
         TcpListener reservation = new(IPAddress.Loopback, 0);
         reservation.Start();
         int port = ((IPEndPoint)reservation.LocalEndpoint).Port;
@@ -41,6 +42,7 @@ internal static class Program
             Uri address = new($"ws://127.0.0.1:{port}/ws?channel=lobby");
             await WaitForServerAsync(port, timeout.Token);
             await RunAsync(address, timeout.Token);
+            await MultiplayerWebSocketTests.RunAsync(address, timeout.Token);
             Console.WriteLine("PASS: lobby WebSocket integration scenarios.");
         }
         finally
@@ -197,9 +199,13 @@ internal sealed class LobbyClient : IDisposable
         }
     }
 
-    public async Task ReadTypeAsync(string expected, CancellationToken token)
+    public async Task<JsonObject> ReadTypeAsync(string expected, CancellationToken token)
     {
-        while ((await ReadAsync(token))["Type"]!.GetValue<string>() != expected) { }
+        while (true)
+        {
+            JsonObject response = await ReadAsync(token);
+            if (response["Type"]!.GetValue<string>() == expected) return response;
+        }
     }
 
     public async Task SendRawAsync(string text, CancellationToken token) =>

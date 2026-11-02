@@ -1,4 +1,10 @@
 {
+  "Multiplayer": {
+    "EnemyHealthPerAdditionalPlayer": 1,
+    "EnemyDamagePerAdditionalPlayer": 0,
+    "NetworkTimeoutSeconds": 10,
+    "RevivalHealthFraction": 0.2
+  },
   "StartingHealth": 120,
   "StartingSkills": [
     "slash"

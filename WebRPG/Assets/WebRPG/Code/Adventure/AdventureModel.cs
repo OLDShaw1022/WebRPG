@@ -24,12 +24,17 @@ namespace WebRPG
         private const string PlayerDefeatedMessage = "生命耗盡，挑戰失敗。";
         private const string BattleTimeoutMessage = "戰鬥超過時限，挑戰失敗。";
         private const string BattleVictoryMessagePrefix = "戰鬥勝利，取得 ";
+        private const string PartyFailureMessage = "多人冒險已終止，本輪挑戰失敗。";
         private const string RunCompletedMessagePrefix = "三層 Boss 已全部擊敗，挑戰成功！本輪金幣：";
         private const string FloorEntryMessagePrefix = "進入「";
 
 
         private readonly AdventureConfiguration _configuration;
-        private readonly Random _random;
+        private readonly Random _mapRandom;
+        private readonly Random _encounterRandom;
+        private readonly Random _relicRandom;
+        private readonly Random _skillRandom;
+        private readonly bool _partyMode;
         private readonly List<AdventureSkillState> _skills = new List<AdventureSkillState>();
         private AdventureBattleModel _battle;
         private readonly IReadOnlyList<AdventureSkillState> _readOnlySkills;
@@ -46,18 +51,28 @@ namespace WebRPG
         private int _damageBonus;
         private long _projectileSequence;
 
-        public AdventureModel(AdventureConfiguration configuration, int seed)
+        public AdventureModel(AdventureConfiguration configuration, int seed) : this(configuration, seed, false)
+        {
+        }
+
+        public AdventureModel(AdventureConfiguration configuration, int seed, bool isolateRandomStreams, int personalSeed = 0)
         {
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             configuration.Validate();
+            _partyMode = isolateRandomStreams;
             MaximumHealth = configuration.StartingHealth;
             Health = MaximumHealth;
-            _random = new Random(seed);
+            Random sharedRandom = new Random(seed);
+            _mapRandom = isolateRandomStreams ? new Random(seed) : sharedRandom;
+            _encounterRandom = isolateRandomStreams ? new Random(unchecked(seed ^ 0x2A53B4C1)) : sharedRandom;
+            _relicRandom = isolateRandomStreams ? new Random(unchecked(seed ^ 0x3F6A2D17 ^ personalSeed * 7919)) : sharedRandom;
+            _skillRandom = isolateRandomStreams ? new Random(unchecked(seed ^ 0x6D718293 ^ personalSeed * 7919)) : sharedRandom;
             _readOnlySkills = _skills.AsReadOnly();
             _readOnlyRewards = _rewards.AsReadOnly();
             _readOnlyRelics = _relics.AsReadOnly();
         }
 
+        public AdventureBattleModel Battle => _battle;
         public AdventureConfiguration Configuration => _configuration;
         public AdventurePhase Phase { get; private set; } = AdventurePhase.Ready;
         public int Health { get; private set; }
@@ -155,7 +170,7 @@ namespace WebRPG
                 return;
             }
 
-            string groupId = CurrentNode.EnemyGroupPool[_random.Next(CurrentNode.EnemyGroupPool.Length)];
+            string groupId = CurrentNode.EnemyGroupPool[_encounterRandom.Next(CurrentNode.EnemyGroupPool.Length)];
             CurrentEnemyGroup = _configuration.EnemyGroups.First(group => group.Id == groupId);
             _battle = new AdventureBattleModel(_configuration, Skills,
                 CurrentEnemyGroup.EnemyIds.Select(identifier => _configuration.Enemies.First(enemy => enemy.Id == identifier)),
@@ -179,10 +194,10 @@ namespace WebRPG
                     WinBattle();
                     break;
                 case AdventureBattleOutcome.Defeated:
-                    Fail(PlayerDefeatedMessage);
+                    if (!_partyMode) Fail(PlayerDefeatedMessage);
                     break;
                 case AdventureBattleOutcome.TimedOut:
-                    Fail(BattleTimeoutMessage);
+                    if (!_partyMode) Fail(BattleTimeoutMessage);
                     break;
             }
         }
@@ -229,7 +244,7 @@ namespace WebRPG
                     _relics.All(owned => owned.Id != relic.Id)).ToArray();
                 if (pool.Length > 0)
                 {
-                    RelicDefinition relic = pool[_random.Next(pool.Length)];
+                    RelicDefinition relic = pool[_relicRandom.Next(pool.Length)];
                     _relics.Add(relic);
                     foreach (EffectDefinition effect in relic.Effects)
                     {
@@ -266,7 +281,15 @@ namespace WebRPG
                     Health = Math.Max(0, Health - CurrentNode.HealthCost);
                     if (Health == 0)
                     {
-                        Fail(EventHealthCostFailureMessage);
+                        if (_partyMode)
+                        {
+                            Record(PlayerDefeatedMessage);
+                            AdvanceNode();
+                        }
+                        else
+                        {
+                            Fail(EventHealthCostFailureMessage);
+                        }
                         return;
                     }
 
@@ -313,8 +336,22 @@ namespace WebRPG
             }
         }
 
+        public void SynchronizePartyBattle()
+        {
+            if (!_partyMode || Phase != AdventurePhase.Battle || _battle == null) return;
+            Health = _battle.Health;
+            if (_battle.Outcome == AdventureBattleOutcome.Won) WinBattle();
+        }
+
+        public void FailPartyRun()
+        {
+            if (Phase != AdventurePhase.Failed) Fail(PartyFailureMessage);
+        }
+
         private void WinBattle()
         {
+            if (_partyMode && Health == 0)
+                Health = Math.Max(1, (int)Math.Ceiling(MaximumHealth * _configuration.Multiplayer.RevivalHealthFraction));
             ResetCooldowns();
             Gold += CurrentNode.Gold;
             Record(BattleVictoryMessagePrefix + CurrentNode.Gold + GoldRewardMessageSuffix);
@@ -327,7 +364,7 @@ namespace WebRPG
             while (_rewards.Count < _configuration.RewardChoices && pool.Count > 0)
             {
                 double totalWeight = pool.Sum(definition => (double)SkillWeight(definition));
-                double draw = _random.NextDouble() * totalWeight;
+                double draw = _skillRandom.NextDouble() * totalWeight;
                 SkillDefinition selected = pool[pool.Count - 1];
                 foreach (SkillDefinition candidate in pool)
                 {
@@ -390,7 +427,7 @@ namespace WebRPG
             HashSet<int> selected = new HashSet<int>();
             for (int index = 0; index < row.NodeCount; index++)
             {
-                int draw = _random.Next(candidates.Count);
+                int draw = _mapRandom.Next(candidates.Count);
                 selected.Add(candidates[draw]);
                 candidates.RemoveAt(draw);
             }

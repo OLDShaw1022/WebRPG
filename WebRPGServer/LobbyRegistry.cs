@@ -9,6 +9,7 @@ public sealed class LobbyRegistry
     private readonly Dictionary<string, LobbyMemberSnapshot> _players = new();
     private readonly Dictionary<string, LobbyRoomSnapshot> _rooms = new();
     private readonly Dictionary<string, string> _memberships = new();
+    private readonly Dictionary<string, MultiplayerRoomState> _adventures = new();
 
     public LobbyRegistry(LobbyOptions options)
     {
@@ -55,6 +56,7 @@ public sealed class LobbyRegistry
                 if (!_rooms.TryGetValue(request.RoomId ?? string.Empty, out LobbyRoomSnapshot? room))
                     throw new ArgumentException("找不到房間，請重新整理列表。");
                 if (room.Members.Length >= room.Capacity) throw new ArgumentException("房間已滿。");
+                if (_adventures.ContainsKey(room.Id)) throw new ArgumentException("冒險進行中，無法加入房間。");
                 _players[playerId].IsReady = false;
                 room.Members = room.Members.Append(_players[playerId]).ToArray();
                 _memberships.Add(playerId, room.Id);
@@ -71,6 +73,44 @@ public sealed class LobbyRegistry
         }
     }
 
+    public AdventurePacket ExecuteAdventure(string playerId, AdventurePacket request)
+    {
+        if (request == null || request.Payload == null || request.Payload.Length > 6000)
+            throw new ArgumentException("冒險訊息格式錯誤。");
+        if (!_memberships.TryGetValue(playerId, out string? roomId) ||
+            !_rooms.TryGetValue(roomId, out LobbyRoomSnapshot? room))
+            throw new ArgumentException("請先加入房間。");
+        if (request.Type == AdventurePacketType.Start)
+        {
+            if (room.LeaderId != playerId || room.Members.Any(member => !member.IsReady))
+                throw new ArgumentException("只有隊長可在全員準備後開始冒險。");
+            if (_adventures.ContainsKey(roomId)) throw new ArgumentException("冒險已經開始。");
+            _adventures.Add(roomId, new MultiplayerRoomState());
+            return new AdventurePacket
+            {
+                Type = AdventurePacketType.Start, RoomId = roomId, PlayerId = playerId,
+                Payload = Random.Shared.Next(1, int.MaxValue).ToString(System.Globalization.CultureInfo.InvariantCulture)
+            };
+        }
+        if (!_adventures.TryGetValue(roomId, out MultiplayerRoomState? adventure))
+            throw new ArgumentException("冒險尚未開始。");
+        return adventure.Execute(playerId, room, request);
+    }
+
+    public AdventurePacket? FailAdventure(string playerId)
+    {
+        return _memberships.TryGetValue(playerId, out string? roomId) &&
+            _adventures.TryGetValue(roomId, out MultiplayerRoomState? adventure)
+            ? adventure.Fail(roomId, playerId) : null;
+    }
+
+    public string[] GetRoomPlayers(string playerId)
+    {
+        return _memberships.TryGetValue(playerId, out string? roomId) && _rooms.TryGetValue(roomId, out LobbyRoomSnapshot? room)
+            ? room.Members.Select(member => member.PlayerId).ToArray()
+            : Array.Empty<string>();
+    }
+
     public LobbyPacket Snapshot(string playerId, string requestId = "")
     {
         return new LobbyPacket
@@ -78,7 +118,7 @@ public sealed class LobbyRegistry
             Type = LobbyPacketType.State,
             RequestId = requestId,
             PlayerId = playerId,
-            Rooms = _rooms.Values.Where(room => room.IsPublic)
+            Rooms = _rooms.Values.Where(room => room.IsPublic && !_adventures.ContainsKey(room.Id))
                 .OrderBy(room => room.Id, StringComparer.Ordinal)
                 .Select(room => new LobbyRoomSummary
                 {
@@ -96,6 +136,7 @@ public sealed class LobbyRegistry
 
     private void Leave(string playerId)
     {
+        FailAdventure(playerId);
         if (!_memberships.Remove(playerId, out string? roomId)) return;
         LobbyRoomSnapshot room = _rooms[roomId];
         room.Members = room.Members.Where(member => member.PlayerId != playerId).ToArray();
@@ -103,8 +144,13 @@ public sealed class LobbyRegistry
         if (room.Members.Length == 0)
         {
             _rooms.Remove(roomId);
+            _adventures.Remove(roomId);
             return;
         }
-        if (room.LeaderId == playerId) room.LeaderId = room.Members[0].PlayerId;
+        if (room.LeaderId == playerId)
+        {
+            room.LeaderId = room.Members[0].PlayerId;
+        }
     }
+
 }

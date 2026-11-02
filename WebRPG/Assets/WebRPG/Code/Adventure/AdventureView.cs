@@ -228,6 +228,7 @@ namespace WebRPG
             _mapPanel.Rect.gameObject.SetActive(screen.ShowMap);
             _situation.text = screen.Situation;
             _resultRestart.Rect.gameObject.SetActive(screen.ShowResultActions);
+            _resultRestart.Button.interactable = screen.CanStart;
             _resultReturn.Rect.gameObject.SetActive(screen.ShowResultActions);
             _skillHeading.text = screen.InspectedCharacterName + InspectedSkillsTitleSuffix;
             for (int index = 0; index < _players.Length; index++)
@@ -259,6 +260,7 @@ namespace WebRPG
                 if (visible)
                 {
                     _choices[index].Label.text = screen.Choices[index];
+                    _choices[index].Button.interactable = screen.CanChoose;
                 }
             }
 
@@ -311,6 +313,7 @@ namespace WebRPG
                 _battleSpeedControls[index].Label.text = selected
                     ? string.Format(SelectedSpeedFormat, labels[index]) : labels[index];
                 _battleSpeedControls[index].Outline.effectColor = selected ? _foreground : _border;
+                _battleSpeedControls[index].Button.interactable = _screen.CanChangeBattleSpeed;
             }
         }
 

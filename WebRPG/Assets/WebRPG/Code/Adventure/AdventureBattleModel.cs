@@ -19,7 +19,10 @@ namespace WebRPG
 
         private readonly AdventureConfiguration _configuration;
         private readonly IReadOnlyList<AdventureSkillState> _skills;
-        private readonly List<AdventureEnemyState> _enemies;
+        private List<AdventureEnemyState> _enemies;
+        private bool _partyMode;
+        private AdventureProjectileState _projectile;
+        internal AdventureProjectileState SharedProjectile { get; set; }
         private readonly int _damageBonus;
         private float _accumulatedTime;
         private float _battleTime;
@@ -32,14 +35,14 @@ namespace WebRPG
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             _skills = skills ?? throw new ArgumentNullException(nameof(skills));
             _enemies = enemies.Select(definition => new AdventureEnemyState(definition)).ToList();
-            Enemies = _enemies.AsReadOnly();
             Health = health;
             MaximumHealth = maximumHealth;
             _damageBonus = damageBonus;
             _projectileSequence = projectileSequence;
             ResetCooldowns();
             SelectLivingTarget();
-            StartPlayerBasicAttack();
+            if (health > 0) StartPlayerBasicAttack();
+            else Outcome = AdventureBattleOutcome.Defeated;
             foreach (AdventureEnemyState enemy in _enemies)
             {
                 StartEnemyAction(enemy);
@@ -52,9 +55,9 @@ namespace WebRPG
         public int MaximumHealth { get; }
         public int BasicAttackDamage => _configuration.BasicAttack.Damage + _damageBonus;
         public long ProjectileSequence => _projectileSequence;
-        public IReadOnlyList<AdventureEnemyState> Enemies { get; }
+        public IReadOnlyList<AdventureEnemyState> Enemies => _enemies.AsReadOnly();
         public AdventureActionState PlayerAction { get; private set; }
-        public AdventureProjectileState Projectile { get; private set; }
+        public AdventureProjectileState Projectile { get => _projectile ?? SharedProjectile; private set => _projectile = value; }
         public int LockedEnemyIndex { get; private set; } = -1;
 
         public void Tick(float seconds)
@@ -107,6 +110,55 @@ namespace WebRPG
             AdventureSkillState skill = _skills[index];
             PlayerAction = new AdventureActionState(skill.Definition.Name, skill.Definition.CastTime, index);
             return true;
+        }
+
+        internal void ScalePartyEnemies(MultiplayerAdventureDefinition settings, int count)
+        {
+            _enemies = _enemies.Select(enemy => new AdventureEnemyState(
+                MultiplayerEnemyScalingHelper.Scale(enemy.Definition, settings, count))).ToList();
+            foreach (AdventureEnemyState enemy in _enemies) StartEnemyAction(enemy);
+        }
+
+        internal void ConfigureParty(AdventureBattleModel first)
+        {
+            _partyMode = true;
+            _enemies = first._enemies;
+            Outcome = AdventureBattleOutcome.Running;
+            SelectLivingTarget();
+        }
+
+        public void ReceivePartyDamage(int damage)
+        {
+            if (!_partyMode || damage <= 0) return;
+            Health = Math.Max(0, Health - damage);
+            if (Health == 0) PlayerAction = null;
+        }
+
+        internal void AdvancePartyPlayer(float seconds)
+        {
+            if (Health == 0 || PlayerAction == null) return;
+            foreach (AdventureSkillState skill in _skills)
+                skill.RemainingCooldown = Math.Max(0, skill.RemainingCooldown - seconds);
+            PlayerAction.RemainingCastTime = Math.Max(0, PlayerAction.RemainingCastTime - seconds);
+        }
+
+        internal void AdvancePartyEnemies(float seconds)
+        {
+            foreach (AdventureEnemyState enemy in _enemies)
+            {
+                if (enemy.Health == 0 || enemy.Action == null) continue;
+                enemy.RemainingSpecialCooldown = Math.Max(0, enemy.RemainingSpecialCooldown - seconds);
+                enemy.Action.RemainingCastTime = Math.Max(0, enemy.Action.RemainingCastTime - seconds);
+            }
+        }
+
+        internal void LaunchPartyPlayerAction() => LaunchPlayerAction();
+        internal void LaunchPartyEnemyAction(int index) => LaunchEnemyAction(index);
+        internal void ResolvePartyProjectile() => ResolveProjectile();
+        internal void CompletePartyBattle(AdventureBattleOutcome outcome)
+        {
+            SharedProjectile = null;
+            Finish(outcome);
         }
 
         private void SimulateStep(float step)
@@ -270,6 +322,12 @@ namespace WebRPG
                         projectile.Healing + SentenceTerminator);
                 }
                 StartEnemyAction(source);
+            }
+            if (_partyMode)
+            {
+                if (Health == 0) PlayerAction = null;
+                SelectLivingTarget();
+                return;
             }
             if (Health == 0)
             {

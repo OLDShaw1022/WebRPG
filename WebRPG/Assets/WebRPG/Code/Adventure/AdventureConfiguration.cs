@@ -33,6 +33,7 @@ namespace WebRPG
         private const string InvalidEffectModuleMessage = "Invalid effect module.";
         private const string InvalidIdentifiersMessage = "Identifiers must be nonempty and unique.";
 
+        public MultiplayerAdventureDefinition Multiplayer { get; set; } = new MultiplayerAdventureDefinition();
         public int StartingHealth { get; set; }
         public BasicAttackDefinition BasicAttack { get; set; }
         public int MaximumMapChoices { get; set; }
@@ -52,6 +53,11 @@ namespace WebRPG
 
         public void Validate()
         {
+            Require(Multiplayer != null && Multiplayer.EnemyHealthPerAdditionalPlayer >= 0 &&
+                Multiplayer.EnemyHealthPerAdditionalPlayer <= 10 && Multiplayer.EnemyDamagePerAdditionalPlayer >= 0 &&
+                Multiplayer.EnemyDamagePerAdditionalPlayer <= 10 && Multiplayer.RevivalHealthFraction > 0 &&
+                Multiplayer.RevivalHealthFraction <= 1 && Multiplayer.NetworkTimeoutSeconds >= 3 &&
+                Multiplayer.NetworkTimeoutSeconds <= 120, nameof(Multiplayer));
             Require(StartingHealth > 0 && SkillSlots == 6 && RewardChoices >= 1 && RewardChoices <= 3,
                 InvalidPlayerOrRewardSettingsMessage);
             Require(OwnedSkillWeight > 0 && NewSkillWeight > 0 &&
@@ -173,6 +179,15 @@ namespace WebRPG
                 throw new ArgumentException(message);
             }
         }
+    }
+
+    // 定義組隊敵人強化與戰勝復活的可調整原型參數。
+    public sealed class MultiplayerAdventureDefinition
+    {
+        public float EnemyHealthPerAdditionalPlayer { get; set; } = 1;
+        public float EnemyDamagePerAdditionalPlayer { get; set; }
+        public float NetworkTimeoutSeconds { get; set; } = 10;
+        public float RevivalHealthFraction { get; set; } = 0.2f;
     }
 
     public enum AdventureNodeType { Battle, Elite, Boss, Chest, Event, Camp }

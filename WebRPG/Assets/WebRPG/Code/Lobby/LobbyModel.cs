@@ -11,6 +11,7 @@ namespace WebRPG
     public interface ILobbyModel
     {
         public event Action Changed;
+        public event Action<AdventurePacket> AdventureReceived;
         public string[] ServerNames { get; }
         public int DefaultServerIndex { get; }
         public bool IsConnected { get; }
@@ -21,6 +22,7 @@ namespace WebRPG
         public LobbyRoomSummary[] Rooms { get; }
         public Awaitable ConnectAsync(int serverIndex, string username);
         public Awaitable SendAsync(LobbyPacket packet);
+        public Awaitable SendAdventureAsync(AdventurePacket packet);
     }
 
     // 管理房間大廳的 WebSocket、要求狀態與完整伺服器快照。
@@ -45,6 +47,7 @@ namespace WebRPG
         private string _pendingId = string.Empty;
         private float _pendingTime;
         public event Action Changed;
+        public event Action<AdventurePacket> AdventureReceived;
         public string[] ServerNames { get; }
         public int DefaultServerIndex { get; }
         public bool IsConnected { get; private set; }
@@ -124,6 +127,27 @@ namespace WebRPG
             await SendPacketAsync(packet);
         }
 
+        public async Awaitable SendAdventureAsync(AdventurePacket packet)
+        {
+            if (_disposed || !IsConnected || packet == null) return;
+            WebSocket socket = _socket;
+            packet.RequestId = (++_requestNumber).ToString();
+            try
+            {
+                await socket.SendText(JsonConvert.SerializeObject(new LobbyPacket
+                {
+                    Type = LobbyPacketType.Adventure,
+                    RequestId = packet.RequestId,
+                    Adventure = packet
+                }));
+            }
+            catch (Exception exception)
+            {
+                if (!_disposed && socket == _socket)
+                    Disconnect(string.Format(ConnectionFailedFormat, exception.Message));
+            }
+        }
+
         private async Awaitable SendPacketAsync(LobbyPacket packet)
         {
             WebSocket socket = _socket;
@@ -147,6 +171,11 @@ namespace WebRPG
             try { packet = JsonConvert.DeserializeObject<LobbyPacket>(json); }
             catch (JsonException) { Disconnect(InvalidPacketMessage); return; }
             if (packet == null) { Disconnect(InvalidPacketMessage); return; }
+            if (packet.Type == LobbyPacketType.Adventure)
+            {
+                if (packet.Adventure != null) AdventureReceived?.Invoke(packet.Adventure);
+                return;
+            }
             if (packet.Type == LobbyPacketType.Welcome || packet.Type == LobbyPacketType.State)
             {
                 PlayerId = packet.PlayerId;

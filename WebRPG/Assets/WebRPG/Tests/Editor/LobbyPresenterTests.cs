@@ -74,6 +74,7 @@ namespace WebRPG.Tests
     internal sealed class TestLobbyModel : ILobbyModel
     {
         public event Action Changed;
+        public event Action<AdventurePacket> AdventureReceived;
         public string[] ServerNames => new[] { "AWS EC2", "本機測試" };
         public int DefaultServerIndex => 0;
         public bool IsConnected { get; set; } = true;
@@ -97,6 +98,13 @@ namespace WebRPG.Tests
         public Awaitable SendAsync(LobbyPacket packet)
         {
             Last = packet;
+            AwaitableCompletionSource source = new AwaitableCompletionSource();
+            source.SetResult();
+            return source.Awaitable;
+        }
+        public Awaitable SendAdventureAsync(AdventurePacket packet)
+        {
+            AdventureReceived?.Invoke(packet);
             AwaitableCompletionSource source = new AwaitableCompletionSource();
             source.SetResult();
             return source.Awaitable;
