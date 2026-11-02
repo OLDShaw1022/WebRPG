@@ -11,6 +11,15 @@ namespace WebRPG
         private const string MissingMainMenuPrefabMessage = "Main requires a MainMenuView prefab reference.";
         private const string MissingAdventureReferencesMessage = "Main requires adventure prefab and configuration references.";
         private const string AdventureStartFailureMessage = "無法開始冒險，請檢查遊戲設定後重試。";
+        private const string LobbyStartFailureMessage = "無法開啟房間大廳，請檢查設定後重試。";
+        private const string MissingLobbyPrefabMessage = "Main requires a LobbyView prefab reference.";
+
+        [SerializeField] private LobbyView _lobbyViewPrefab;
+        [SerializeField] private TextAsset _lobbyConfiguration;
+        private LobbyView _lobbyView;
+        private LobbyModel _lobbyModel;
+        private LobbyPresenter _lobbyPresenter;
+
         private const string WebGlQuitMessage = "請關閉瀏覽器分頁以離開遊戲。";
 
         [SerializeField]
@@ -40,17 +49,19 @@ namespace WebRPG
 
             _mainMenuView = Instantiate(_mainMenuViewPrefab);
             _mainMenuPresenter = new MainMenuPresenter(
-                new MainMenuModel(), _mainMenuView, StartAdventure, QuitGame);
+                new MainMenuModel(), _mainMenuView, StartAdventure, QuitGame, OpenLobby);
         }
 
         private void OnApplicationQuit()
         {
+            DisposeLobby();
             DisposeAdventure();
             _mainMenuPresenter?.Dispose();
         }
 
         private void OnDestroy()
         {
+            DisposeLobby();
             DisposeAdventure();
             _mainMenuPresenter?.Dispose();
             _mainMenuPresenter = null;
@@ -71,6 +82,7 @@ namespace WebRPG
         private void Update()
         {
             _adventurePresenter?.Tick(Time.deltaTime);
+            _lobbyModel?.Tick(Time.unscaledDeltaTime);
         }
 
         private bool StartAdventure()
@@ -134,9 +146,49 @@ namespace WebRPG
                 _adventureView = null;
             }
             _mainMenuPresenter?.Dispose();
-            _mainMenuPresenter = new MainMenuPresenter(new MainMenuModel(), _mainMenuView, StartAdventure, QuitGame);
+            _mainMenuPresenter = new MainMenuPresenter(new MainMenuModel(), _mainMenuView, StartAdventure, QuitGame, OpenLobby);
             _mainMenuView.ShowMessage(string.Empty);
             _mainMenuView.gameObject.SetActive(true);
+        }
+
+        private bool OpenLobby()
+        {
+            if (_lobbyPresenter != null || _adventurePresenter != null) return false;
+            try
+            {
+                if (!_lobbyViewPrefab || !_lobbyConfiguration)
+                    throw new InvalidOperationException(MissingLobbyPrefabMessage);
+                LobbyClientConfiguration configuration =
+                    JsonConvert.DeserializeObject<LobbyClientConfiguration>(_lobbyConfiguration.text);
+                configuration.Validate();
+                _lobbyView = Instantiate(_lobbyViewPrefab);
+                _lobbyModel = new LobbyModel(configuration, Application.isEditor);
+                _lobbyPresenter = new LobbyPresenter(_lobbyModel, _lobbyView, ReturnFromLobby);
+                return true;
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception, this);
+                DisposeLobby();
+                _mainMenuView.ShowMessage(LobbyStartFailureMessage);
+                return false;
+            }
+        }
+
+        private void ReturnFromLobby()
+        {
+            DisposeLobby();
+            _mainMenuView.gameObject.SetActive(true);
+        }
+
+        private void DisposeLobby()
+        {
+            _lobbyPresenter?.Dispose();
+            _lobbyPresenter = null;
+            if (_lobbyModel != null) _lobbyModel.DisposeAsync().Forget();
+            _lobbyModel = null;
+            if (_lobbyView) Destroy(_lobbyView.gameObject);
+            _lobbyView = null;
         }
 
         private void QuitGame()

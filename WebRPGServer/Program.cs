@@ -3,7 +3,7 @@ using Npgsql;
 
 namespace WebRPGServer;
 
-// 啟動聊天伺服器，設定資料庫服務與 /ws WebSocket 端點。
+// 啟動聊天與房間大廳伺服器，設定資料庫與 /ws WebSocket 端點。
 public static class Program
 {
     public static async Task Main(string[] arguments)
@@ -20,6 +20,10 @@ public static class Program
         }
 
         builder.Services.AddSingleton<ChatHub>();
+        LobbyOptions lobbyOptions = builder.Configuration.GetSection("Lobby").Get<LobbyOptions>() ?? new LobbyOptions();
+        lobbyOptions.Validate();
+        builder.Services.AddSingleton(lobbyOptions);
+        builder.Services.AddSingleton<LobbyHub>();
 
         WebApplication application = builder.Build();
 
@@ -45,8 +49,16 @@ public static class Program
             if (context.Request.Path == "/ws" && context.WebSockets.IsWebSocketRequest)
             {
                 using WebSocket webSocket = await context.WebSockets.AcceptWebSocketAsync();
-                ChatHub chatHub = context.RequestServices.GetRequiredService<ChatHub>();
-                await chatHub.HandleConnectionAsync(webSocket, context.RequestAborted);
+                if (context.Request.Query["channel"] == "lobby")
+                {
+                    LobbyHub lobbyHub = context.RequestServices.GetRequiredService<LobbyHub>();
+                    await lobbyHub.HandleConnectionAsync(webSocket, context.RequestAborted);
+                }
+                else
+                {
+                    ChatHub chatHub = context.RequestServices.GetRequiredService<ChatHub>();
+                    await chatHub.HandleConnectionAsync(webSocket, context.RequestAborted);
+                }
                 return;
             }
 

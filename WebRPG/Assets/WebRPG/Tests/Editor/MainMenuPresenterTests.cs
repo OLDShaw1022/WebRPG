@@ -62,14 +62,34 @@ namespace WebRPG.Tests
             Assert.That(starts, Is.Zero);
         }
 
+        [Test]
+        public void MultiplayerOpensLobbyAndCanReturnWithoutStartingAdventure()
+        {
+            MainMenuModel model = new MainMenuModel();
+            TestMainMenuView view = new TestMainMenuView();
+            int opened = 0;
+            using (MainMenuPresenter presenter = new MainMenuPresenter(model, view,
+                () => false, () => { }, () => { opened++; return true; }))
+            {
+                view.Multiplayer();
+                Assert.That(opened, Is.EqualTo(1));
+                Assert.That(view.Hidden, Is.True);
+                Assert.That(model.HasEnteredAdventure, Is.False);
+            }
+            view.Multiplayer();
+            Assert.That(opened, Is.EqualTo(1));
+        }
+
         // 模擬主選單操作並記錄隱藏狀態，供 Presenter 測試使用。
         private sealed class TestMainMenuView : IMainMenuView
         {
             public event Action SinglePlayerRequested;
+            public event Action MultiplayerRequested;
             public event Action QuitRequested;
             public bool Hidden { get; private set; }
             public void Hide() => Hidden = true;
             public void StartSinglePlayer() => SinglePlayerRequested?.Invoke();
+            public void Multiplayer() => MultiplayerRequested?.Invoke();
             public void Quit() => QuitRequested?.Invoke();
         }
     }

@@ -50,6 +50,7 @@ publish/
 # Server and shared library project files required by GitHub Actions
 !/WebRPGServer/WebRPGServer.csproj
 !/WebRPGShared/WebRPGShared.csproj
+!/WebRPGServer.Tests/WebRPGServer.Tests.csproj
 
 ### Windows
 # Windows thumbnail cache files

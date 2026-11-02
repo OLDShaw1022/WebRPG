@@ -13,6 +13,8 @@ namespace WebRPG
         [SerializeField]
         private UnityEngine.UI.Button _singlePlayerButton;
 
+        [SerializeField] private UnityEngine.UI.Button _multiplayerButton;
+
         [SerializeField]
         private UnityEngine.UI.Button _quitButton;
 
@@ -20,21 +22,24 @@ namespace WebRPG
         private TextMeshProUGUI _message;
 
         public event Action SinglePlayerRequested;
+        public event Action MultiplayerRequested;
         public event Action QuitRequested;
 
         private void Awake()
         {
-            if (!_singlePlayerButton || !_quitButton || !_message)
+            if (!_singlePlayerButton || !_multiplayerButton || !_quitButton || !_message)
             {
                 throw new InvalidOperationException(MissingViewReferencesMessage);
             }
 
             _singlePlayerButton.onClick.AddListener(HandleSinglePlayerRequested);
+            _multiplayerButton.onClick.AddListener(HandleMultiplayerRequested);
             _quitButton.onClick.AddListener(HandleQuitRequested);
         }
 
         private void OnDestroy()
         {
+            if (_multiplayerButton) _multiplayerButton.onClick.RemoveListener(HandleMultiplayerRequested);
             if (_singlePlayerButton)
             {
                 _singlePlayerButton.onClick.RemoveListener(HandleSinglePlayerRequested);
@@ -60,6 +65,8 @@ namespace WebRPG
         {
             SinglePlayerRequested?.Invoke();
         }
+
+        private void HandleMultiplayerRequested() => MultiplayerRequested?.Invoke();
 
         private void HandleQuitRequested()
         {

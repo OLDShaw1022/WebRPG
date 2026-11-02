@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using Newtonsoft.Json;
 using UnityEditor;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
@@ -32,6 +33,14 @@ namespace WebRPG.ContinuousIntegration
             {
                 throw new InvalidOperationException("At least one enabled build scene is required.");
             }
+
+            TextAsset lobbyConfigurationAsset =
+                AssetDatabase.LoadAssetAtPath<TextAsset>("Assets/WebRPG/Data/LobbyClient.json");
+            if (!lobbyConfigurationAsset)
+                throw new InvalidOperationException("Lobby server catalog is required for WebGL.");
+            LobbyClientConfiguration lobbyConfiguration =
+                JsonConvert.DeserializeObject<LobbyClientConfiguration>(lobbyConfigurationAsset.text);
+            lobbyConfiguration.Validate();
 
             string originalTemplate = PlayerSettings.WebGL.template;
 

@@ -1,0 +1,18 @@
+{
+  "DefaultServerId": "aws-ec2",
+  "Servers": [
+    {
+      "Id": "aws-ec2",
+      "Name": "AWS EC2（正式伺服器）",
+      "Url": "wss://ws.oldshaw-webrpg.com/ws?channel=lobby",
+      "EditorOnly": false
+    },
+    {
+      "Id": "local",
+      "Name": "本機測試",
+      "Url": "ws://localhost:8080/ws?channel=lobby",
+      "EditorOnly": true
+    }
+  ],
+  "RequestTimeoutSeconds": 10
+}
