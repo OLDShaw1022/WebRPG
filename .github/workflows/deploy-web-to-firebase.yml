@@ -57,7 +57,10 @@ jobs:
       - name: Free runner disk space for Unity
         run: |
           df -h /
-          sudo rm -rf /usr/local/lib/android
+          # This job has already built the shared DLL; Unity uses its container toolchain.
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /usr/share/swift
+          sudo rm -rf /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL
+          docker image prune --all --force
           df -h /
 
       - name: Cache Unity Library
@@ -67,6 +70,7 @@ jobs:
           key: ${{ runner.os }}-WebRPG-WebGL-Library-v1-${{ hashFiles('WebRPG/ProjectSettings/ProjectVersion.txt', 'WebRPG/Packages/manifest.json', 'WebRPG/Packages/packages-lock.json', 'WebRPGPage/ci/UnityWebBuild.cs', '.github/workflows/deploy-web-to-firebase.yml') }}-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-WebRPG-WebGL-Library-v1-${{ hashFiles('WebRPG/ProjectSettings/ProjectVersion.txt', 'WebRPG/Packages/manifest.json', 'WebRPG/Packages/packages-lock.json', 'WebRPGPage/ci/UnityWebBuild.cs', '.github/workflows/deploy-web-to-firebase.yml') }}-
+            ${{ runner.os }}-WebRPG-WebGL-Library-v1-
 
       - name: Build Unity Web
         uses: game-ci/unity-builder@v4
