@@ -7,6 +7,130 @@ namespace WebRPG.Tests
     public sealed class AdventureBattleModelTests
     {
         [Test]
+        public void SingleAndOneMemberPartyFollowTheSameSchedule()
+        {
+            AdventureConfiguration configuration = AdventureBattleTestHelper.Configuration();
+            configuration.Enemies[0].CastTime = 1;
+            AdventureSkillState soloSkill = new AdventureSkillState(configuration.Skills[0]);
+            AdventureSkillState partySkill = new AdventureSkillState(configuration.Skills[0]);
+            AdventureBattleModel solo = new AdventureBattleModel(configuration,
+                new[] { soloSkill }, new[] { configuration.Enemies[0] }, 100, 100);
+            AdventureBattleModel member = new AdventureBattleModel(configuration,
+                new[] { partySkill }, new[] { configuration.Enemies[0] }, 100, 100);
+            AdventurePartyBattleModel party = new AdventurePartyBattleModel(configuration,
+                new[] { member }, new Random(17));
+            Assert.That(solo.TryUseSkill(0), Is.True);
+            Assert.That(member.TryUseSkill(0), Is.True);
+            for (int step = 0; step < 160; step++)
+            {
+                solo.Tick(configuration.SimulationStep);
+                party.Tick(configuration.SimulationStep);
+                Assert.That(member.Outcome, Is.EqualTo(solo.Outcome));
+                Assert.That(member.Health, Is.EqualTo(solo.Health));
+                Assert.That(member.Enemies[0].Health, Is.EqualTo(solo.Enemies[0].Health));
+                Assert.That(member.PlayerAction?.RemainingCastTime, Is.EqualTo(solo.PlayerAction?.RemainingCastTime));
+                Assert.That(member.Projectile?.Id, Is.EqualTo(solo.Projectile?.Id));
+                Assert.That(member.Projectile?.RemainingTime, Is.EqualTo(solo.Projectile?.RemainingTime));
+                Assert.That(partySkill.RemainingCooldown, Is.EqualTo(soloSkill.RemainingCooldown));
+            }
+        }
+
+        [Test]
+        public void PartyFlightFreezesAllActorsAndDeadlineThenLaunchesNextReadyPlayer()
+        {
+            AdventureConfiguration configuration = AdventureBattleTestHelper.Configuration();
+            configuration.Skills[0].CastTime = 2;
+            configuration.BattleTimeLimit = 2.125f;
+            AdventureSkillState skill = new AdventureSkillState(configuration.Skills[0]);
+            AdventureBattleModel first = new AdventureBattleModel(configuration,
+                new[] { skill }, new[] { configuration.Enemies[0] }, 100, 100);
+            AdventureBattleModel second = new AdventureBattleModel(configuration,
+                Array.Empty<AdventureSkillState>(), new[] { configuration.Enemies[0] }, 100, 100);
+            AdventurePartyBattleModel party = new AdventurePartyBattleModel(configuration,
+                new[] { first, second }, new Random(17));
+            first.TryUseSkill(0);
+            party.Tick(2);
+            float enemyCast = first.Enemies[0].Action.RemainingCastTime;
+            party.Tick(0.25f);
+            Assert.That(first.PlayerAction.RemainingCastTime, Is.EqualTo(2));
+            Assert.That(second.PlayerAction.RemainingCastTime, Is.Zero);
+            Assert.That(skill.RemainingCooldown, Is.EqualTo(configuration.Skills[0].Cooldown));
+            Assert.That(first.Enemies[0].Action.RemainingCastTime, Is.EqualTo(enemyCast));
+            Assert.That(party.SourcePlayerIndex, Is.Zero);
+            party.Tick(0.25f);
+            Assert.That(party.SourcePlayerIndex, Is.EqualTo(1));
+            Assert.That(party.Outcome, Is.EqualTo(AdventureBattleOutcome.Running));
+            party.Tick(configuration.ProjectileTravelTime);
+            party.Tick(configuration.SimulationStep);
+            Assert.That(party.Outcome, Is.EqualTo(AdventureBattleOutcome.TimedOut));
+            Assert.That(first.Projectile, Is.Null);
+            Assert.That(second.PlayerAction, Is.Null);
+            Assert.That(skill.RemainingCooldown, Is.Zero);
+        }
+
+        [Test]
+        public void PartyOwnsEnemyStatesAndParticipantRosterIndependently()
+        {
+            AdventureConfiguration configuration = AdventureBattleTestHelper.Configuration();
+            AdventureBattleModel first = new AdventureBattleModel(configuration,
+                Array.Empty<AdventureSkillState>(), new[] { configuration.Enemies[0] }, 100, 100);
+            AdventureBattleModel second = new AdventureBattleModel(configuration,
+                Array.Empty<AdventureSkillState>(), new[] { configuration.Enemies[0] }, 100, 100);
+            AdventureEnemyState previousEnemy = first.Enemies[0];
+            AdventureBattleModel[] members = { first, second };
+            AdventurePartyBattleModel party = new AdventurePartyBattleModel(configuration, members, new Random(17));
+            members[0] = null;
+            Assert.That(first.Enemies[0], Is.Not.SameAs(previousEnemy));
+            Assert.That(second.Enemies, Is.SameAs(first.Enemies));
+            party.Tick(configuration.BasicAttack.CastTime);
+            Assert.That(party.SourcePlayerIndex, Is.Zero);
+            first.Stop();
+            Assert.That(party.Outcome, Is.EqualTo(AdventureBattleOutcome.Stopped));
+            Assert.That(second.Outcome, Is.EqualTo(AdventureBattleOutcome.Stopped));
+            Assert.That(second.Projectile, Is.Null);
+            Assert.That(second.PlayerAction, Is.Null);
+        }
+
+        [Test]
+        public void PartyPlayerTickCannotAdvanceTheSharedBattle()
+        {
+            AdventureConfiguration configuration = AdventureBattleTestHelper.Configuration();
+            AdventureBattleModel first = new AdventureBattleModel(configuration,
+                Array.Empty<AdventureSkillState>(), new[] { configuration.Enemies[0] }, 100, 100);
+            AdventureBattleModel second = new AdventureBattleModel(configuration,
+                Array.Empty<AdventureSkillState>(), new[] { configuration.Enemies[0] }, 100, 100);
+            AdventurePartyBattleModel party = new AdventurePartyBattleModel(configuration,
+                new[] { first, second }, new Random(17));
+            first.Tick(configuration.BasicAttack.CastTime);
+            second.Tick(configuration.BasicAttack.CastTime);
+            Assert.That(party.Projectile, Is.Null);
+            Assert.That(first.Projectile, Is.Null);
+            Assert.That(first.PlayerAction.RemainingCastTime, Is.EqualTo(configuration.BasicAttack.CastTime));
+            party.Tick(configuration.BasicAttack.CastTime);
+            Assert.That(party.Projectile, Is.SameAs(first.Projectile));
+            Assert.That(second.Projectile, Is.SameAs(first.Projectile));
+        }
+
+        [Test]
+        public void PartyProjectileSequenceIsUniqueAcrossPlayers()
+        {
+            AdventureConfiguration configuration = AdventureBattleTestHelper.Configuration();
+            AdventureBattleModel first = new AdventureBattleModel(configuration,
+                Array.Empty<AdventureSkillState>(), new[] { configuration.Enemies[0] }, 100, 100, 0, 41);
+            AdventureBattleModel second = new AdventureBattleModel(configuration,
+                Array.Empty<AdventureSkillState>(), new[] { configuration.Enemies[0] }, 100, 100, 0, 41);
+            AdventurePartyBattleModel party = new AdventurePartyBattleModel(configuration,
+                new[] { first, second }, new Random(17));
+            party.Tick(configuration.BasicAttack.CastTime);
+            Assert.That(party.Projectile.Id, Is.EqualTo(42));
+            party.Tick(configuration.ProjectileTravelTime);
+            Assert.That(party.SourcePlayerIndex, Is.EqualTo(1));
+            Assert.That(party.Projectile.Id, Is.EqualTo(43));
+            Assert.That(first.ProjectileSequence, Is.EqualTo(43));
+            Assert.That(second.ProjectileSequence, Is.EqualTo(43));
+        }
+
+        [Test]
         public void VictoryResolvesProjectileAndPreservesSequenceAcrossBattles()
         {
             AdventureConfiguration configuration = AdventureBattleTestHelper.Configuration();

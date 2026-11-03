@@ -340,6 +340,7 @@ namespace WebRPG
         {
             if (!_partyMode || Phase != AdventurePhase.Battle || _battle == null) return;
             Health = _battle.Health;
+            _projectileSequence = _battle.ProjectileSequence;
             if (_battle.Outcome == AdventureBattleOutcome.Won) WinBattle();
         }
 
