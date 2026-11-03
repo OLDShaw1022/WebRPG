@@ -8,7 +8,7 @@ namespace WebRPGServer;
 public sealed class LobbyHub
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
-    private readonly Dictionary<string, WebSocket> _sessions = new();
+    private readonly Dictionary<string, LobbySendSession> _sessions = new();
     private readonly LobbyRegistry _registry;
     private readonly LobbyOptions _options;
 
@@ -22,6 +22,7 @@ public sealed class LobbyHub
     {
         string playerId = Guid.NewGuid().ToString("N");
         bool registered = false;
+        LobbySendSession session = new(socket, _options.SendTimeoutSeconds, token);
         try
         {
             while (socket.State == WebSocketState.Open && !token.IsCancellationRequested)
@@ -36,12 +37,12 @@ public sealed class LobbyHub
                 {
                     if (request is null)
                     {
-                        await SendErrorAsync(socket, string.Empty, "封包格式錯誤或超過大小上限。");
+                        EnqueueError(session, string.Empty, "封包格式錯誤或超過大小上限。");
                         continue;
                     }
                     if (request.RequestId?.Length > 64)
                     {
-                        await SendErrorAsync(socket, string.Empty, "要求識別碼過長。");
+                        EnqueueError(session, string.Empty, "要求識別碼過長。");
                         continue;
                     }
                     if (!registered)
@@ -49,33 +50,32 @@ public sealed class LobbyHub
                         if (request.Type != LobbyPacketType.Hello) throw new ArgumentException("請先連線。");
                         if (_sessions.Count >= _options.MaximumConnections) throw new ArgumentException("大廳連線已滿。");
                         _registry.Connect(playerId, request.Username);
-                        _sessions.Add(playerId, socket);
+                        _sessions.Add(playerId, session);
                         registered = true;
                         LobbyPacket welcome = _registry.Snapshot(playerId, request.RequestId ?? string.Empty);
                         welcome.Type = LobbyPacketType.Welcome;
-                        await LobbySocketHelper.SendAsync(socket, welcome, _options.SendTimeoutSeconds);
+                        session.Enqueue(welcome);
                         continue;
                     }
                     if (request.Type == LobbyPacketType.Adventure)
                     {
                         AdventurePacket adventure = _registry.ExecuteAdventure(playerId, request.Adventure);
                         adventure.RequestId = request.RequestId ?? string.Empty;
-                        await BroadcastAdventureAsync(adventure, _registry.GetRoomPlayers(playerId));
-                        if (adventure.Type == AdventurePacketType.Start) await BroadcastAsync(string.Empty);
+                        BroadcastAdventure(adventure, _registry.GetRoomPlayers(playerId));
+                        if (adventure.Type == AdventurePacketType.Start) Broadcast(string.Empty);
                         continue;
                     }
                     string[] affected = _registry.GetRoomPlayers(playerId);
                     AdventurePacket? failure = request.Type == LobbyPacketType.LeaveRoom
                         ? _registry.FailAdventure(playerId) : null;
                     bool changed = _registry.Execute(playerId, request);
-                    if (failure != null) await BroadcastAdventureAsync(failure, affected);
-                    await LobbySocketHelper.SendAsync(socket, _registry.Snapshot(playerId, request.RequestId ?? string.Empty),
-                        _options.SendTimeoutSeconds);
-                    if (changed) await BroadcastAsync(playerId);
+                    if (failure != null) BroadcastAdventure(failure, affected);
+                    session.Enqueue(_registry.Snapshot(playerId, request.RequestId ?? string.Empty));
+                    if (changed) Broadcast(playerId);
                 }
                 catch (ArgumentException exception)
                 {
-                    await SendErrorAsync(socket, request?.RequestId ?? string.Empty, exception.Message);
+                    EnqueueError(session, request?.RequestId ?? string.Empty, exception.Message);
                 }
                 finally { _gate.Release(); }
             }
@@ -92,12 +92,13 @@ public sealed class LobbyHub
                     string[] affected = _registry.GetRoomPlayers(playerId);
                     AdventurePacket? failure = _registry.FailAdventure(playerId);
                     _sessions.Remove(playerId);
-                    if (failure != null) await BroadcastAdventureAsync(failure, affected);
+                    if (failure != null) BroadcastAdventure(failure, affected);
                     _registry.Disconnect(playerId);
-                    await BroadcastAsync(playerId);
+                    Broadcast(playerId);
                 }
             }
             finally { _gate.Release(); }
+            await session.DisposeAsync();
             if (socket.State is WebSocketState.Open or WebSocketState.CloseReceived)
             {
                 using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(_options.SendTimeoutSeconds));
@@ -107,29 +108,33 @@ public sealed class LobbyHub
         }
     }
 
-    private async Task BroadcastAsync(string excludedPlayerId)
+    private void Broadcast(string excludedPlayerId)
     {
-        await Task.WhenAll(_sessions.Where(pair => pair.Key != excludedPlayerId).Select(pair =>
-            LobbySocketHelper.SendAsync(pair.Value, _registry.Snapshot(pair.Key), _options.SendTimeoutSeconds)));
+        foreach (KeyValuePair<string, LobbySendSession> pair in _sessions)
+        {
+            if (pair.Key != excludedPlayerId) pair.Value.Enqueue(_registry.Snapshot(pair.Key));
+        }
     }
 
-    private async Task BroadcastAdventureAsync(AdventurePacket adventure, string[] playerIds)
+    private void BroadcastAdventure(AdventurePacket adventure, string[] playerIds)
     {
-        LobbyPacket packet = new LobbyPacket
+        LobbyPacket packet = new()
         {
             Type = LobbyPacketType.Adventure,
             PlayerId = adventure.PlayerId,
             Adventure = adventure
         };
-        await Task.WhenAll(playerIds.Where(_sessions.ContainsKey).Select(playerId =>
-            LobbySocketHelper.SendAsync(_sessions[playerId], packet, _options.SendTimeoutSeconds)));
+        foreach (string playerId in playerIds)
+        {
+            if (_sessions.TryGetValue(playerId, out LobbySendSession? session)) session.Enqueue(packet);
+        }
     }
 
-    private async Task SendErrorAsync(WebSocket socket, string requestId, string error)
+    private static void EnqueueError(LobbySendSession session, string requestId, string error)
     {
-        await LobbySocketHelper.SendAsync(socket, new LobbyPacket
+        session.Enqueue(new LobbyPacket
         {
             Type = LobbyPacketType.Error, RequestId = requestId, Error = error
-        }, _options.SendTimeoutSeconds);
+        });
     }
 }

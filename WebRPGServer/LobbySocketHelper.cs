@@ -1,6 +1,5 @@
 using System.Net.WebSockets;
 using System.Text;
-using System.Text.Json;
 using WebRPGShared;
 
 namespace WebRPGServer;
@@ -25,13 +24,13 @@ internal static class LobbySocketHelper
         return valid ? Encoding.UTF8.GetString(message.ToArray()) : string.Empty;
     }
 
-    public static async Task SendAsync(WebSocket socket, LobbyPacket packet, int timeoutSeconds)
+    public static async Task SendAsync(WebSocket socket, byte[] bytes, int timeoutSeconds, CancellationToken token)
     {
         if (socket.State != WebSocketState.Open) return;
-        using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(timeoutSeconds));
+        using CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(token);
+        timeout.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
         try
         {
-            byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(packet);
             await socket.SendAsync(bytes, WebSocketMessageType.Text, true, timeout.Token);
         }
         catch (Exception exception) when (exception is WebSocketException or OperationCanceledException or ObjectDisposedException)

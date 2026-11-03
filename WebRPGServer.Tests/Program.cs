@@ -18,6 +18,9 @@ internal static class Program
             await RunRemoteAsync(new Uri(arguments[1]), remoteTimeout.Token);
             return;
         }
+        await LobbyConcurrencyTests.RunAsync();
+        await LobbySendFailureTests.RunAsync();
+        if (arguments.Length == 1 && arguments[0] == "--concurrency-only") return;
         MultiplayerProtocolTests.Run();
         TcpListener reservation = new(IPAddress.Loopback, 0);
         reservation.Start();
