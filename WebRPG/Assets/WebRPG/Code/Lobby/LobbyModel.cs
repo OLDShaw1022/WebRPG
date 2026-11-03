@@ -201,9 +201,6 @@ namespace WebRPG
 
         public void Tick(float deltaTime)
         {
-#if !UNITY_WEBGL || UNITY_EDITOR
-            _socket?.DispatchMessageQueue();
-#endif
             if (!IsBusy || _disposed) return;
             _pendingTime += deltaTime;
             if (_pendingTime >= _requestTimeoutSeconds) Disconnect(TimeoutMessage);
