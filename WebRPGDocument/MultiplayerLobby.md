@@ -32,7 +32,7 @@
 3. 建立公開房間，其他客戶端可在列表加入；最多 4 人，第 5 人加入會被拒絕。
 4. 切換準備狀態，其他房內成員同步顯示；離開或關閉連線後，成員及列表更新。
 5. 返回主選單後可再次進入大廳，亦可開始既有單人冒險。
-6. 執行 `dotnet run --project WebRPGServer.Tests/WebRPGServer.Tests.csproj` 驗證真實 WebSocket 的容量、列表、準備、房主接任、斷線與無效輸入。此為無外部測試套件的可執行整合測試，會啟動並關閉獨立本機伺服器。
+6. 執行 `dotnet test WebRPGServer.Tests/WebRPGServer.Tests.csproj`。測試採用 NUnit，分類為 Unit、Component 與 Integration；本機整合測試會自動啟動及關閉獨立伺服器。遠端測試標記為 Explicit，需以 `--filter FullyQualifiedName~RemoteLobbyTests` 明確選取，並透過環境變數 `WEBRPG_TEST_SERVER_URL` 或 NUnit 的 `TestRunParameters` 提供 `ServerUrl`；預設不連線遠端。
 7. Unity EditMode 執行 LobbyPrefabTests、LobbyPresenterTests、LobbyServerSelectionTests、MainMenuPresenterTests、MainMenuPrefabTests 與 AdventureStartupTests。
 
 ## 相關文件
@@ -144,7 +144,7 @@
 - `WebRPGServer/appsettings.json`
 - `WebRPGServer/Program.cs`
 - `WebRPGServer.Tests/WebRPGServer.Tests.csproj`
-- `WebRPGServer.Tests/Program.cs`
+- `WebRPGServer.Tests/LobbyWebSocketTests.cs`
 - `WebRPG/Assets/WebRPG/Tests/Editor/LobbyPrefabTests.cs`
 - `WebRPGDocument/MainMenu.md`
 - `WebRPGDocument/Document Directory.md`
@@ -189,7 +189,7 @@
 - `WebRPG/Assets/WebRPG/Tests/Editor/LobbyServerSelectionTests.cs`
 - `WebRPG/Assets/WebRPG/Prefabs/LobbyCanvas.prefab`
 - `WebRPG/Assets/WebRPG/Prefabs/LobbyCanvas.prefab.meta`
-- `WebRPGServer.Tests/Program.cs`
+- `WebRPGServer.Tests/LobbyWebSocketTests.cs`
 - `WebRPGDocument/MultiplayerLobby.md`
 - `WebRPG/Assets/Plugins/WebRPGShared.dll`
 - `WebRPG/Assets/Plugins/WebRPGShared.pdb`

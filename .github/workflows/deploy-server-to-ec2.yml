@@ -30,7 +30,7 @@ jobs:
           dotnet-version: 9.0.x
 
       - name: Verify lobby WebSocket integration
-        run: dotnet run --project WebRPGServer.Tests/WebRPGServer.Tests.csproj
+        run: dotnet test WebRPGServer.Tests/WebRPGServer.Tests.csproj
 
       - name: Publish server
         run: dotnet publish WebRPGServer/WebRPGServer.csproj --configuration Release --runtime linux-x64 --self-contained true --output publish
@@ -77,4 +77,6 @@ jobs:
           '
 
       - name: Verify public EC2 lobby connection
-        run: dotnet run --project WebRPGServer.Tests/WebRPGServer.Tests.csproj --no-build -- --url 'wss://ws.oldshaw-webrpg.com/ws?channel=lobby'
+        env:
+          WEBRPG_TEST_SERVER_URL: wss://ws.oldshaw-webrpg.com/ws?channel=lobby
+        run: dotnet test WebRPGServer.Tests/WebRPGServer.Tests.csproj --no-build --filter FullyQualifiedName~RemoteLobbyTests

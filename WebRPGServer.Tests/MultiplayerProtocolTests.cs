@@ -1,3 +1,4 @@
+using NUnit.Framework;
 using WebRPGServer;
 using WebRPGShared;
 using static WebRPGServer.Tests.MultiplayerProtocolTestHelper;
@@ -5,9 +6,12 @@ using static WebRPGServer.Tests.MultiplayerProtocolTestHelper;
 namespace WebRPGServer.Tests;
 
 // 驗證多人投票、回合隔離、權限與失敗終止的伺服器規則。
-internal static class MultiplayerProtocolTests
+[TestFixture]
+[Category("Unit")]
+public sealed class MultiplayerProtocolTests
 {
-    public static void Run()
+    [Test]
+    public void AdventureProtocolEnforcesVotesTurnsAndAuthority()
     {
         LobbyRegistry registry = new(new LobbyOptions());
         registry.Connect("a", "A");
@@ -40,7 +44,7 @@ internal static class MultiplayerProtocolTests
         Check(failure?.Type == AdventurePacketType.Failed, "Disconnect must terminate the run.");
         Reject(() => registry.ExecuteAdventure("a",
             new AdventurePacket { Type = AdventurePacketType.Command, Command = "vote", Payload = "0|0", Turn = 1 }));
-        Console.WriteLine("PASS: multiplayer vote/change/tie, null input, stale turn, tick authority, no client damage, disconnect.");
+
     }
 
 }

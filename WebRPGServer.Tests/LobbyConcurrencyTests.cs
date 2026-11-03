@@ -1,12 +1,16 @@
+using NUnit.Framework;
 using WebRPGServer;
 using WebRPGShared;
 
 namespace WebRPGServer.Tests;
 
 // 驗證慢連線不阻塞大廳操作、快照順序及斷線清理。
-internal static class LobbyConcurrencyTests
+[TestFixture]
+[Category("Component")]
+public sealed class LobbyConcurrencyTests
 {
-    public static async Task RunAsync()
+    [Test]
+    public async Task SlowRecipientDoesNotBlockOtherConnections()
     {
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(10));
         CancellationToken token = timeout.Token;
@@ -40,7 +44,7 @@ internal static class LobbyConcurrencyTests
             await fastConnection.WaitAsync(progress.Token);
             LobbyPacket state = await observer.RequestAsync(new LobbyPacket { Type = LobbyPacketType.ListRooms }, progress.Token);
             if (state.Rooms.Single(room => room.Id == roomId).MemberCount != 1)
-                throw new InvalidOperationException("Disconnect cleanup was blocked by a slow recipient.");
+                Assert.Fail("Disconnect cleanup was blocked by a slow recipient.");
 
             slow.ResumeSending();
             LobbyPacket[] snapshots = new LobbyPacket[4];
@@ -48,9 +52,9 @@ internal static class LobbyConcurrencyTests
             if (snapshots[0].Room.Members.Length != 2 || snapshots[0].Room.Members[1].IsReady ||
                 !snapshots[1].Room.Members[1].IsReady || snapshots[2].Room.Members[1].IsReady ||
                 snapshots[3].Room.Members.Length != 1)
-                throw new InvalidOperationException("Queued snapshots were mutated or delivered out of order.");
+                Assert.Fail("Queued snapshots were mutated or delivered out of order.");
             if (slow.ConcurrentSendDetected || fast.ConcurrentSendDetected || observer.ConcurrentSendDetected)
-                throw new InvalidOperationException("A connection performed concurrent sends.");
+                Assert.Fail("A connection performed concurrent sends.");
         }
         finally
         {
@@ -60,7 +64,7 @@ internal static class LobbyConcurrencyTests
             observer.Abort();
             await Task.WhenAll(slowConnection, fastConnection, observerConnection).WaitAsync(token);
         }
-        Console.WriteLine("PASS: slow-recipient isolation, ordered immutable snapshots and disconnect cleanup.");
+
     }
 }
 

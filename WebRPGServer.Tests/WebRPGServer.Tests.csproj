@@ -1,11 +1,17 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
+    <IsTestProject>true</IsTestProject>
+    <IsPackable>false</IsPackable>
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageReference Include="NUnit" Version="4.3.2" />
+    <PackageReference Include="NUnit3TestAdapter" Version="5.0.0" />
     <ProjectReference Include="../WebRPGServer/WebRPGServer.csproj" />
+    <None Include="../WebRPGServer/bin/$(Configuration)/$(TargetFramework)/WebRPGServer.runtimeconfig.json" Link="WebRPGServer.runtimeconfig.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../WebRPGServer/bin/$(Configuration)/$(TargetFramework)/WebRPGServer.deps.json" Link="WebRPGServer.deps.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

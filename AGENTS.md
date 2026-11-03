@@ -4,6 +4,7 @@
 
 - `WebRPG/`：Unity 6.3（6000.3.11f1）2D 遊戲專案，使用 URP、Input System 和 NativeWebSocket。
 - `WebRPGServer/`：以 .NET 9 建置的 ASP.NET Core WebSocket 伺服器，WebSocket 路徑是 `/ws`。
+- `WebRPGServer.Tests/`：以 .NET 9 與 NUnit 建置的伺服器自動化測試專案，包含單元、元件及 WebSocket 整合測試；使用 `dotnet test WebRPGServer.Tests/WebRPGServer.Tests.csproj` 執行，遠端測試需明確指定才執行。
 - `WebRPGShared/`：目標為 .NET Standard 2.1 的共用 C# 程式庫；建置後會複製 DLL/PDB 到 `WebRPG/Assets/Plugins/`。
 - `WebRPGDocument/`：存放遊戲設計、技術規範與文件範本，由 `Document Directory.md` 提供文件索引。
 - `WebRPG.sln`：根目錄的 .NET solution。
