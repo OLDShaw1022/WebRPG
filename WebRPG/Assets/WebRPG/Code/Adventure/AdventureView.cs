@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using TMPro;
 using UnityEngine;
 
@@ -237,32 +236,8 @@ namespace WebRPG
                 RenderActor(_enemies[index], index < screen.Enemies.Length ? screen.Enemies[index] : null);
             }
 
-            for (int index = 0; index < _skills.Length; index++)
-            {
-                bool visible = index < screen.InspectedSkills.Length;
-                _skills[index].Rect.gameObject.SetActive(visible);
-                if (visible)
-                {
-                    _skills[index].Title.text = screen.InspectedSkills[index].DisplayName;
-                    AdventureGaugeScreenModel skill = screen.InspectedSkills[index];
-                    AdventureUiHelper.SetGauge(_skills[index].Gauge, skill, false);
-                    _skills[index].Gauge.Value.text = skill.CompactText;
-                    _skills[index].Icon.SetIcon(skill.IconId);
-                    _skills[index].Tooltip.SetContent(skill.Title, skill.Description, skill.Text);
-                    _skills[index].Button.interactable = skill.CanUse;
-                }
-            }
-
-            for (int index = 0; index < _choices.Length; index++)
-            {
-                bool visible = index < screen.Choices.Length;
-                _choices[index].Rect.gameObject.SetActive(visible);
-                if (visible)
-                {
-                    _choices[index].Label.text = screen.Choices[index];
-                    _choices[index].Button.interactable = screen.CanChoose;
-                }
-            }
+            AdventureUiHelper.RenderSkills(_skills, screen.InspectedSkills);
+            AdventureUiHelper.RenderChoices(_choices, screen.Choices, screen.CanChoose);
 
             if (screen.ShowMap && (previous == null || !ReferenceEquals(previous.MapRows, screen.MapRows)))
             {
@@ -330,10 +305,8 @@ namespace WebRPG
             {
                 return;
             }
-            AdventureActorViewReferences source = _players.Concat(_enemies)
-                .FirstOrDefault(actor => actor.Id == projectile.SourceCharacterId);
-            AdventureActorViewReferences target = _players.Concat(_enemies)
-                .FirstOrDefault(actor => actor.Id == projectile.TargetCharacterId);
+            AdventureActorViewReferences source = AdventureUiHelper.FindActor(_players, _enemies, projectile.SourceCharacterId);
+            AdventureActorViewReferences target = AdventureUiHelper.FindActor(_players, _enemies, projectile.TargetCharacterId);
             if (source == null || target == null)
             {
                 _projectile.gameObject.SetActive(false);

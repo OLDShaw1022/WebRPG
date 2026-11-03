@@ -135,20 +135,12 @@ namespace WebRPG
             WebSocket socket = _socket;
             packet.RequestId = (++_requestNumber).ToString();
             _adventureRequests.Add(packet.RequestId, Room?.Id ?? string.Empty);
-            try
+            await LobbyPacketSendHelper.SendAsync(socket, new LobbyPacket
             {
-                await socket.SendText(JsonConvert.SerializeObject(new LobbyPacket
-                {
-                    Type = LobbyPacketType.Adventure,
-                    RequestId = packet.RequestId,
-                    Adventure = packet
-                }));
-            }
-            catch (Exception exception)
-            {
-                if (!_disposed && socket == _socket)
-                    Disconnect(string.Format(ConnectionFailedFormat, exception.Message));
-            }
+                Type = LobbyPacketType.Adventure,
+                RequestId = packet.RequestId,
+                Adventure = packet
+            }, HandleSendFailure);
         }
 
         private async Awaitable SendPacketAsync(LobbyPacket packet)
@@ -160,12 +152,13 @@ namespace WebRPG
             IsBusy = true;
             Status = PendingMessage;
             Changed?.Invoke();
-            try { await socket.SendText(JsonConvert.SerializeObject(packet)); }
-            catch (Exception exception)
-            {
-                if (!_disposed && socket == _socket)
-                    Disconnect(string.Format(ConnectionFailedFormat, exception.Message));
-            }
+            await LobbyPacketSendHelper.SendAsync(socket, packet, HandleSendFailure);
+        }
+
+        private void HandleSendFailure(WebSocket socket, Exception exception)
+        {
+            if (!_disposed && socket == _socket)
+                Disconnect(string.Format(ConnectionFailedFormat, exception.Message));
         }
 
         private void HandlePacket(string json)

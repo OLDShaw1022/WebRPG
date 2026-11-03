@@ -27,6 +27,53 @@ namespace WebRPG
         }
 
 
+        public static AdventureActorViewReferences FindActor(AdventureActorViewReferences[] players,
+            AdventureActorViewReferences[] enemies, string characterId)
+        {
+            foreach (AdventureActorViewReferences actor in players)
+            {
+                if (actor.Id == characterId) return actor;
+            }
+            foreach (AdventureActorViewReferences actor in enemies)
+            {
+                if (actor.Id == characterId) return actor;
+            }
+            return null;
+        }
+
+        public static void RenderSkills(AdventureSkillViewReferences[] controls, AdventureGaugeScreenModel[] skills)
+        {
+            for (int index = 0; index < controls.Length; index++)
+            {
+                bool visible = index < skills.Length;
+                controls[index].Rect.gameObject.SetActive(visible);
+                if (visible)
+                {
+                    controls[index].Title.text = skills[index].DisplayName;
+                    AdventureGaugeScreenModel skill = skills[index];
+                    AdventureUiHelper.SetGauge(controls[index].Gauge, skill, false);
+                    controls[index].Gauge.Value.text = skill.CompactText;
+                    controls[index].Icon.SetIcon(skill.IconId);
+                    controls[index].Tooltip.SetContent(skill.Title, skill.Description, skill.Text);
+                    controls[index].Button.interactable = skill.CanUse;
+                }
+            }
+        }
+
+        public static void RenderChoices(AdventureButtonViewReferences[] controls, string[] choices, bool canChoose)
+        {
+            for (int index = 0; index < controls.Length; index++)
+            {
+                bool visible = index < choices.Length;
+                controls[index].Rect.gameObject.SetActive(visible);
+                if (visible)
+                {
+                    controls[index].Label.text = choices[index];
+                    controls[index].Button.interactable = canChoose;
+                }
+            }
+        }
+
         public static void SetEnabled(AdventureButtonViewReferences control, bool enabled, Color foreground, Color secondary)
         {
             control.Button.interactable = enabled;
