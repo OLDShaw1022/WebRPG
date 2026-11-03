@@ -59,6 +59,38 @@ namespace WebRPG.Tests
             finally { foreach (MultiplayerAdventureSession session in sessions) session.Dispose(); }
         }
 
+        [TestCase("room", true)]
+        [TestCase("other", false)]
+        public void RequestErrorReachesOnlyMatchingSession(string roomId, bool fails)
+        {
+            TestMultiplayerLobbyModel lobby = new TestMultiplayerLobbyModel
+            {
+                PlayerId = "self",
+                Room = new LobbyRoomSnapshot
+                {
+                    Id = "room", LeaderId = "self",
+                    Members = new[] { new LobbyMemberSnapshot { PlayerId = "self" } }
+                }
+            };
+            using (MultiplayerAdventureSession session = new MultiplayerAdventureSession(lobby, 1, AdventureModelScenarioHelper.WinningConfiguration()))
+            {
+                lobby.Emit(new AdventurePacket
+                {
+                    Type = AdventurePacketType.Error, RequestId = "adventure", RoomId = roomId, Error = "rejected"
+                });
+                Assert.That(session.LocalModel.Phase == AdventurePhase.Failed, Is.EqualTo(fails));
+                if (!fails)
+                {
+                    lobby.Emit(new AdventurePacket
+                    {
+                        Type = AdventurePacketType.Command, Command = AdventureCommand.Node,
+                        RoomId = "room", PlayerId = "self", Sequence = 1, Payload = "0|0"
+                    });
+                    Assert.That(session.Turn, Is.EqualTo(1));
+                }
+            }
+        }
+
         [Test]
         public void DisconnectOrSequenceGapFailsWholeParty()
         {

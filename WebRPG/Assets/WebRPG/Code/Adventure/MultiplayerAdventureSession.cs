@@ -125,7 +125,13 @@ namespace WebRPG
 
         private void HandleAdventure(AdventurePacket packet)
         {
-            if (_disposed || _failed || packet == null || packet.RoomId != _roomId || packet.Sequence <= _lastSequence) return;
+            if (_disposed || _failed || packet == null || packet.RoomId != _roomId) return;
+            if (packet.Type == AdventurePacketType.Error)
+            {
+                if (!IsComplete) Fail();
+                return;
+            }
+            if (packet.Sequence <= _lastSequence) return;
             if (packet.Sequence != _lastSequence + 1)
             {
                 Fail();

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using NativeWebSocket;
 using Newtonsoft.Json;
@@ -41,6 +42,7 @@ namespace WebRPG
         private readonly LobbyServerConfiguration[] _servers;
         private readonly float _requestTimeoutSeconds;
 
+        private readonly Dictionary<string, string> _adventureRequests = new Dictionary<string, string>();
         private WebSocket _socket;
         private bool _disposed;
         private int _requestNumber;
@@ -132,6 +134,7 @@ namespace WebRPG
             if (_disposed || !IsConnected || packet == null) return;
             WebSocket socket = _socket;
             packet.RequestId = (++_requestNumber).ToString();
+            _adventureRequests.Add(packet.RequestId, Room?.Id ?? string.Empty);
             try
             {
                 await socket.SendText(JsonConvert.SerializeObject(new LobbyPacket
@@ -173,7 +176,12 @@ namespace WebRPG
             if (packet == null) { Disconnect(InvalidPacketMessage); return; }
             if (packet.Type == LobbyPacketType.Adventure)
             {
-                if (packet.Adventure != null) AdventureReceived?.Invoke(packet.Adventure);
+                if (packet.Adventure != null)
+                {
+                    if (packet.Adventure.PlayerId == PlayerId && !string.IsNullOrEmpty(packet.Adventure.RequestId))
+                        _adventureRequests.Remove(packet.Adventure.RequestId);
+                    AdventureReceived?.Invoke(packet.Adventure);
+                }
                 return;
             }
             if (packet.Type == LobbyPacketType.Welcome || packet.Type == LobbyPacketType.State)
@@ -182,7 +190,7 @@ namespace WebRPG
                 Room = packet.Room;
                 Rooms = packet.Rooms ?? Array.Empty<LobbyRoomSummary>();
                 IsConnected = true;
-                if (packet.RequestId == _pendingId)
+                if (!string.IsNullOrEmpty(_pendingId) && packet.RequestId == _pendingId)
                 {
                     IsBusy = false;
                     _pendingId = string.Empty;
@@ -191,6 +199,23 @@ namespace WebRPG
             }
             else if (packet.Type == LobbyPacketType.Error)
             {
+                if (string.IsNullOrEmpty(packet.RequestId)) return;
+                if (_adventureRequests.TryGetValue(packet.RequestId, out string roomId))
+                {
+                    _adventureRequests.Remove(packet.RequestId);
+                    AdventureReceived?.Invoke(new AdventurePacket
+                    {
+                        Type = AdventurePacketType.Error, RequestId = packet.RequestId,
+                        RoomId = roomId, PlayerId = PlayerId, Error = packet.Error
+                    });
+                    if (!IsBusy && Room?.Id == roomId)
+                    {
+                        Status = packet.Error;
+                        Changed?.Invoke();
+                    }
+                    return;
+                }
+                if (string.IsNullOrEmpty(_pendingId) || packet.RequestId != _pendingId) return;
                 IsBusy = false;
                 _pendingId = string.Empty;
                 Status = packet.Error;
@@ -210,6 +235,7 @@ namespace WebRPG
         {
             WebSocket socket = _socket;
             _socket = null;
+            _adventureRequests.Clear();
             IsConnected = false;
             IsBusy = false;
             PlayerId = string.Empty;
@@ -227,6 +253,7 @@ namespace WebRPG
             _disposed = true;
             WebSocket socket = _socket;
             _socket = null;
+            _adventureRequests.Clear();
             IsConnected = false;
             IsBusy = false;
             Room = null;
