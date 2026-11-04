@@ -5,6 +5,7 @@ namespace WebRPGServer;
 // 管理單一伺服器程序內的房間、成員與準備狀態，由 Hub 序列化存取。
 public sealed class LobbyRegistry
 {
+    private const int MaximumAdventurePayloadLength = 6000;
     private readonly LobbyOptions _options;
     private readonly Dictionary<string, LobbyMemberSnapshot> _players = new();
     private readonly Dictionary<string, LobbyRoomSnapshot> _rooms = new();
@@ -75,7 +76,7 @@ public sealed class LobbyRegistry
 
     public AdventurePacket ExecuteAdventure(string playerId, AdventurePacket request)
     {
-        if (request == null || request.Payload == null || request.Payload.Length > 6000)
+        if (request == null || request.Payload == null || request.Payload.Length > MaximumAdventurePayloadLength)
             throw new ArgumentException("冒險訊息格式錯誤。");
         if (!_memberships.TryGetValue(playerId, out string? roomId) ||
             !_rooms.TryGetValue(roomId, out LobbyRoomSnapshot? room))

@@ -32,6 +32,11 @@ namespace WebRPG
     // 依畫面尺寸調整角色、技能與地圖節點的動態排列。
     internal sealed class AdventureDynamicLayoutHelper
     {
+        private const int MaximumFactionColumns = 2;
+        private const float RelicHorizontalPadding = 8;
+        private const float RelicTopPadding = 4;
+        private const float MapNodeWidthDivisor = 4;
+        private const float MapNodeWidthSpacing = 16;
         private const string ConnectionNamePrefix = "Connection";
 
         private readonly RectTransform _root;
@@ -111,7 +116,7 @@ namespace WebRPG
             {
                 return;
             }
-            int columns = Math.Min(2, count);
+            int columns = Math.Min(MaximumFactionColumns, count);
             int rows = Mathf.CeilToInt((float)count / columns);
             float width = _settings.CharacterWidth;
             float height = _settings.CharacterHeight;
@@ -152,7 +157,7 @@ namespace WebRPG
         {
             int count = _screen.Relics.Length;
             float viewportWidth = Mathf.Max(1, _relicArea.Rect.rect.width);
-            float contentWidth = Mathf.Max(viewportWidth, 16 + count * _settings.RelicWidth +
+            float contentWidth = Mathf.Max(viewportWidth, 2 * RelicHorizontalPadding + count * _settings.RelicWidth +
                 Mathf.Max(0, count - 1) * _settings.RelicSpacing);
             RectTransform content = _relicArea.Content;
             content.anchorMin = content.anchorMax = new Vector2(0, 1);
@@ -167,7 +172,7 @@ namespace WebRPG
                 rect.pivot = new Vector2(0, 1);
                 rect.sizeDelta = new Vector2(_settings.RelicWidth, _settings.RelicHeight);
                 rect.anchoredPosition = new Vector2(
-                    8 + index * (_settings.RelicWidth + _settings.RelicSpacing), -4);
+                    RelicHorizontalPadding + index * (_settings.RelicWidth + _settings.RelicSpacing), -RelicTopPadding);
             }
         }
 
@@ -184,7 +189,7 @@ namespace WebRPG
             _mapScroll.Content.anchorMax = new Vector2(1, 1);
             _mapScroll.Content.pivot = new Vector2(0, 1);
             _mapScroll.Content.sizeDelta = new Vector2(0, height);
-            float nodeWidth = Mathf.Clamp(width / 4 - 16, _settings.MapNodeMinimumWidth, _settings.MapNodeMaximumWidth);
+            float nodeWidth = Mathf.Clamp(width / MapNodeWidthDivisor - MapNodeWidthSpacing, _settings.MapNodeMinimumWidth, _settings.MapNodeMaximumWidth);
             int connection = 0;
             for (int row = 0; row < rows.Length; row++)
             {

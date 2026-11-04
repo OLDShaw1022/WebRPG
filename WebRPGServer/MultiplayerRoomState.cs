@@ -6,6 +6,13 @@ namespace WebRPGServer;
 // 管理單輪冒險的投票、操作序列、回合隔離與模擬時間上限。
 public sealed class MultiplayerRoomState
 {
+    private const int MaximumStepsPerPacket = 4;
+    private const int SimulationStepsPerSecond = 20;
+    private const int AllowedSimulationLeadSteps = 20;
+    private const int MaximumSkillSlotIndex = 5;
+    private const int MaximumEnemyTargetIndex = 3;
+    private const int MaximumChoiceIndex = 2;
+    private const int MaximumResolveOptionIndex = 1;
     private readonly Dictionary<string, int> _votes = new();
     private readonly DateTime _startedAt = DateTime.UtcNow;
     private int _ticks;
@@ -24,7 +31,7 @@ public sealed class MultiplayerRoomState
         switch (command)
         {
             case AdventureCommand.Vote:
-                if (index < 0 || index > 2) throw new ArgumentException("無效的地圖選項。");
+                if (index < 0 || index > MaximumChoiceIndex) throw new ArgumentException("無效的地圖選項。");
                 _votes[playerId] = index;
                 if (_votes.Count == room.Members.Length)
                 {
@@ -37,23 +44,23 @@ public sealed class MultiplayerRoomState
                 }
                 break;
             case AdventureCommand.Tick:
-                if (room.LeaderId != playerId || index < 1 || index > 4)
+                if (room.LeaderId != playerId || index < 1 || index > MaximumStepsPerPacket)
                     throw new ArgumentException("只有隊長可推進模擬時間。");
-                if (_ticks + index > (DateTime.UtcNow - _startedAt).TotalSeconds * 20 + 20)
+                if (_ticks + index > (DateTime.UtcNow - _startedAt).TotalSeconds * SimulationStepsPerSecond + AllowedSimulationLeadSteps)
                     throw new ArgumentException("模擬時間推進過快。");
                 _ticks += index;
                 break;
             case AdventureCommand.Skill:
-                if (index < 0 || index > 5) throw new ArgumentException("無效的技能槽。");
+                if (index < 0 || index > MaximumSkillSlotIndex) throw new ArgumentException("無效的技能槽。");
                 break;
             case AdventureCommand.Target:
-                if (index < 0 || index > 3) throw new ArgumentException("無效的敵方目標。");
+                if (index < 0 || index > MaximumEnemyTargetIndex) throw new ArgumentException("無效的敵方目標。");
                 break;
             case AdventureCommand.Reward:
-                if (index < 0 || index > 2) throw new ArgumentException("無效的獎勵選項。");
+                if (index < 0 || index > MaximumChoiceIndex) throw new ArgumentException("無效的獎勵選項。");
                 break;
             case AdventureCommand.Resolve:
-                if (index < 0 || index > 1) throw new ArgumentException("無效的節點選項。");
+                if (index < 0 || index > MaximumResolveOptionIndex) throw new ArgumentException("無效的節點選項。");
                 break;
             case AdventureCommand.Abandon:
                 Failed = true;

@@ -7,6 +7,7 @@ namespace WebRPGServer;
 // 序列化房間操作並向所有已連線玩家推播伺服器狀態。
 public sealed class LobbyHub
 {
+    private const int MaximumRequestIdLength = 64;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly Dictionary<string, LobbySendSession> _sessions = new();
     private readonly LobbyRegistry _registry;
@@ -40,7 +41,7 @@ public sealed class LobbyHub
                         EnqueueError(session, string.Empty, "封包格式錯誤或超過大小上限。");
                         continue;
                     }
-                    if (request.RequestId?.Length > 64)
+                    if (request.RequestId?.Length > MaximumRequestIdLength)
                     {
                         EnqueueError(session, string.Empty, "要求識別碼過長。");
                         continue;

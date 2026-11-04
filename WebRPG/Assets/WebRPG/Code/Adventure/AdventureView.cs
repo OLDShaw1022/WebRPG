@@ -9,6 +9,7 @@ namespace WebRPG
     [DisallowMultipleComponent]
     public sealed class AdventureView : MonoBehaviour, IAdventureView
     {
+        private const float JournalFollowBottomThreshold = 0.01f;
         private const string MissingPrefabReferencesMessage = "AdventureView requires complete prefab references.";
         private const string InspectedSkillsTitleSuffix = " · 技能狀態";
         private const string PlayerDefeatedText = "已倒下";
@@ -428,7 +429,7 @@ namespace WebRPG
             _detailsHeading.text = JournalHeading;
             if (_detailsText.text != _screen.Journal)
             {
-                bool followLatest = _detailsScroll.Scroll.verticalNormalizedPosition <= 0.01f ||
+                bool followLatest = _detailsScroll.Scroll.verticalNormalizedPosition <= JournalFollowBottomThreshold ||
                     _detailsText.text.Length == 0;
                 _detailsText.text = _screen.Journal;
                 UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(_detailsScroll.Content);

@@ -9,6 +9,8 @@ namespace WebRPGServer;
 // 管理聊天室連線、封包驗證、訊息廣播與歷史訊息載入。
 public sealed class ChatHub
 {
+    private const int RecentMessageLimit = 50;
+    private const int ReceiveBufferSizeBytes = 4096;
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = false
@@ -83,7 +85,7 @@ public sealed class ChatHub
                         {
                             _sessions.TryAdd(session.ConnectionId, session);
                             IReadOnlyList<ChatPacket> history =
-                                await _messageStore.GetRecentMessagesAsync(50, cancellationToken);
+                                await _messageStore.GetRecentMessagesAsync(RecentMessageLimit, cancellationToken);
 
                             foreach (ChatPacket historyMessage in history)
                             {
@@ -237,7 +239,7 @@ public sealed class ChatHub
 
     private static async Task<string?> ReceiveTextAsync(WebSocket socket, CancellationToken cancellationToken)
     {
-        byte[] buffer = new byte[4096];
+        byte[] buffer = new byte[ReceiveBufferSizeBytes];
         using MemoryStream message = new();
         WebSocketReceiveResult result;
         bool isTextMessage = true;

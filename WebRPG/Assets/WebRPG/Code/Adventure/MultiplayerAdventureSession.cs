@@ -10,6 +10,8 @@ namespace WebRPG
     // 重播伺服器排序的全隊操作，管理連線失敗、投票及固定模擬時間。
     public sealed class MultiplayerAdventureSession : IDisposable
     {
+        private const float MaximumAccumulatedTimeSeconds = 0.2f;
+        private const int MaximumStepsPerPacket = 4;
         private const string PayloadFormat = "{0}|0";
         private const string VoteStatusFormat = "節點投票：{0}/{1}；全員投票後前進，平票優先採隊長選擇。";
         private const string WaitingMessage = "等待隊友完成節點或領取獎勵。";
@@ -73,9 +75,9 @@ namespace WebRPG
                 return;
             }
             if (!IsLeader) return;
-            _accumulatedTime = Math.Min(0.2f, _accumulatedTime + seconds);
+            _accumulatedTime = Math.Min(MaximumAccumulatedTimeSeconds, _accumulatedTime + seconds);
             if (_accumulatedTime < PacketInterval) return;
-            int steps = Math.Min(4, (int)(_accumulatedTime / NetworkStep));
+            int steps = Math.Min(MaximumStepsPerPacket, (int)(_accumulatedTime / NetworkStep));
             _accumulatedTime -= steps * NetworkStep;
             SendCommand(AdventureCommand.Tick, steps);
         }
@@ -177,7 +179,7 @@ namespace WebRPG
                     Party.LockEnemy(player, index);
                     break;
                 case AdventureCommand.Tick:
-                    if (packet.PlayerId != _lobby.Room?.LeaderId || index < 1 || index > 4) { Fail(); return; }
+                    if (packet.PlayerId != _lobby.Room?.LeaderId || index < 1 || index > MaximumStepsPerPacket) { Fail(); return; }
                     for (int step = 0; step < index; step++) Party.Tick(NetworkStep);
                     break;
                 case AdventureCommand.Abandon:

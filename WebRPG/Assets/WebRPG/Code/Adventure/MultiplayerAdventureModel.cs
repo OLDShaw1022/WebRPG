@@ -17,7 +17,7 @@ namespace WebRPG
 
         public MultiplayerAdventureModel(AdventureConfiguration configuration, int seed, string[] playerIds)
         {
-            if (playerIds == null || playerIds.Length < 1 || playerIds.Length > 4 ||
+            if (playerIds == null || playerIds.Length < 1 || playerIds.Length > WebRPGShared.LobbyPacketLimits.MaximumPlayers ||
                 playerIds.Distinct().Count() != playerIds.Length)
                 throw new ArgumentException(nameof(playerIds));
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));

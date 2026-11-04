@@ -6,6 +6,7 @@ namespace WebRPGServer;
 // 啟動聊天與房間大廳伺服器，設定資料庫與 /ws WebSocket 端點。
 public static class Program
 {
+    private const int WebSocketKeepAliveIntervalSeconds = 30;
     public static async Task Main(string[] arguments)
     {
         WebApplicationBuilder builder = WebApplication.CreateBuilder(arguments);
@@ -41,7 +42,7 @@ public static class Program
 
         application.UseWebSockets(new WebSocketOptions
         {
-            KeepAliveInterval = TimeSpan.FromSeconds(30)
+            KeepAliveInterval = TimeSpan.FromSeconds(WebSocketKeepAliveIntervalSeconds)
         });
 
         application.Use(async (context, next) =>

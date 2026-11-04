@@ -7,6 +7,10 @@ namespace WebRPG
     // 管理冒險進度、路線選擇與獎勵結算，並協調單場戰鬥。
     public sealed class AdventureModel
     {
+        private const int RelicRandomSeedSalt = 0x3F6A2D17;
+        private const int SkillRandomSeedSalt = 0x6D718293;
+        private const int PersonalRandomSeedMultiplier = 7919;
+        private const int MaximumJournalEntries = 8;
         private const string RunStartedMessage = "挑戰開始。血量跨戰鬥保留，請選擇路線。";
         private const string NodeEntryMessagePrefix = "前往「";
         private const string QuotedNameSentenceSuffix = "」。";
@@ -65,8 +69,8 @@ namespace WebRPG
             Random sharedRandom = new Random(seed);
             _mapRandom = isolateRandomStreams ? new Random(seed) : sharedRandom;
             _encounterRandom = isolateRandomStreams ? new Random(unchecked(seed ^ 0x2A53B4C1)) : sharedRandom;
-            _relicRandom = isolateRandomStreams ? new Random(unchecked(seed ^ 0x3F6A2D17 ^ personalSeed * 7919)) : sharedRandom;
-            _skillRandom = isolateRandomStreams ? new Random(unchecked(seed ^ 0x6D718293 ^ personalSeed * 7919)) : sharedRandom;
+            _relicRandom = isolateRandomStreams ? new Random(unchecked(seed ^ RelicRandomSeedSalt ^ personalSeed * PersonalRandomSeedMultiplier)) : sharedRandom;
+            _skillRandom = isolateRandomStreams ? new Random(unchecked(seed ^ SkillRandomSeedSalt ^ personalSeed * PersonalRandomSeedMultiplier)) : sharedRandom;
             _readOnlySkills = _skills.AsReadOnly();
             _readOnlyRewards = _rewards.AsReadOnly();
             _readOnlyRelics = _relics.AsReadOnly();
@@ -461,7 +465,7 @@ namespace WebRPG
         private void Record(string message)
         {
             _journal.Enqueue(message);
-            while (_journal.Count > 8)
+            while (_journal.Count > MaximumJournalEntries)
             {
                 _journal.Dequeue();
             }

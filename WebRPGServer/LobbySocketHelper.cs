@@ -7,9 +7,10 @@ namespace WebRPGServer;
 // 處理有大小上限的大廳 WebSocket 訊息與限時傳送。
 internal static class LobbySocketHelper
 {
+    private const int ReceiveBufferSizeBytes = 4096;
     public static async Task<string?> ReceiveAsync(WebSocket socket, CancellationToken token)
     {
-        byte[] buffer = new byte[4096];
+        byte[] buffer = new byte[ReceiveBufferSizeBytes];
         using MemoryStream message = new();
         bool valid = true;
         WebSocketReceiveResult result;
