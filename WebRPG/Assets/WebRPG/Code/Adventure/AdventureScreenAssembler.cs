@@ -120,7 +120,8 @@ namespace WebRPG
                 PlayerHealth = localHealth,
                 BasicAttack = localAttack,
                 Skills = slots,
-                Players = _network?.GetPartyCharacters(localPlayer) ?? new[] { localPlayer },
+                Players = _network == null ? new[] { localPlayer }
+                    : AdventurePartyScreenHelper.Characters(_network, localPlayer),
                 Enemies = enemies,
                 ShowBattle = fighting,
                 BattleSpeed = _model.BattleSpeed,

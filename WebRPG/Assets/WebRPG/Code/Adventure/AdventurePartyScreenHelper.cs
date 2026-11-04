@@ -8,6 +8,13 @@ namespace WebRPG
     {
         private const string HealthTitle = "生命";
         private const string HealthFormat = "生命 {0} / {1}";
+        public static AdventureCharacterScreenModel[] Characters(MultiplayerAdventureSession session,
+            AdventureCharacterScreenModel localPlayer)
+        {
+            return session.GetMembers().Select((member, index) => member.PlayerId == session.PlayerId ? localPlayer :
+                Character(session.Party.Players[index], member.PlayerId, member.Username)).ToArray();
+        }
+
         public static AdventureCharacterScreenModel Character(AdventureModel player, string id, string name)
         {
             bool fighting = player.Phase == AdventurePhase.Battle;

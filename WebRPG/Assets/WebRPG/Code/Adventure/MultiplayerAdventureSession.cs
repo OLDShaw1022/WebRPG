@@ -93,10 +93,12 @@ namespace WebRPG
             }).Forget();
         }
 
-        public AdventureCharacterScreenModel[] GetPartyCharacters(AdventureCharacterScreenModel localPlayer)
+        public LobbyMemberSnapshot[] GetMembers()
         {
-            return _members.Select((member, index) => index == _localIndex ? localPlayer :
-                AdventurePartyScreenHelper.Character(Party.Players[index], member.PlayerId, member.Username)).ToArray();
+            return _members.Select(member => new LobbyMemberSnapshot
+            {
+                PlayerId = member.PlayerId, Username = member.Username
+            }).ToArray();
         }
 
         public void Dispose()
