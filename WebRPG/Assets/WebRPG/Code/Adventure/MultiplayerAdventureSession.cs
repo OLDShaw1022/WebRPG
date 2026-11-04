@@ -15,7 +15,7 @@ namespace WebRPG
         private const string WaitingMessage = "等待隊友完成節點或領取獎勵。";
         private const string FailureMessage = "本輪多人冒險已結束；隊員離開或連線中斷時全隊失敗。";
         private const float NetworkStep = 0.05f;
-        private const float PacketInterval = 0.1f;
+        internal const float PacketInterval = 0.1f;
         private readonly ILobbyModel _lobby;
         private readonly string _roomId;
         private readonly LobbyMemberSnapshot[] _members;
@@ -25,7 +25,6 @@ namespace WebRPG
         private long _lastSequence;
         private float _accumulatedTime;
         private float _silenceTime;
-        private bool _pendingTick;
         private bool _disposed;
         private bool _failed;
 
@@ -75,10 +74,9 @@ namespace WebRPG
             }
             if (!IsLeader) return;
             _accumulatedTime = Math.Min(0.2f, _accumulatedTime + seconds);
-            if (_pendingTick || _accumulatedTime < PacketInterval) return;
+            if (_accumulatedTime < PacketInterval) return;
             int steps = Math.Min(4, (int)(_accumulatedTime / NetworkStep));
             _accumulatedTime -= steps * NetworkStep;
-            _pendingTick = true;
             SendCommand(AdventureCommand.Tick, steps);
         }
 
@@ -180,7 +178,6 @@ namespace WebRPG
                     break;
                 case AdventureCommand.Tick:
                     if (packet.PlayerId != _lobby.Room?.LeaderId || index < 1 || index > 4) { Fail(); return; }
-                    if (packet.PlayerId == PlayerId) _pendingTick = false;
                     for (int step = 0; step < index; step++) Party.Tick(NetworkStep);
                     break;
                 case AdventureCommand.Abandon:

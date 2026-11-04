@@ -1,12 +1,150 @@
 using System;
 using System.Linq;
 using NUnit.Framework;
+using WebRPGShared;
 
 namespace WebRPG.Tests
 {
     // 驗證冒險操作事件、數值條、角色檢視與地圖畫面資料。
     public sealed class AdventurePresenterTests
     {
+        [TestCase(1f)]
+        [TestCase(2f)]
+        public void SoloPresentationMovesBetweenSimulationStepsAndFreezesWhenPaused(float speed)
+        {
+            AdventureConfiguration configuration = AdventureBattleTestHelper.Configuration();
+            configuration.SimulationStep = 0.1f;
+            configuration.BasicAttack.CastTime = 2;
+            AdventureModel model = AdventureBattleTestHelper.StartBattle(configuration);
+            TestAdventureView view = new TestAdventureView();
+            using (AdventurePresenter presenter = new AdventurePresenter(model, view))
+            {
+                view.SetSpeed(speed);
+                bool movedBetweenSteps = false;
+                for (int frame = 0; frame < 48; frame++)
+                {
+                    float remaining = model.PlayerAction.RemainingCastTime;
+                    float displayed = view.Screen.Players[0].Action.FillAmount;
+                    presenter.Tick(1f / 120);
+                    if (model.PlayerAction.RemainingCastTime == remaining &&
+                        view.Screen.Players[0].Action.FillAmount > displayed)
+                        movedBetweenSteps = true;
+                }
+                Assert.That(movedBetweenSteps, Is.True);
+                presenter.SetPaused(true);
+                float pausedFill = view.Screen.Players[0].Action.FillAmount;
+                float pausedRemaining = model.PlayerAction.RemainingCastTime;
+                presenter.Tick(1);
+                Assert.That(view.Screen.Players[0].Action.FillAmount, Is.EqualTo(pausedFill));
+                Assert.That(model.PlayerAction.RemainingCastTime, Is.EqualTo(pausedRemaining));
+                presenter.SetPaused(false);
+                view.SetSpeed(0);
+                float stoppedFill = view.Screen.Players[0].Action.FillAmount;
+                presenter.Tick(1);
+                Assert.That(view.Screen.Players[0].Action.FillAmount, Is.EqualTo(stoppedFill));
+            }
+        }
+
+        [Test]
+        public void MultiplayerPresentationAdvancesBetweenPacketsWithoutAdvancingBattle()
+        {
+            AdventureConfiguration configuration = AdventureModelScenarioHelper.WinningConfiguration();
+            configuration.BasicAttack.CastTime = 2;
+            TestMultiplayerLobbyModel lobby = new TestMultiplayerLobbyModel
+            {
+                PlayerId = "self",
+                Room = new LobbyRoomSnapshot
+                {
+                    Id = "room", LeaderId = "self",
+                    Members = new[] { new LobbyMemberSnapshot { PlayerId = "self" } }
+                }
+            };
+            using (MultiplayerAdventureSession session = new MultiplayerAdventureSession(lobby, 1, configuration))
+            {
+                TestAdventureView view = new TestAdventureView();
+                using (AdventurePresenter presenter = new AdventurePresenter(session.LocalModel, view, session))
+                {
+                    lobby.Emit(new AdventurePacket
+                    {
+                        Type = AdventurePacketType.Command, Command = AdventureCommand.Node,
+                        RoomId = "room", PlayerId = "self", Sequence = 1, Payload = "0|0"
+                    });
+                    lobby.Emit(new AdventurePacket
+                    {
+                        Type = AdventurePacketType.Command, Command = AdventureCommand.Tick,
+                        RoomId = "room", PlayerId = "self", Sequence = 2, Turn = 1, Payload = "2|0"
+                    });
+                    float remaining = session.LocalModel.PlayerAction.RemainingCastTime;
+                    float previous = view.Screen.Players[0].Action.FillAmount;
+                    for (int frame = 0; frame < 6; frame++)
+                    {
+                        presenter.Tick(1f / 60);
+                        float current = view.Screen.Players[0].Action.FillAmount;
+                        Assert.That(current, Is.GreaterThan(previous));
+                        Assert.That(session.LocalModel.PlayerAction.RemainingCastTime, Is.EqualTo(remaining));
+                        previous = current;
+                    }
+                    presenter.Tick(1);
+                    Assert.That(view.Screen.Players[0].Action.FillAmount, Is.EqualTo(previous).Within(0.00001f));
+                }
+            }
+        }
+
+        [TestCase(30)]
+        [TestCase(60)]
+        [TestCase(144)]
+        public void MultiplayerInterpolationSmoothsConfirmedProgressAndResetsNewActions(int framesPerSecond)
+        {
+            AdventurePresentationHelper presentation = new AdventurePresentationHelper(0.1f);
+            Func<float, float, AdventureScreenModel> snapshot = (fill, progress) => new AdventureScreenModel
+            {
+                ShowBattle = true,
+                Players = Array.Empty<AdventureCharacterScreenModel>(),
+                Enemies = Array.Empty<AdventureCharacterScreenModel>(),
+                InspectedCharacterId = "self",
+                InspectedSkills = new[] { new AdventureGaugeScreenModel
+                {
+                    Title = "skill", FillAmount = fill, CanUse = true, Text = "ready"
+                } },
+                PlayerHealth = new AdventureGaugeScreenModel { FillAmount = 0.4f, Text = "40/100" },
+                Projectile = new AdventureProjectileScreenModel
+                {
+                    SourceCharacterId = "self", TargetCharacterId = "enemy", Name = "attack", Progress = progress
+                }
+            };
+            presentation.Apply(snapshot(0.2f, 0.2f), 0);
+            presentation.Apply(snapshot(0.8f, 0.8f), 0);
+            float previous = 0.2f;
+            for (int frame = 0; frame < (int)Math.Ceiling(framesPerSecond / 10.0); frame++)
+            {
+                AdventureScreenModel screen = snapshot(0.8f, 0.8f);
+                presentation.Apply(screen, 1f / framesPerSecond);
+                Assert.That(screen.Projectile.Progress, Is.GreaterThan(previous));
+                Assert.That(screen.Projectile.Progress, Is.LessThanOrEqualTo(0.8f));
+                Assert.That(screen.InspectedSkills[0].FillAmount, Is.EqualTo(screen.Projectile.Progress));
+                Assert.That(screen.InspectedSkills[0].CanUse, Is.True);
+                Assert.That(screen.InspectedSkills[0].Text, Is.EqualTo("ready"));
+                Assert.That(screen.PlayerHealth.FillAmount, Is.EqualTo(0.4f));
+                previous = screen.Projectile.Progress;
+            }
+            AdventureScreenModel stalled = snapshot(0.8f, 0.8f);
+            presentation.Apply(stalled, 1);
+            Assert.That(stalled.Projectile.Progress, Is.EqualTo(0.8f));
+            AdventureScreenModel reset = snapshot(0.1f, 0.1f);
+            presentation.Apply(reset, 0);
+            Assert.That(reset.InspectedSkills[0].FillAmount, Is.EqualTo(0.1f));
+            Assert.That(reset.Projectile.Progress, Is.EqualTo(0.1f));
+            AdventureScreenModel next = snapshot(0.9f, 0.9f);
+            next.Projectile.TargetCharacterId = "other-enemy";
+            presentation.Apply(next, 0);
+            Assert.That(next.Projectile.Progress, Is.EqualTo(0.9f));
+            next.ShowBattle = false;
+            presentation.Apply(next, 0);
+            AdventureScreenModel newBattle = snapshot(0.5f, 0.5f);
+            presentation.Apply(newBattle, 0);
+            Assert.That(newBattle.InspectedSkills[0].FillAmount, Is.EqualTo(0.5f));
+        }
+
         [Test]
         public void BattleTicksReuseMapRelicsChoicesAndJournalUntilTheirContentChanges()
         {

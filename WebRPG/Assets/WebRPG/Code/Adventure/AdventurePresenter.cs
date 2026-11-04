@@ -111,6 +111,7 @@ namespace WebRPG
         private readonly AdventureOperationHelper _operations;
         private readonly IAdventureView _view;
         private readonly MultiplayerAdventureSession _network;
+        private readonly AdventurePresentationHelper _presentation;
         private bool _disposed;
         private bool _paused;
         private bool _mapOpen;
@@ -121,6 +122,8 @@ namespace WebRPG
             _model = model ?? throw new ArgumentNullException(nameof(model));
             _view = view ?? throw new ArgumentNullException(nameof(view));
             _network = network;
+            _presentation = new AdventurePresentationHelper(network == null
+                ? model.Configuration.SimulationStep : MultiplayerAdventureSession.PacketInterval);
             _screenAssembler = new AdventureScreenAssembler(_model, network);
             _operations = new AdventureOperationHelper(_model, network);
             _view.StartRequested += HandleStart;
@@ -141,7 +144,7 @@ namespace WebRPG
         {
             if (_disposed) return;
             _operations.Tick(seconds, _paused);
-            Refresh();
+            Render(seconds);
         }
 
         public void SetPaused(bool paused)
@@ -236,8 +239,16 @@ namespace WebRPG
 
         private void Refresh()
         {
+            Render(0);
+        }
+
+        private void Render(float seconds)
+        {
             if (_disposed) return;
-            _view.Render(_screenAssembler.Build(_paused, _mapOpen));
+            AdventureScreenModel screen = _screenAssembler.Build(_paused, _mapOpen);
+            float presentationSeconds = _network == null ? (_paused ? 0 : seconds * _model.BattleSpeed) : seconds;
+            _presentation.Apply(screen, presentationSeconds);
+            _view.Render(screen);
         }
     }
 }

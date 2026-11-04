@@ -8,6 +8,28 @@ namespace WebRPG.Tests
     // 驗證多個獨立客戶端接收相同操作後維持完整戰鬥與進度一致。
     public sealed class MultiplayerSessionTests
     {
+        [Test]
+        public void LeaderBatchesNetworkStepsWithoutWaitingForEcho()
+        {
+            TestMultiplayerLobbyModel lobby = new TestMultiplayerLobbyModel
+            {
+                PlayerId = "self",
+                Room = new LobbyRoomSnapshot
+                {
+                    Id = "room", LeaderId = "self",
+                    Members = new[] { new LobbyMemberSnapshot { PlayerId = "self" } }
+                }
+            };
+            using (MultiplayerAdventureSession session = new MultiplayerAdventureSession(
+                lobby, 1, AdventureModelScenarioHelper.WinningConfiguration()))
+            {
+                for (int step = 0; step < 20; step++) session.Tick(0.05f);
+                Assert.That(lobby.Sent.Count, Is.EqualTo(10));
+                Assert.That(lobby.Sent.All(packet => packet.Command == AdventureCommand.Tick &&
+                    packet.Payload == "2|0"), Is.True);
+            }
+        }
+
         [TestCase(2)]
         [TestCase(4)]
         public void SeparateClientsReplaySameCombatAndIndividualRewards(int count)
