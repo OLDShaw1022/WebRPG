@@ -1,75 +1,49 @@
-using System.Diagnostics;
-using System.Net;
-using System.Net.Sockets;
-using NUnit.Framework;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using WebRPGServer;
 
 namespace WebRPGServer.Tests;
 
-// 管理整合測試專用伺服器的啟動、輸出與關閉。
+// 在本機 Kestrel 執行隔離的大廳測試主機，認證依測試情境注入。
 internal sealed class LocalLobbyServer : IAsyncDisposable
 {
-    private readonly Process _process;
-    private readonly Task<string> _output;
-    private readonly Task<string> _errors;
+    private readonly WebApplication _application;
     public Uri Address { get; }
 
-    private LocalLobbyServer(Process process, int port)
+    private LocalLobbyServer(WebApplication application, Uri address)
     {
-        _process = process;
-        _output = process.StandardOutput.ReadToEndAsync();
-        _errors = process.StandardError.ReadToEndAsync();
-        Address = new Uri($"ws://127.0.0.1:{port}/ws?channel=lobby");
+        _application = application;
+        Address = address;
     }
 
-    public static async Task<LocalLobbyServer> StartAsync()
+    public static async Task<LocalLobbyServer> StartAsync(Func<string, Task<AccountIdentity?>>? authenticate = null)
     {
-        TcpListener reservation = new(IPAddress.Loopback, 0);
-        reservation.Start();
-        int port = ((IPEndPoint)reservation.LocalEndpoint).Port;
-        reservation.Stop();
-        ProcessStartInfo start = new("dotnet")
+        WebApplicationBuilder builder = WebApplication.CreateBuilder();
+        builder.WebHost.UseUrls("http://127.0.0.1:0");
+        builder.Logging.ClearProviders();
+        WebApplication application = builder.Build();
+        application.UseWebSockets();
+        LobbyHub hub = new(new LobbyOptions());
+        application.Run(async context =>
         {
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            CreateNoWindow = true,
-            WorkingDirectory = TestContext.CurrentContext.TestDirectory
-        };
-        start.ArgumentList.Add(Path.Combine(TestContext.CurrentContext.TestDirectory, "WebRPGServer.dll"));
-        start.Environment["PORT"] = port.ToString();
-        start.Environment["ConnectionStrings__GameDatabase"] = string.Empty;
-        LocalLobbyServer server = new(Process.Start(start)!, port);
-        try
-        {
-            using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(15));
-            while (true)
-            {
-                if (server._process.HasExited) throw new InvalidOperationException("Test server exited before becoming ready.");
-                try
-                {
-                    using TcpClient probe = new();
-                    await probe.ConnectAsync(IPAddress.Loopback, port, timeout.Token);
-                    return server;
-                }
-                catch (SocketException) { await Task.Delay(50, timeout.Token); }
-            }
-        }
-        catch
-        {
-            await server.DisposeAsync();
-            throw;
-        }
+            if (!context.WebSockets.IsWebSocketRequest) { context.Response.StatusCode = 400; return; }
+            using System.Net.WebSockets.WebSocket socket = await context.WebSockets.AcceptWebSocketAsync();
+            await hub.HandleConnectionAsync(socket, context.RequestAborted, authenticate);
+        });
+        await application.StartAsync();
+        IServer server = application.Services.GetRequiredService<IServer>();
+        string address = server.Features.Get<IServerAddressesFeature>()!.Addresses.Single();
+        UriBuilder socketAddress = new(address) { Scheme = "ws", Path = "/ws", Query = "channel=lobby" };
+        return new LocalLobbyServer(application, socketAddress.Uri);
     }
 
     public async ValueTask DisposeAsync()
     {
-        try
-        {
-            if (!_process.HasExited) _process.Kill(true);
-            await _process.WaitForExitAsync();
-            TestContext.Progress.WriteLine(await _output);
-            TestContext.Progress.WriteLine(await _errors);
-        }
-        finally { _process.Dispose(); }
+        await _application.StopAsync();
+        await _application.DisposeAsync();
     }
 }

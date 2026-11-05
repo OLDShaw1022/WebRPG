@@ -27,6 +27,7 @@ namespace WebRPG
         [SerializeField] private RectTransform _rooms;
         [SerializeField] private LobbyRoomRowView _roomTemplate;
         private readonly List<LobbyRoomRowView> _rows = new List<LobbyRoomRowView>();
+        private bool _hasAccount;
         public event Action<int, string> ConnectRequested;
         public event Action<string, bool> CreateRequested;
         public event Action<string> JoinRequested;
@@ -53,7 +54,7 @@ namespace WebRPG
         {
             _serverDropdown.ClearOptions();
             _serverDropdown.AddOptions(new List<string>(names));
-            _serverDropdown.SetValueWithoutNotify(defaultServerIndex);
+            if (!_hasAccount) _serverDropdown.SetValueWithoutNotify(defaultServerIndex);
             _serverDropdown.RefreshShownValue();
         }
 
@@ -63,8 +64,8 @@ namespace WebRPG
             _members.text = screen.Members;
             _readyLabel.text = screen.ReadyLabel;
             bool available = screen.Connected && !screen.Busy;
-            _serverDropdown.interactable = !screen.Connected && !screen.Busy;
-            _username.interactable = !screen.Connected && !screen.Busy;
+            _serverDropdown.interactable = !_hasAccount && !screen.Connected && !screen.Busy;
+            _username.interactable = !_hasAccount && !screen.Connected && !screen.Busy;
             _connectButton.interactable = !screen.Connected && !screen.Busy;
             _createButton.interactable = available && !screen.InRoom;
             _joinButton.interactable = available && !screen.InRoom;
@@ -85,6 +86,14 @@ namespace WebRPG
         }
 
         private void Connect() => ConnectRequested?.Invoke(_serverDropdown.value, _username.text);
+        public void SetAccount(string username, int serverIndex)
+        {
+            _hasAccount = true;
+            _username.text = username;
+            _serverDropdown.SetValueWithoutNotify(serverIndex);
+            _serverDropdown.interactable = false;
+            _username.interactable = false;
+        }
         private void Create() => CreateRequested?.Invoke(_roomName.text, _publicToggle.isOn);
         private void Join() => JoinRequested?.Invoke(_roomId.text);
         private void SelectRoom(string roomId) => JoinRequested?.Invoke(roomId);

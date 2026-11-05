@@ -7,9 +7,9 @@
 
 ## 規則
 
-- 1：遊戲啟動時先顯示主選單，依序提供「單人遊玩」、「多人遊玩」、「設定（尚未開放）」與「離開遊戲」。
+- 1：遊戲啟動先顯示[帳號登入](Accounts.md)，登入成功才顯示主選單，依序提供「單人遊玩」、「多人遊玩」、「設定（尚未開放）」、「離開遊戲」與「登出」。
 - 2：單人遊玩直接開始新一局並進入冒險地圖；成功後隱藏主選單，避免重複建立冒險。啟動失敗時保留選單、顯示錯誤提示並允許重試。
-- 3：多人遊玩開啟[房間大廳](MultiplayerLobby.md)，由玩家輸入名稱並連線；返回主選單時關閉連線並釋放大廳。設定按鈕仍停用。
+- 3：多人遊玩開啟[房間大廳](MultiplayerLobby.md)，沿用登入帳號名稱與伺服器並連線；返回主選單時關閉連線並釋放大廳。設定按鈕仍停用。
 - 4：離開遊戲在桌面版呼叫 Application.Quit，在 Unity Editor 停止播放；WebGL 顯示「請關閉瀏覽器分頁以離開遊戲。」。
 - 5：Main 不再建立或釋放聊天功能；既有 Chat 程式與 Prefab 保留；多人共同冒險由[房間大廳](MultiplayerLobby.md)啟動。
 - 6：從挑戰選單確認返回主選單後，結束本輪、釋放冒險與挑戰選單，重新建立主選單 Presenter；可再次點擊單人遊玩開始新局。取消確認則保留本輪。挑戰內設定提示與中央選單行為見[挑戰介面](AdventureUI.md)，不改動本頁尚未開放的設定入口。
@@ -18,19 +18,19 @@
 
 | 檔案 | 職責 |
 | --- | --- |
-| [MainMenuCanvas.prefab](../WebRPG/Assets/WebRPG/Prefabs/MainMenuCanvas.prefab) | 保存 Canvas、縮放、射線偵測、背景、標題、四個按鈕、提示文字及 View 引用；可在 Prefab Mode 調整。 |
+| [MainMenuCanvas.prefab](../WebRPG/Assets/WebRPG/Prefabs/MainMenuCanvas.prefab) | 保存 Canvas、縮放、射線偵測、背景、標題、五個按鈕、提示文字及 View 引用；可在 Prefab Mode 調整。 |
 | [MainMenuView.cs](../WebRPG/Assets/WebRPG/Code/MainMenu/MainMenuView.cs) | 綁定與解除按鈕事件、轉送操作、顯示提示及隱藏選單；不動態建立固定版面。 |
 | [MainMenuModel.cs](../WebRPG/Assets/WebRPG/Code/MainMenu/MainMenuModel.cs) | 記錄是否已成功進入冒險。 |
 | [MainMenuPresenter.cs](../WebRPG/Assets/WebRPG/Code/MainMenu/MainMenuPresenter.cs) | 處理單人與離開操作；成功啟動後更新 Model 並隱藏 View，釋放時解除事件訂閱。 |
 | [Main.cs](../WebRPG/Assets/WebRPG/Code/Bootstrap/Main.cs) | 生成主選單 Prefab、組裝 MVP，並負責冒險啟動、逐幀推進、離開遊戲與生命週期管理。 |
 
-- Prefab 的 Menu 節點包含 Title、SinglePlayer、Multiplayer、Settings、Quit 與 Message；按鈕文字位於各自的 Label 子節點。
+- Prefab 的 Menu 節點包含 Title、SinglePlayer、Multiplayer、Settings、Quit、Logout 與 Message；按鈕文字位於各自的 Label 子節點。
 - 固定版面與動態內容的製作要求以 [Unity 規則](UnityRules.md)為準；helper method 的拆分要求見 [Coding 規則](CodingRules.md)。
 - 配色與字體呈現遵守[美術製作規範](ArtProductionRules.md)；主選單與挑戰畫面共用[單人可玩原型](AdventurePrototype.md)記錄的三層字級。
 
 ## 驗收情境
 
-- 對應規則 1：啟動後顯示四個選項，尚未建立冒險或聊天畫面。
+- 對應規則 1：啟動先顯示帳號頁；登入後顯示五個選項，尚未建立冒險或聊天畫面。登出成功後返回帳號頁。
 - 對應規則 2：點擊單人遊玩後直接進入 Map，主選單隱藏，冒險畫面只有一個；啟動失敗時仍可重試。
 - 對應規則 3：多人入口可開啟大廳並返回主選單，再次開啟會建立新的大廳；設定按鈕不可操作。
 - 對應規則 4：依執行平台確認關閉程式、停止播放或顯示分頁關閉提示。

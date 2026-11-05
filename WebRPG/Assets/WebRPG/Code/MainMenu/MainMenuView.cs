@@ -14,6 +14,8 @@ namespace WebRPG
         private UnityEngine.UI.Button _singlePlayerButton;
 
         [SerializeField] private UnityEngine.UI.Button _multiplayerButton;
+        [SerializeField] private UnityEngine.UI.Button _logoutButton;
+        public event Action LogoutRequested;
 
         [SerializeField]
         private UnityEngine.UI.Button _quitButton;
@@ -35,10 +37,12 @@ namespace WebRPG
             _singlePlayerButton.onClick.AddListener(HandleSinglePlayerRequested);
             _multiplayerButton.onClick.AddListener(HandleMultiplayerRequested);
             _quitButton.onClick.AddListener(HandleQuitRequested);
+            if (_logoutButton) _logoutButton.onClick.AddListener(HandleLogoutRequested);
         }
 
         private void OnDestroy()
         {
+            if (_logoutButton) _logoutButton.onClick.RemoveListener(HandleLogoutRequested);
             if (_multiplayerButton) _multiplayerButton.onClick.RemoveListener(HandleMultiplayerRequested);
             if (_singlePlayerButton)
             {
@@ -67,6 +71,7 @@ namespace WebRPG
         }
 
         private void HandleMultiplayerRequested() => MultiplayerRequested?.Invoke();
+        private void HandleLogoutRequested() => LogoutRequested?.Invoke();
 
         private void HandleQuitRequested()
         {

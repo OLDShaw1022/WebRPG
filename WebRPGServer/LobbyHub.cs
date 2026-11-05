@@ -19,10 +19,12 @@ public sealed class LobbyHub
         _registry = new LobbyRegistry(options);
     }
 
-    public async Task HandleConnectionAsync(WebSocket socket, CancellationToken token)
+    public async Task HandleConnectionAsync(WebSocket socket, CancellationToken token,
+        Func<string, Task<AccountIdentity?>>? authenticate = null)
     {
         string playerId = Guid.NewGuid().ToString("N");
         bool registered = false;
+        string accessToken = string.Empty;
         LobbySendSession session = new(socket, _options.SendTimeoutSeconds, token);
         try
         {
@@ -33,6 +35,23 @@ public sealed class LobbyHub
                 LobbyPacket? request;
                 try { request = JsonSerializer.Deserialize<LobbyPacket>(json); }
                 catch (JsonException) { request = null; }
+                AccountIdentity? identity = null;
+                if (authenticate is not null && request is not null)
+                {
+                    if (!registered)
+                    {
+                        using JsonDocument document = JsonDocument.Parse(json);
+                        if (document.RootElement.TryGetProperty("AccessToken", out JsonElement property) &&
+                            property.ValueKind == JsonValueKind.String) accessToken = property.GetString() ?? string.Empty;
+                    }
+                    identity = await authenticate(accessToken);
+                    if (identity is null)
+                    {
+                        await socket.CloseAsync(WebSocketCloseStatus.PolicyViolation, "Authentication required", token);
+                        break;
+                    }
+                    if (!registered) playerId = identity.AccountId;
+                }
                 await _gate.WaitAsync(token);
                 try
                 {
@@ -50,7 +69,8 @@ public sealed class LobbyHub
                     {
                         if (request.Type != LobbyPacketType.Hello) throw new ArgumentException("請先連線。");
                         if (_sessions.Count >= _options.MaximumConnections) throw new ArgumentException("大廳連線已滿。");
-                        _registry.Connect(playerId, request.Username);
+                        if (_sessions.ContainsKey(playerId)) throw new ArgumentException("此帳號已連線至大廳。");
+                        _registry.Connect(playerId, identity?.Username ?? request.Username);
                         _sessions.Add(playerId, session);
                         registered = true;
                         LobbyPacket welcome = _registry.Snapshot(playerId, request.RequestId ?? string.Empty);

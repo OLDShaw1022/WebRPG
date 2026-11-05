@@ -41,6 +41,9 @@ namespace WebRPG
         private const string TimeoutMessage = "伺服器回應逾時，請重新連線。";
         private readonly LobbyServerConfiguration[] _servers;
         private readonly float _requestTimeoutSeconds;
+        private readonly AccountModel _account;
+        private const string TokenProperty = "AccessToken";
+        private const string AuthenticationRequiredMessage = "請重新登入後再連線。";
 
         private readonly Dictionary<string, string> _adventureRequests = new Dictionary<string, string>();
         private WebSocket _socket;
@@ -59,9 +62,10 @@ namespace WebRPG
         public LobbyRoomSnapshot Room { get; private set; }
         public LobbyRoomSummary[] Rooms { get; private set; } = Array.Empty<LobbyRoomSummary>();
 
-        public LobbyModel(LobbyClientConfiguration configuration, bool includeEditorServers = false)
+        public LobbyModel(LobbyClientConfiguration configuration, bool includeEditorServers = false, AccountModel account = null)
         {
             configuration.Validate();
+            _account = account;
             _requestTimeoutSeconds = configuration.RequestTimeoutSeconds;
             _servers = configuration.GetAvailableServers(includeEditorServers);
             ServerNames = _servers.Select(server => server.Name).ToArray();
@@ -71,6 +75,16 @@ namespace WebRPG
         public async Awaitable ConnectAsync(int serverIndex, string username)
         {
             if (_disposed || IsBusy || IsConnected) return;
+            if (_account != null)
+            {
+                if (!_account.IsLoggedIn || serverIndex != _account.ServerIndex)
+                {
+                    Status = AuthenticationRequiredMessage;
+                    Changed?.Invoke();
+                    return;
+                }
+                username = _account.Username;
+            }
             string name = username?.Trim() ?? string.Empty;
             if (name.Length == 0 || name.Length > LobbyPacketLimits.UsernameLength)
             {
@@ -152,7 +166,14 @@ namespace WebRPG
             IsBusy = true;
             Status = PendingMessage;
             Changed?.Invoke();
-            await LobbyPacketSendHelper.SendAsync(socket, packet, HandleSendFailure);
+            if (packet.Type == LobbyPacketType.Hello && _account != null)
+            {
+                Newtonsoft.Json.Linq.JObject json = Newtonsoft.Json.Linq.JObject.FromObject(packet);
+                json[TokenProperty] = _account.AccessToken;
+                try { await socket.SendText(json.ToString(Formatting.None)); }
+                catch (Exception exception) { HandleSendFailure(socket, exception); }
+            }
+            else await LobbyPacketSendHelper.SendAsync(socket, packet, HandleSendFailure);
         }
 
         private void HandleSendFailure(WebSocket socket, Exception exception)

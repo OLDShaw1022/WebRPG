@@ -421,6 +421,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a8263bf958124e4d8ab3fd7fc7ea9921, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _accountViewPrefab: {fileID: 5089514640753872917, guid: f5c211fa118be664580faa24f45a943f, type: 3}
   _lobbyViewPrefab: {fileID: 4121991731964137153, guid: 4217c60156ac0d14f9facd900c9290b0, type: 3}
   _lobbyConfiguration: {fileID: 4900000, guid: 306937b586a61a145b1619a470a010d9, type: 3}
   _mainMenuViewPrefab: {fileID: 1835696493, guid: 64871617f95945bc898517fcf6ece958, type: 3}

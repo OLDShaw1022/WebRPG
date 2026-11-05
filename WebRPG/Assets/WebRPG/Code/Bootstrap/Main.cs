@@ -14,6 +14,14 @@ namespace WebRPG
         private const string AdventureStartFailureMessage = "無法開始冒險，請檢查遊戲設定後重試。";
         private const string LobbyStartFailureMessage = "無法開啟房間大廳，請檢查設定後重試。";
         private const string MissingLobbyPrefabMessage = "Main requires a LobbyView prefab reference.";
+        private const string MissingAccountPrefabMessage = "Main requires an AccountView prefab reference.";
+        private const string LoggedInFormat = "已登入：{0}";
+        private const string SessionExpiredMessage = "登入已到期，請重新登入。";
+        [SerializeField] private AccountView _accountViewPrefab;
+        private AccountView _accountView;
+        private AccountModel _accountModel;
+        private AccountPresenter _accountPresenter;
+        private bool _loggingOut;
 
         [SerializeField] private LobbyView _lobbyViewPrefab;
         [SerializeField] private TextAsset _lobbyConfiguration;
@@ -57,6 +65,15 @@ namespace WebRPG
             _mainMenuView = Instantiate(_mainMenuViewPrefab);
             _mainMenuPresenter = new MainMenuPresenter(
                 new MainMenuModel(), _mainMenuView, StartAdventure, QuitGame, OpenLobby);
+            _mainMenuView.LogoutRequested += Logout;
+            _mainMenuView.gameObject.SetActive(false);
+            if (!_accountViewPrefab || !_lobbyConfiguration)
+                throw new InvalidOperationException(MissingAccountPrefabMessage);
+            LobbyClientConfiguration accountConfiguration =
+                JsonConvert.DeserializeObject<LobbyClientConfiguration>(_lobbyConfiguration.text);
+            _accountModel = new AccountModel(accountConfiguration, Application.isEditor);
+            _accountView = Instantiate(_accountViewPrefab);
+            _accountPresenter = new AccountPresenter(_accountModel, _accountView, ShowAuthenticatedMenu);
         }
 
         private void OnApplicationQuit()
@@ -68,6 +85,10 @@ namespace WebRPG
 
         private void OnDestroy()
         {
+            _accountPresenter?.Dispose();
+            _accountModel?.Dispose();
+            if (_accountView) Destroy(_accountView.gameObject);
+            if (_mainMenuView) _mainMenuView.LogoutRequested -= Logout;
             DisposeLobby();
             DisposeAdventure();
             _mainMenuPresenter?.Dispose();
@@ -88,6 +109,8 @@ namespace WebRPG
 
         private void Update()
         {
+            if (_accountModel != null && !string.IsNullOrEmpty(_accountModel.AccessToken) && !_accountModel.IsLoggedIn)
+                ShowLogin(SessionExpiredMessage);
             _adventurePresenter?.Tick(Time.deltaTime);
             _lobbyModel?.Tick(Time.unscaledDeltaTime);
         }
@@ -99,6 +122,7 @@ namespace WebRPG
 
         private bool StartAdventure(int seed, bool multiplayer)
         {
+            if (_accountModel == null || !_accountModel.IsLoggedIn) return false;
             if (_adventurePresenter != null)
             {
                 return false;
@@ -177,6 +201,7 @@ namespace WebRPG
 
         private bool OpenLobby()
         {
+            if (_accountModel == null || !_accountModel.IsLoggedIn) return false;
             if (_lobbyPresenter != null || _adventurePresenter != null) return false;
             try
             {
@@ -186,9 +211,10 @@ namespace WebRPG
                     JsonConvert.DeserializeObject<LobbyClientConfiguration>(_lobbyConfiguration.text);
                 configuration.Validate();
                 _lobbyView = Instantiate(_lobbyViewPrefab);
-                _lobbyModel = new LobbyModel(configuration, Application.isEditor);
+                _lobbyModel = new LobbyModel(configuration, Application.isEditor, _accountModel);
                 _lobbyModel.AdventureReceived += HandleAdventurePacket;
                 _lobbyPresenter = new LobbyPresenter(_lobbyModel, _lobbyView, ReturnFromLobby);
+                _lobbyView.SetAccount(_accountModel.Username, _accountModel.ServerIndex);
                 return true;
             }
             catch (Exception exception)
@@ -239,6 +265,48 @@ namespace WebRPG
 #else
             Application.Quit();
 #endif
+        }
+
+        private void ShowAuthenticatedMenu()
+        {
+            _accountView.gameObject.SetActive(false);
+            _mainMenuView.gameObject.SetActive(true);
+            _mainMenuView.ShowMessage(string.Format(LoggedInFormat, _accountModel.Username));
+        }
+
+        private void Logout()
+        {
+            if (!_loggingOut) LogoutAsync().Forget();
+        }
+
+        private async Awaitable LogoutAsync()
+        {
+            _loggingOut = true;
+            try
+            {
+                await _accountModel.LogoutAsync();
+                if (this) ShowLogin(string.Empty);
+            }
+            catch (Exception exception)
+            {
+                if (_mainMenuView) _mainMenuView.ShowMessage(exception.Message);
+            }
+            finally { _loggingOut = false; }
+        }
+
+        private void ShowLogin(string message)
+        {
+            DisposeLobby();
+            DisposeAdventure();
+            if (_adventureView) Destroy(_adventureView.gameObject);
+            _adventureView = null;
+            _accountModel.ClearSession();
+            _mainMenuPresenter?.Dispose();
+            _mainMenuPresenter = new MainMenuPresenter(new MainMenuModel(), _mainMenuView, StartAdventure, QuitGame, OpenLobby);
+            _mainMenuView.gameObject.SetActive(false);
+            _accountView.gameObject.SetActive(true);
+            _accountView.ClearPassword();
+            _accountView.Render(false, message);
         }
     }
 }

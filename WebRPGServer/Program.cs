@@ -1,5 +1,6 @@
 using System.Net.WebSockets;
 using Npgsql;
+using Microsoft.AspNetCore.HttpOverrides;
 
 namespace WebRPGServer;
 
@@ -18,9 +19,17 @@ public static class Program
         {
             builder.Services.AddSingleton(NpgsqlDataSource.Create(connectionString));
             builder.Services.AddSingleton<IChatMessageStore, PostgresChatMessageStore>();
+            builder.Services.AddSingleton<PostgresAccountStore>();
         }
 
         builder.Services.AddSingleton<ChatHub>();
+        AccountEndpoints.AddServices(builder.Services);
+        builder.Services.Configure<ForwardedHeadersOptions>(options =>
+            options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto);
+        builder.Services.AddCors(options => options.AddDefaultPolicy(policy => policy
+            .WithOrigins(builder.Configuration.GetSection("Accounts:AllowedOrigins").Get<string[]>() ??
+                new[] { "https://oldshaw-web-rpg.web.app", "https://oldshaw-web-rpg.firebaseapp.com" })
+            .WithMethods("POST").WithHeaders("Content-Type", "Authorization")));
         LobbyOptions lobbyOptions = builder.Configuration.GetSection("Lobby").Get<LobbyOptions>() ?? new LobbyOptions();
         lobbyOptions.Validate();
         builder.Services.AddSingleton(lobbyOptions);
@@ -32,6 +41,7 @@ public static class Program
         {
             IChatMessageStore messageStore = application.Services.GetRequiredService<IChatMessageStore>();
             await messageStore.InitializeAsync(CancellationToken.None);
+            await application.Services.GetRequiredService<PostgresAccountStore>().InitializeAsync(CancellationToken.None);
             application.Logger.LogInformation("Chat message database is ready.");
         }
         else
@@ -40,10 +50,15 @@ public static class Program
                 "Chat message persistence is disabled: GameDatabase is not configured.");
         }
 
+        application.UseForwardedHeaders();
         application.UseWebSockets(new WebSocketOptions
         {
             KeepAliveInterval = TimeSpan.FromSeconds(WebSocketKeepAliveIntervalSeconds)
         });
+        application.UseRouting();
+        application.UseCors();
+        application.UseRateLimiter();
+        AccountEndpoints.Map(application);
 
         application.Use(async (context, next) =>
         {
@@ -53,7 +68,10 @@ public static class Program
                 if (context.Request.Query["channel"] == "lobby")
                 {
                     LobbyHub lobbyHub = context.RequestServices.GetRequiredService<LobbyHub>();
-                    await lobbyHub.HandleConnectionAsync(webSocket, context.RequestAborted);
+                    PostgresAccountStore? accounts = context.RequestServices.GetService<PostgresAccountStore>();
+                    await lobbyHub.HandleConnectionAsync(webSocket, context.RequestAborted,
+                        async accessToken => accounts is null ? null :
+                            await accounts.AuthenticateAsync(accessToken, context.RequestAborted));
                 }
                 else
                 {
