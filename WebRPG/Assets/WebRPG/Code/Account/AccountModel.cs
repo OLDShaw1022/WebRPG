@@ -48,6 +48,7 @@ namespace WebRPG
         public string AccountId { get; private set; } = string.Empty;
         public string Username { get; private set; } = string.Empty;
         public DateTimeOffset ExpiresAt { get; private set; }
+        public bool RegistrationSucceeded { get; private set; }
         public bool IsLoggedIn => !string.IsNullOrEmpty(AccessToken) && DateTimeOffset.UtcNow < ExpiresAt;
 
         public AccountModel(LobbyClientConfiguration configuration, bool includeEditorServers)
@@ -60,13 +61,18 @@ namespace WebRPG
 
         public async Awaitable<string> SubmitAsync(int serverIndex, string email, string password, string username, bool register)
         {
+            RegistrationSucceeded = false;
             if (string.IsNullOrWhiteSpace(email) || string.IsNullOrEmpty(password)) return MissingCredentialsMessage;
             if (register && (string.IsNullOrWhiteSpace(username) || username.Trim().Length > MaximumUsernameLength ||
                 password.Length < MinimumPasswordLength || password.Length > MaximumPasswordLength)) return RegistrationFieldsMessage;
             JObject payload = new JObject { [EmailProperty] = email.Trim(), [PasswordProperty] = password };
             if (register) payload[UsernameProperty] = username.Trim();
             string response = await SendAsync(serverIndex, register ? RegisterPath : LoginPath, payload.ToString(Formatting.None), false);
-            if (register) return RegisteredMessage;
+            if (register)
+            {
+                RegistrationSucceeded = true;
+                return RegisteredMessage;
+            }
             AccountResponseModel session = JsonConvert.DeserializeObject<AccountResponseModel>(response);
             if (session == null || string.IsNullOrEmpty(session.AccessToken) || string.IsNullOrEmpty(session.AccountId) ||
                 string.IsNullOrEmpty(session.Username) || session.ExpiresAt <= DateTimeOffset.UtcNow)

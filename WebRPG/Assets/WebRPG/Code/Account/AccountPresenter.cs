@@ -6,7 +6,8 @@ namespace WebRPG
     // 協調帳號表單與 API，防止重複送出並處理非同步錯誤。
     public sealed class AccountPresenter : IDisposable
     {
-        private const string InitialMessage = "請登入，或填寫使用者名稱後註冊新帳號。\n密碼須為 8～128 個字元。";
+        private const string InitialMessage = "請使用 Email 與密碼登入。";
+        private const string RegistrationMessage = "請填寫 Email、密碼與使用者名稱。\n密碼須為 8～128 個字元。";
         private const string PendingMessage = "處理中，請稍候…";
         private readonly AccountModel _model;
         private readonly AccountView _view;
@@ -21,7 +22,15 @@ namespace WebRPG
             _loggedIn = loggedIn;
             _view.Configure(model.ServerNames, model.DefaultServerIndex);
             _view.Submitted += Submit;
+            _view.PageRequested += ChangePage;
             _view.Render(false, InitialMessage);
+        }
+
+        private void ChangePage(bool registration)
+        {
+            if (_busy || _disposed) return;
+            _view.ShowPage(registration);
+            _view.Render(false, registration ? RegistrationMessage : InitialMessage);
         }
 
         private void Submit(int server, string email, string password, string username, bool register)
@@ -39,6 +48,7 @@ namespace WebRPG
                 string status = await _model.SubmitAsync(server, email, password, username, register);
                 if (_disposed || !_view) return;
                 _view.ClearPassword();
+                if (register && _model.RegistrationSucceeded) _view.ShowPage(false);
                 _view.Render(false, status);
                 if (_model.IsLoggedIn) _loggedIn();
             }
@@ -52,7 +62,11 @@ namespace WebRPG
         public void Dispose()
         {
             _disposed = true;
-            if (_view) _view.Submitted -= Submit;
+            if (_view)
+            {
+                _view.Submitted -= Submit;
+                _view.PageRequested -= ChangePage;
+            }
         }
     }
 }
