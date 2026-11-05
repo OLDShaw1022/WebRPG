@@ -10,11 +10,9 @@
   <main>
     <canvas id="unity-canvas" width="{{{ WIDTH }}}" height="{{{ HEIGHT }}}" tabindex="-1"></canvas>
     <p id="unity-status" role="status">載入遊戲中…</p>
-    <button id="unity-fullscreen" type="button" disabled>全螢幕</button>
   </main>
   <script>
     const statusElement = document.querySelector("#unity-status");
-    const fullscreenButton = document.querySelector("#unity-fullscreen");
     const buildDirectory = "Build";
     const loaderScript = document.createElement("script");
     loaderScript.src = buildDirectory + "/{{{ LOADER_FILENAME }}}";
@@ -34,10 +32,8 @@
         }
       }, progress => {
         statusElement.textContent = "載入遊戲中 " + Math.round(progress * 100) + "%";
-      }).then(unityInstance => {
+      }).then(() => {
         statusElement.textContent = "";
-        fullscreenButton.disabled = false;
-        fullscreenButton.onclick = () => unityInstance.SetFullscreen(1);
       }).catch(error => {
         statusElement.textContent = "遊戲載入失敗：" + String(error);
       });
