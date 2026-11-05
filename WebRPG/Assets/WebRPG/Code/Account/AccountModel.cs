@@ -137,6 +137,7 @@ namespace WebRPG
             _request = request;
             try
             {
+                AccountBrowserRequestHelper.Configure(address.Uri);
                 await request.SendWebRequest();
                 if (_disposed) throw new OperationCanceledException();
                 if (allowUnauthorized && request.responseCode == UnauthorizedStatus) return string.Empty;

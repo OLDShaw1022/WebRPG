@@ -183,6 +183,24 @@ public sealed class RememberedLoginTests
         Assert.That(await store.AuthenticateAsync(previousSession["accessToken"]!.GetValue<string>(), CancellationToken.None), Is.Null);
     }
 
+    [TestCase("https://oldshaw-webrpg.com", true)]
+    [TestCase("https://evil.example", false)]
+    [TestCase("https://oldshaw-web-rpg.web.app", false)]
+    public async Task CorsPreflightAllowsCredentialsOnlyForConfiguredGameOrigin(string origin, bool allowed)
+    {
+        await using LocalAccountServer server = await LocalAccountServer.StartAsync(_database);
+        using HttpClient client = new() { BaseAddress = server.Address };
+        using HttpRequestMessage request = new(HttpMethod.Options, "api/accounts/refresh");
+        request.Headers.Add("Origin", origin);
+        request.Headers.Add("Access-Control-Request-Method", "POST");
+        request.Headers.Add("Access-Control-Request-Headers", "content-type,x-webrpg-request,authorization");
+        using HttpResponseMessage response = await client.SendAsync(request);
+        bool credentials = response.Headers.TryGetValues("Access-Control-Allow-Credentials", out var values) && values.Single() == "true";
+        Assert.That(credentials, Is.EqualTo(allowed));
+        string? allowedOrigin = response.Headers.TryGetValues("Access-Control-Allow-Origin", out var origins) ? origins.Single() : null;
+        Assert.That(allowedOrigin, Is.EqualTo(allowed ? origin : null));
+    }
+
     [Test]
     public async Task LoginWithoutRememberMeDoesNotIssuePersistentCookie()
     {

@@ -31,13 +31,13 @@
 
 - 沿用 `ConnectionStrings:GameDatabase`，可由 `ConnectionStrings__GameDatabase` 提供；不要把密碼、憑證或連線字串寫入 Git、文件或聊天。
 - 啟動時建立 `game_accounts`、`game_account_sessions`、`game_account_remembered_sessions` 與索引，為既有工作階段表補上可空的長效工作階段關聯欄位，不改既有聊天表；資料庫角色需要建表權限。過期工作階段於後續成功登入時清理。
-- `Accounts:AllowedOrigins` 設定允許的 WebGL 來源，預設僅 `https://oldshaw-webrpg.com`。客戶端由 LobbyClient.json 的 WebSocket 位址推導帳號 API 位址，正式值為 `wss://oldshaw-webrpg.com/ws?channel=lobby`，因此 API 為同源的 `https://oldshaw-webrpg.com/api/accounts/`。瀏覽器持久登入以 WebGL 為驗收範圍；Editor／桌面沿用 UnityWebRequest Cookie 管理，不承諾跨應用程式重啟保存。
+- `Accounts:AllowedOrigins` 設定允許的 WebGL 來源，預設僅 `https://oldshaw-webrpg.com`。客戶端由 LobbyClient.json 的 WebSocket 位址推導帳號 API 位址，正式值為 `wss://ws.oldshaw-webrpg.com/ws?channel=lobby`，因此 API 為 `https://ws.oldshaw-webrpg.com/api/accounts/`；與遊戲頁面同站但不同來源。瀏覽器持久登入以 WebGL 為驗收範圍；Editor／桌面沿用 UnityWebRequest Cookie 管理，不承諾跨應用程式重啟保存。
 - 預設僅信任 ASP.NET Core 的 loopback 反向代理；其他拓撲需明確設定可信代理。反向代理需轉送 `/api/accounts/`、`X-Forwarded-For` 與 `X-Forwarded-Proto`，並保留既有 WebSocket 路徑。
 
 ## 正式網域與反向代理
 
-- 正式入口為 https://oldshaw-webrpg.com/ ，靜態 WebGL、帳號 API 與 WebSocket 必須由同一 HTTPS origin 提供。現有 WebRPGPage/firebase.json 僅有靜態頁面 rewrite，不會直接把 API 或 WebSocket 轉送至 EC2；不可只改 DNS 或客戶端位址便視為部署完成。
-- 在負責 oldshaw-webrpg.com TLS 的 gateway 設定以下路由；範例假設 ASP.NET Core 與 Nginx 在同一主機且監聽 8080。靜態遊戲檔案的根路由沿用實際 hosting 配置，以下不覆寫該設定。若代理跨主機，須另外配置可信代理與實際上游。
+- 正式遊戲入口為 https://oldshaw-webrpg.com/ ，由 Firebase Hosting 的自訂網域提供靜態 WebGL；帳號 API 位於 https://ws.oldshaw-webrpg.com/api/accounts/ ，WebSocket 位於 wss://ws.oldshaw-webrpg.com/ws 。兩個 HTTPS 子網域同站但不同來源，不需要把 API 移到遊戲主網域。
+- 在負責 ws.oldshaw-webrpg.com TLS 的 gateway 設定以下路由；範例假設 ASP.NET Core 與 Nginx 在同一主機且監聽 8080。Firebase 仍提供遊戲頁面，無須新增同源 API rewrite。若代理跨主機，須另外配置可信代理與實際上游。
 
 ```nginx
 location /api/accounts/ {
@@ -59,8 +59,15 @@ location = /ws {
 }
 ```
 
-- 保留 Set-Cookie，不把 /api/accounts/ 回應快取或改寫成 index.html。舊 Firebase 網域不再是預設帳號來源；正式 gateway、憑證、DNS 與 hosting 尚未由本次工作變更或部署。
-- 上線驗收須實際確認：WebGL 勾選記住登入後重新整理、關閉再開啟瀏覽器可登入；未勾選不會留下長效憑證；登出後重新整理仍停留登入頁；Cookie 為 HttpOnly／Secure，JavaScript 無法讀取；API 與 WSS 均走正式網域。
+- API 代理保留 Set-Cookie、Origin 與 CORS 回應標頭，不把 /api/accounts/ 回應快取或改寫成 index.html。正式請使用 oldshaw-webrpg.com 的遊戲頁面；Firebase 預設 web.app／firebaseapp.com 網址屬於另一個站點，不在預設來源清單內，也不承諾其跨站 Cookie 登入。正式 gateway、憑證、DNS 與 hosting 不由本次程式修正變更。
+- 上線驗收須實際確認：WebGL 勾選記住登入後重新整理、關閉再開啟瀏覽器可登入；未勾選不會留下長效憑證；登出後重新整理仍停留登入頁；Cookie 為 HttpOnly／Secure，JavaScript 無法讀取；API 與 WSS 均走 ws.oldshaw-webrpg.com，遊戲頁面走 oldshaw-webrpg.com。
+
+## WebGL 跨來源憑證
+
+- AccountBrowserRequestHelper 在 UnityWebRequest 送出前登記該次完整帳號 API URL；WebRPGAccountCredentials.jslib 為 Unity 6.3 的 Module.fetchWithProgress 與 Module.cachedFetch 設定有範圍限制的包裝，只讓已登記 URL 的 POST 要求使用 credentials: include。只接受 register、login、refresh、logout 路徑，不更動其他主機、資產下載、GET 或未登記 URL 的憑證模式；保留取消訊號、逾時與進度回呼。Editor 與桌面不呼叫此 WebGL 橋接。
+- AccountCorsHelper 以 Accounts:AllowedOrigins 的明確來源清單啟用 AllowCredentials，預設僅 https://oldshaw-webrpg.com ，不使用萬用來源。預檢允許 POST、Content-Type、Authorization 與 X-WebRPG-Request；Origin 與 Sec-Fetch-Site 防護維持原規則。
+- Cookie 仍為 HttpOnly、Secure、SameSite=Strict、host-only、Path=/api/accounts，僅屬於 API 子網域。沒有改成 SameSite=None，沒有設定涵蓋所有子網域的 Domain，也沒有讓遊戲 JavaScript 讀取長效憑證。
+- 更新伺服器與 WebGL 客戶端須配套發布；只更新 CORS 或只更新瀏覽器端，都無法完成跨來源記住登入。
 
 ## UI 與驗證
 
@@ -81,11 +88,27 @@ location = /ws {
 - 已清除本次建置落盤的暫時 preloadedAssets 項目，ProjectSettings.asset 與原始基準一致；Editor 作用中平台切回原來的 StandaloneWindows64。沒有修改 WebSocket 封包或共用 DLL/PDB。
 - 本機瀏覽器測試使用相同帳號端點與獨立測試頁；正式 WebGL 遊戲在 oldshaw-webrpg.com 的整合、TLS／代理與多瀏覽器驗收仍須部署後執行。
 
-## 本次修改的還原基準
+## 跨來源修正驗證
+
+- 完整本機伺服器測試 32 項通過，包含正式來源的 credentialed CORS 預檢，以及不允許的網站／Firebase 預設來源不會取得憑證式 CORS 授權；未執行遠端測試。
+- Node 內建測試 4 項通過，驗證 Unity 的兩條 fetch 路徑、原有取消／進度參數保留、重複登記不疊加包裝，以及非帳號要求不帶入額外 Cookie。執行命令為 node --test WebRPGPage/ci/account-credentials.test.mjs。
+- AccountCrossOriginBrowserTests 使用 webrpg.test 與 api.webrpg.test 的本機 HTTPS、獨立 Edge 設定檔與實際 jslib 原始碼，驗證登入保存 Cookie、跨瀏覽器程序重啟恢復及登出撤銷。省略 credentials 的對照要求為 401，透過插件設定 include 後成功恢復；SameSite=Strict 維持不變。測試 DNS 僅在該瀏覽器程序映射至 loopback，不更動系統 hosts、正式 DNS 或使用者設定檔。
+- 本機 HTTPS 憑證僅供測試，未安裝憑證或信任根、未寫入 Git；Windows Schannel 需要暫時使用者金鑰容器，憑證物件釋放時清理。忽略憑證信任檢查的旗標僅用於這個隔離瀏覽器程序。
+- Unity Editor 帳號測試 13 項通過；Unity 6000.3.11f1 WebGL 建置成功、零錯誤，並核對產生的 framework.js 含帳號橋接與執行期憑證登記邏輯。建置有未連結 Unity Services project ID、未設定 Pipeline runtime 兩項非帳號警告，未因此改動服務設定。
+- WebGL 輸出位於本機暫存目錄 WebRPGCrossOrigin-WebGL-20261105-verify。DLL/PDB 未覆寫；字型原先已有修改，匯入／建置又觸發自動更新，匯入前狀態已備份。建置暫時的預載資產項目已清理；正式伺服器與 Firebase WebGL 尚未由本次修正部署，正式網域整合仍須配套發布後驗收。
+
+## 跨來源修正的還原基準
+
+- 比較基準為 origin/main 的 82bb92d8351b62643330b70312582c0d97bc6b41；本次首次修改的程式、測試及文件均與此版本一致，既有 DLL 不在修改範圍。
+- 驗證前快照 refs/backups/20261105-101902475-cross-origin-login 涵蓋 Program.cs、AccountCorsHelper.cs、RememberedLoginTests.cs、RememberedBrowserHelper.cs、AccountCrossOriginBrowserTests.cs、AccountModel.cs、AccountBrowserRequestHelper.cs、WebRPGAccountCredentials.jslib、WebRPGPage/ci/account-credentials.test.mjs，以及 Unity 匯入前已存在的 NotoSansTC-Regular SDF.asset 修改。原暫存區保持不變，備份不推送遠端。
+- 清理前另有 refs/backups/20261105-102817712-cross-origin-build-cleanup，涵蓋當時的 ProjectSettings.asset、Accounts.md 與 MultiplayerLobby.md；保護建置暫時狀態及驗證紀錄編輯前的文件。
+- 可用 git show <reference>:<path> 查看指定內容；僅在使用者要求時，以 git restore --source=<reference> -- <指定路徑> 還原指定檔案。要取得本次修正前的原始程式，使用上述 upstream 基準；驗證快照保留的是中途實作及字型狀態。
+
+## 前次修改的還原基準
 
 - 額外驗證快照：refs/backups/20261105-091336725-remember-login-import，涵蓋 Unity 自動更新後的 NotoSansTC-Regular SDF.asset、建置中的 ProjectSettings.asset，以及 Accounts.md、MultiplayerLobby.md、AccountHttpTestServer.cs、AccountRememberedClientTests.cs、RememberedLoginTests.cs、RememberedBrowserTests.cs、RememberedBrowserHelper.cs。字型在任務前已有修改，本快照是匯入後狀態，不是任務開始前的原始字型版本；未改動原暫存區。
 - 原始比較基準：origin/main，6864971b83ad034d520c9e6d90aca87b2fb6727d。首次寫入前本次涉及的既有檔案皆無相對 upstream 的未推送變更，故原始內容以此版本為還原基準。
-- 驗證修正前的實作快照：refs/backups/20261105-085900443-remember-login-validation，未推送遠端。涵蓋帳號伺服器的 AccountContracts、AccountEndpoints、PostgresAccountStore、Program、新增的 Cookie／Token helper 與 RememberedSessions、RememberedLoginTests，以及 Unity AccountModel／Presenter／View、Main、LobbyClient.json、AccountCanvas.prefab、新增的 AccountRememberedClientTests／AccountClientConfigurationHelper 與其 meta。未包含既有 DLL 或字型修改，也未改動原暫存區。
+- 驗證修正前的實作快照：refs/backups/20261105-085900443-remember-login-validation，已於 109a68e 成功推送並核對後清除本機 reference。涵蓋帳號伺服器的 AccountContracts、AccountEndpoints、PostgresAccountStore、Program、新增的 Cookie／Token helper 與 RememberedSessions、RememberedLoginTests，以及 Unity AccountModel／Presenter／View、Main、LobbyClient.json、AccountCanvas.prefab、新增的 AccountRememberedClientTests／AccountClientConfigurationHelper 與其 meta。未包含既有 DLL 或字型修改，也未改動原暫存區。
 - 可用 git show <reference>:<path> 查看指定內容；使用者要求還原時才執行 git restore --source=<reference> -- <指定路徑>，僅處理指定檔案。上述 backup 是驗證修正前的實作快照，若要取得修改前內容須使用原始基準。後續首次修改的 AccountHttpTestServer.cs 與文件本身原先亦與該基準一致。
 
 ## 本機資料庫測試

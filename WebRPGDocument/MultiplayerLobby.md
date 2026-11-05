@@ -19,7 +19,7 @@
 
 ## 設定與連線
 
-- [LobbyClient.json](../WebRPG/Assets/WebRPG/Data/LobbyClient.json)：以 DefaultServerId 指定預設伺服器，Servers 陣列設定 Id、Name、Url、EditorOnly。預設為 AWS EC2，透過 `wss://oldshaw-webrpg.com/ws?channel=lobby` 連線；正式網域須提供同源帳號 API 與 WebSocket 代理，詳見[帳號登入](Accounts.md)的部署要求；本機測試只在 Editor 顯示。RequestTimeoutSeconds 預設為 10 秒。畫面使用 TMP_Dropdown，不提供網址輸入。非 Editor 選項必須使用 wss。
+- [LobbyClient.json](../WebRPG/Assets/WebRPG/Data/LobbyClient.json)：以 DefaultServerId 指定預設伺服器，Servers 陣列設定 Id、Name、Url、EditorOnly。預設為 AWS EC2，透過 `wss://ws.oldshaw-webrpg.com/ws?channel=lobby` 連線；遊戲頁面使用 `https://oldshaw-webrpg.com`，帳號 API 使用 ws 子網域並允許指定遊戲來源的 Cookie 要求，詳見[帳號登入](Accounts.md)的部署要求；本機測試只在 Editor 顯示。RequestTimeoutSeconds 預設為 10 秒。畫面使用 TMP_Dropdown，不提供網址輸入。非 Editor 選項必須使用 wss。
 - [appsettings.json](../WebRPGServer/appsettings.json)：Lobby.RoomCapacity、MaximumRooms、MaximumConnections、SendTimeoutSeconds，預設分別為 4、100、256、3。均為本批原型設定。
 - 原有 `/ws` 聊天協定保留；`/ws?channel=lobby` 使用 LobbyPacket。部署時須轉送 query string。公開網站使用時應配置對應的 wss 位址。
 - 要求類型為 Hello、ListRooms、CreateRoom、JoinRoom、LeaveRoom、SetReady；回應為 Welcome、State 或 Error。RequestId 配對要求與回應，無 RequestId 的 State 為推播。
@@ -172,7 +172,7 @@
 - EC2 部署後，workflow 透過正式 WSS 端點驗證建立／列出／加入／準備／離開／清理；只操作自己建立的短期驗證房間。
 - 由既有 `.github/workflows/deploy-web-to-firebase.yml` 建置 WebGL 並部署至 Firebase。CI 建置方法驗證正式伺服器目錄，公開版本只顯示可用的安全端點。
 - 觸發命令：`gh workflow run deploy-server-to-ec2.yml --ref main -f confirm_deployment=deploy`，以及 `gh workflow run deploy-web-to-firebase.yml --ref main`。
-- 正式遊戲網址：https://oldshaw-web-rpg.web.app/ 。實際部署結果以對應 GitHub Actions run 為準。
+- 正式遊戲網址：https://oldshaw-webrpg.com/ 。實際部署結果以對應 GitHub Actions run 為準。
 
 ### refs/backups/20261102-145037-ec2-server-selector
 

@@ -26,10 +26,7 @@ public static class Program
         AccountEndpoints.AddServices(builder.Services);
         builder.Services.Configure<ForwardedHeadersOptions>(options =>
             options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto);
-        builder.Services.AddCors(options => options.AddDefaultPolicy(policy => policy
-            .WithOrigins(builder.Configuration.GetSection("Accounts:AllowedOrigins").Get<string[]>() ??
-                new[] { AccountCookieHelper.ProductionOrigin })
-            .WithMethods("POST").WithHeaders("Content-Type", "Authorization", AccountCookieHelper.RequestHeader)));
+        AccountCorsHelper.AddServices(builder.Services, builder.Configuration);
         LobbyOptions lobbyOptions = builder.Configuration.GetSection("Lobby").Get<LobbyOptions>() ?? new LobbyOptions();
         lobbyOptions.Validate();
         builder.Services.AddSingleton(lobbyOptions);
