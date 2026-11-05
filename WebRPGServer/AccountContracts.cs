@@ -4,7 +4,7 @@ namespace WebRPGServer;
 public sealed record AccountRegistration(string Email, string Password, string Username);
 
 // 保存登入表單內容。
-public sealed record AccountLogin(string Email, string Password);
+public sealed record AccountLogin(string Email, string Password, bool RememberMe = false);
 
 // 表示由伺服器確認的固定帳號身分。
 public sealed record AccountIdentity(string AccountId, string Username);

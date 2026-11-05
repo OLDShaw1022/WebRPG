@@ -13,6 +13,8 @@ namespace WebRPG.Tests
         public string SocketUrl { get; }
         public string LastPath { get; private set; }
         public string LastAuthorization { get; private set; }
+        public string LastRequestHeader { get; private set; }
+        public string LastBody { get; private set; }
 
         public AccountHttpTestServer()
         {
@@ -30,6 +32,9 @@ namespace WebRPG.Tests
             HttpListenerContext context = await _listener.GetContextAsync();
             LastPath = context.Request.Url.AbsolutePath;
             LastAuthorization = context.Request.Headers["Authorization"];
+            LastRequestHeader = context.Request.Headers["X-WebRPG-Request"];
+            using (System.IO.StreamReader reader = new System.IO.StreamReader(context.Request.InputStream, Encoding.UTF8))
+                LastBody = await reader.ReadToEndAsync();
             context.Response.StatusCode = status;
             context.Response.ContentType = "application/json";
             byte[] bytes = Encoding.UTF8.GetBytes(body);

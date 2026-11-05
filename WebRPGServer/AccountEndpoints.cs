@@ -31,6 +31,11 @@ public static class AccountEndpoints
             if (context.Request.Path.StartsWithSegments("/api/accounts"))
             {
                 context.Response.Headers.CacheControl = "no-store";
+                if (!AccountCookieHelper.IsTrustedRequest(context))
+                {
+                    context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                    return;
+                }
                 var size = context.Features.Get<Microsoft.AspNetCore.Http.Features.IHttpMaxRequestBodySizeFeature>();
                 if (size is { IsReadOnly: false }) size.MaxRequestBodySize = MaximumRequestBytes;
                 if (context.Request.ContentLength > MaximumRequestBytes)
@@ -68,15 +73,39 @@ public static class AccountEndpoints
         {
             PostgresAccountStore store = context.RequestServices.GetRequiredService<PostgresAccountStore>();
             AccountSession? session = await store.LoginAsync(login, context.RequestAborted);
-            return session is null ? Results.Json(new { error = "Email 或密碼錯誤。" }, statusCode: StatusCodes.Status401Unauthorized)
-                : Results.Ok(session);
+            if (session is null)
+                return Results.Json(new { error = "Email 或密碼錯誤。" }, statusCode: StatusCodes.Status401Unauthorized);
+            await store.RevokeRememberedAsync(AccountCookieHelper.Read(context), context.RequestAborted);
+            if (login.RememberMe)
+                AccountCookieHelper.Write(context, await store.RememberAsync(session, context.RequestAborted));
+            else
+                AccountCookieHelper.Clear(context);
+            return Results.Ok(session);
+        });
+        group.MapPost("/refresh", async (HttpContext context) =>
+        {
+            if (!AccountCookieHelper.HasRequestHeader(context)) return Results.StatusCode(StatusCodes.Status403Forbidden);
+            PostgresAccountStore store = context.RequestServices.GetRequiredService<PostgresAccountStore>();
+            RememberedAccountSession? session = await store.RefreshAsync(AccountCookieHelper.Read(context), context.RequestAborted);
+            if (session is null)
+            {
+                AccountCookieHelper.Clear(context);
+                return Results.Unauthorized();
+            }
+            AccountCookieHelper.Write(context, session);
+            return Results.Ok(session.Session);
         });
         group.MapPost("/logout", async (HttpContext context) =>
         {
             string token = ReadToken(context);
-            if (string.IsNullOrEmpty(token)) return Results.Unauthorized();
+            string? remembered = AccountCookieHelper.Read(context);
+            if (!string.IsNullOrEmpty(remembered) && !AccountCookieHelper.HasRequestHeader(context))
+                return Results.StatusCode(StatusCodes.Status403Forbidden);
+            if (string.IsNullOrEmpty(token) && string.IsNullOrEmpty(remembered)) return Results.Unauthorized();
             PostgresAccountStore store = context.RequestServices.GetRequiredService<PostgresAccountStore>();
-            await store.LogoutAsync(token, context.RequestAborted);
+            await store.RevokeRememberedAsync(remembered, context.RequestAborted);
+            if (!string.IsNullOrEmpty(token)) await store.LogoutAsync(token, context.RequestAborted);
+            AccountCookieHelper.Clear(context);
             return Results.NoContent();
         });
     }

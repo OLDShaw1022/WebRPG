@@ -9,6 +9,8 @@ namespace WebRPG
         private const string InitialMessage = "請使用 Email 與密碼登入。";
         private const string RegistrationMessage = "請填寫 Email、密碼與使用者名稱。\n密碼須為 8～128 個字元。";
         private const string PendingMessage = "處理中，請稍候…";
+        private const string RestoringMessage = "正在恢復登入…";
+        private const string RestoreFailedMessage = "無法恢復登入，請重新整理重試，或使用 Email 與密碼登入。";
         private readonly AccountModel _model;
         private readonly AccountView _view;
         private readonly Action _loggedIn;
@@ -24,6 +26,25 @@ namespace WebRPG
             _view.Submitted += Submit;
             _view.PageRequested += ChangePage;
             _view.Render(false, InitialMessage);
+        }
+
+        public async Awaitable RestoreAsync(int serverIndex)
+        {
+            if (_busy || _disposed) return;
+            _busy = true;
+            _view.Render(true, RestoringMessage);
+            try
+            {
+                bool restored = await _model.TryRestoreAsync(serverIndex);
+                if (_disposed || !_view) return;
+                _view.Render(false, InitialMessage);
+                if (restored) _loggedIn();
+            }
+            catch (Exception)
+            {
+                if (!_disposed && _view) _view.Render(false, RestoreFailedMessage);
+            }
+            finally { _busy = false; }
         }
 
         private void ChangePage(bool registration)
@@ -45,7 +66,7 @@ namespace WebRPG
             _view.Render(true, PendingMessage);
             try
             {
-                string status = await _model.SubmitAsync(server, email, password, username, register);
+                string status = await _model.SubmitAsync(server, email, password, username, register, _view.RememberMe);
                 if (_disposed || !_view) return;
                 _view.ClearPassword();
                 if (register && _model.RegistrationSucceeded) _view.ShowPage(false);

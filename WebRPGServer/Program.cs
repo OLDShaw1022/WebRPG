@@ -28,8 +28,8 @@ public static class Program
             options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto);
         builder.Services.AddCors(options => options.AddDefaultPolicy(policy => policy
             .WithOrigins(builder.Configuration.GetSection("Accounts:AllowedOrigins").Get<string[]>() ??
-                new[] { "https://oldshaw-web-rpg.web.app", "https://oldshaw-web-rpg.firebaseapp.com" })
-            .WithMethods("POST").WithHeaders("Content-Type", "Authorization")));
+                new[] { AccountCookieHelper.ProductionOrigin })
+            .WithMethods("POST").WithHeaders("Content-Type", "Authorization", AccountCookieHelper.RequestHeader)));
         LobbyOptions lobbyOptions = builder.Configuration.GetSection("Lobby").Get<LobbyOptions>() ?? new LobbyOptions();
         lobbyOptions.Validate();
         builder.Services.AddSingleton(lobbyOptions);

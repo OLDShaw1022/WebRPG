@@ -17,6 +17,10 @@ namespace WebRPG
         private const string LoginPath = "login";
         private const string RegisterPath = "register";
         private const string LogoutPath = "logout";
+        private const string RefreshPath = "refresh";
+        private const string RememberMeProperty = "rememberMe";
+        private const string RequestHeader = "X-WebRPG-Request";
+        private const string RequestHeaderValue = "1";
         private const string ContentType = "Content-Type";
         private const string JsonContentType = "application/json";
         private const string AuthorizationHeader = "Authorization";
@@ -59,7 +63,7 @@ namespace WebRPG
             DefaultServerIndex = Array.FindIndex(_servers, server => server.Id == configuration.DefaultServerId);
         }
 
-        public async Awaitable<string> SubmitAsync(int serverIndex, string email, string password, string username, bool register)
+        public async Awaitable<string> SubmitAsync(int serverIndex, string email, string password, string username, bool register, bool rememberMe = false)
         {
             RegistrationSucceeded = false;
             if (string.IsNullOrWhiteSpace(email) || string.IsNullOrEmpty(password)) return MissingCredentialsMessage;
@@ -67,12 +71,27 @@ namespace WebRPG
                 password.Length < MinimumPasswordLength || password.Length > MaximumPasswordLength)) return RegistrationFieldsMessage;
             JObject payload = new JObject { [EmailProperty] = email.Trim(), [PasswordProperty] = password };
             if (register) payload[UsernameProperty] = username.Trim();
+            else payload[RememberMeProperty] = rememberMe;
             string response = await SendAsync(serverIndex, register ? RegisterPath : LoginPath, payload.ToString(Formatting.None), false);
             if (register)
             {
                 RegistrationSucceeded = true;
                 return RegisteredMessage;
             }
+            ApplySession(serverIndex, response);
+            return string.Empty;
+        }
+
+        public async Awaitable<bool> TryRestoreAsync(int serverIndex)
+        {
+            string response = await SendAsync(serverIndex, RefreshPath, string.Empty, false, true);
+            if (string.IsNullOrEmpty(response)) return false;
+            ApplySession(serverIndex, response);
+            return true;
+        }
+
+        private void ApplySession(int serverIndex, string response)
+        {
             AccountResponseModel session = JsonConvert.DeserializeObject<AccountResponseModel>(response);
             if (session == null || string.IsNullOrEmpty(session.AccessToken) || string.IsNullOrEmpty(session.AccountId) ||
                 string.IsNullOrEmpty(session.Username) || session.ExpiresAt <= DateTimeOffset.UtcNow)
@@ -82,7 +101,6 @@ namespace WebRPG
             AccountId = session.AccountId;
             Username = session.Username;
             ExpiresAt = session.ExpiresAt;
-            return string.Empty;
         }
 
         public async Awaitable LogoutAsync()
@@ -99,7 +117,7 @@ namespace WebRPG
             ExpiresAt = default;
         }
 
-        private async Awaitable<string> SendAsync(int serverIndex, string path, string body, bool authenticated)
+        private async Awaitable<string> SendAsync(int serverIndex, string path, string body, bool authenticated, bool allowUnauthorized = false)
         {
             if (_disposed || _request != null || serverIndex < 0 || serverIndex >= _servers.Length)
                 throw new InvalidOperationException(RequestFailedMessage);
@@ -113,6 +131,7 @@ namespace WebRPG
             request.uploadHandler = new UploadHandlerRaw(System.Text.Encoding.UTF8.GetBytes(body));
             request.downloadHandler = new DownloadHandlerBuffer();
             request.SetRequestHeader(ContentType, JsonContentType);
+            request.SetRequestHeader(RequestHeader, RequestHeaderValue);
             if (authenticated) request.SetRequestHeader(AuthorizationHeader, BearerPrefix + AccessToken);
             request.timeout = RequestTimeoutSeconds;
             _request = request;
@@ -120,6 +139,7 @@ namespace WebRPG
             {
                 await request.SendWebRequest();
                 if (_disposed) throw new OperationCanceledException();
+                if (allowUnauthorized && request.responseCode == UnauthorizedStatus) return string.Empty;
                 if (request.result != UnityWebRequest.Result.Success)
                 {
                     string message = request.responseCode == UnauthorizedStatus ? LoginFailedMessage :

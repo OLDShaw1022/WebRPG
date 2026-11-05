@@ -23,6 +23,8 @@ namespace WebRPG
         [SerializeField] private TextMeshProUGUI _registrationStatus;
         [SerializeField] private UnityEngine.UI.Button _openRegistration;
         [SerializeField] private UnityEngine.UI.Button _backToLogin;
+        [SerializeField] private UnityEngine.UI.Toggle _rememberMe;
+        public bool RememberMe => _rememberMe.isOn;
         public event Action<bool> PageRequested;
         public event Action<int, string, string, string, bool> Submitted;
 
@@ -83,6 +85,7 @@ namespace WebRPG
             _registrationServer.interactable = !busy;
             _openRegistration.interactable = !busy;
             _backToLogin.interactable = !busy;
+            _rememberMe.interactable = !busy;
         }
 
         public void ClearPassword()

@@ -4,7 +4,7 @@
     {
       "Id": "aws-ec2",
       "Name": "AWS EC2（正式伺服器）",
-      "Url": "wss://ws.oldshaw-webrpg.com/ws?channel=lobby",
+      "Url": "wss://oldshaw-webrpg.com/ws?channel=lobby",
       "EditorOnly": false
     },
     {

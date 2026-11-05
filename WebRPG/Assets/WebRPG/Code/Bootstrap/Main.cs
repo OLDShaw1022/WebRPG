@@ -74,6 +74,7 @@ namespace WebRPG
             _accountModel = new AccountModel(accountConfiguration, Application.isEditor);
             _accountView = Instantiate(_accountViewPrefab);
             _accountPresenter = new AccountPresenter(_accountModel, _accountView, ShowAuthenticatedMenu);
+            _accountPresenter.RestoreAsync(_accountModel.DefaultServerIndex).Forget();
         }
 
         private void OnApplicationQuit()

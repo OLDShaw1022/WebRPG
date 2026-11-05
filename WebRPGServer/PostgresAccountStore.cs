@@ -1,15 +1,10 @@
-using System.Security.Cryptography;
-using System.Text;
 using Npgsql;
 
 namespace WebRPGServer;
 
 // 在 PostgreSQL 保存帳號、唯一 Email 與可撤銷的登入工作階段。
-public sealed class PostgresAccountStore
+public sealed partial class PostgresAccountStore
 {
-    private const int SessionTokenBytes = 32;
-    private const int SessionLifetimeHours = 12;
-    private const int MaximumTokenLength = 128;
     private readonly NpgsqlDataSource _dataSource;
     private readonly string _dummyHash = AccountPasswordHelper.Hash(Guid.NewGuid().ToString());
 
@@ -25,12 +20,24 @@ public sealed class PostgresAccountStore
                 password_hash TEXT NOT NULL,
                 created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
+            CREATE TABLE IF NOT EXISTS game_account_remembered_sessions (
+                remembered_session_id UUID PRIMARY KEY,
+                token_hash TEXT NOT NULL UNIQUE,
+                account_id UUID NOT NULL REFERENCES game_accounts(account_id) ON DELETE CASCADE,
+                expires_at TIMESTAMPTZ NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS ix_game_account_remembered_sessions_expires_at
+                ON game_account_remembered_sessions(expires_at);
             CREATE TABLE IF NOT EXISTS game_account_sessions (
                 token_hash TEXT PRIMARY KEY,
                 account_id UUID NOT NULL REFERENCES game_accounts(account_id) ON DELETE CASCADE,
                 expires_at TIMESTAMPTZ NOT NULL
             );
             CREATE INDEX IF NOT EXISTS ix_game_account_sessions_expires_at ON game_account_sessions(expires_at);
+            ALTER TABLE game_account_sessions ADD COLUMN IF NOT EXISTS remembered_session_id UUID
+                REFERENCES game_account_remembered_sessions(remembered_session_id) ON DELETE CASCADE;
+            CREATE INDEX IF NOT EXISTS ix_game_account_sessions_remembered_session_id
+                ON game_account_sessions(remembered_session_id);
             """);
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
@@ -74,17 +81,17 @@ public sealed class PostgresAccountStore
         }
         bool valid = AccountPasswordHelper.Verify(hash, login.Password);
         if (!valid || accountId == Guid.Empty) return null;
-        string token = Convert.ToHexString(RandomNumberGenerator.GetBytes(SessionTokenBytes));
-        DateTimeOffset expires = DateTimeOffset.UtcNow.AddHours(SessionLifetimeHours);
+        string token = AccountTokenHelper.Create();
+        DateTimeOffset expires = DateTimeOffset.UtcNow.AddHours(AccountTokenHelper.SessionLifetimeHours);
         await using (NpgsqlCommand cleanup = _dataSource.CreateCommand(
-            "DELETE FROM game_account_sessions WHERE expires_at <= CURRENT_TIMESTAMP;"))
+            "DELETE FROM game_account_remembered_sessions WHERE expires_at <= CURRENT_TIMESTAMP; DELETE FROM game_account_sessions WHERE expires_at <= CURRENT_TIMESTAMP;"))
         {
             await cleanup.ExecuteNonQueryAsync(cancellationToken);
         }
         await using NpgsqlCommand insert = _dataSource.CreateCommand("""
             INSERT INTO game_account_sessions(token_hash, account_id, expires_at) VALUES ($1, $2, $3);
             """);
-        insert.Parameters.AddWithValue(HashToken(token));
+        insert.Parameters.AddWithValue(AccountTokenHelper.Hash(token));
         insert.Parameters.AddWithValue(accountId);
         insert.Parameters.AddWithValue(expires);
         await insert.ExecuteNonQueryAsync(cancellationToken);
@@ -93,13 +100,13 @@ public sealed class PostgresAccountStore
 
     public async Task<AccountIdentity?> AuthenticateAsync(string? token, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrEmpty(token) || token.Length > MaximumTokenLength) return null;
+        if (string.IsNullOrEmpty(token) || token.Length > AccountTokenHelper.MaximumTokenLength) return null;
         await using NpgsqlCommand command = _dataSource.CreateCommand("""
             SELECT a.account_id, a.username FROM game_account_sessions s
             JOIN game_accounts a ON a.account_id = s.account_id
             WHERE s.token_hash = $1 AND s.expires_at > CURRENT_TIMESTAMP;
             """);
-        command.Parameters.AddWithValue(HashToken(token));
+        command.Parameters.AddWithValue(AccountTokenHelper.Hash(token));
         await using NpgsqlDataReader reader = await command.ExecuteReaderAsync(cancellationToken);
         return await reader.ReadAsync(cancellationToken)
             ? new AccountIdentity(reader.GetGuid(0).ToString("N"), reader.GetString(1)) : null;
@@ -108,10 +115,16 @@ public sealed class PostgresAccountStore
     public async Task LogoutAsync(string token, CancellationToken cancellationToken)
     {
         await using NpgsqlCommand command = _dataSource.CreateCommand(
-            "DELETE FROM game_account_sessions WHERE token_hash = $1;");
-        command.Parameters.AddWithValue(HashToken(token));
+            """
+            WITH revoked AS (
+                DELETE FROM game_account_remembered_sessions WHERE remembered_session_id IN (
+                    SELECT remembered_session_id FROM game_account_sessions WHERE token_hash = $1
+                )
+            )
+            DELETE FROM game_account_sessions WHERE token_hash = $1;
+            """);
+        command.Parameters.AddWithValue(AccountTokenHelper.Hash(token));
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    private static string HashToken(string token) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
 }
