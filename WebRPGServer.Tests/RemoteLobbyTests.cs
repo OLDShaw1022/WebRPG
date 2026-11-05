@@ -18,8 +18,10 @@ public sealed class RemoteLobbyTests
         Uri address = new(endpoint!);
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(45));
         CancellationToken token = timeout.Token;
-        using LobbyClient host = await LobbyClient.ConnectAsync(address, "部署驗證隊長", token);
-        using LobbyClient second = await LobbyClient.ConnectAsync(address, "部署驗證隊友", token);
+        await using RemoteAccountSession hostAccount = await RemoteAccountSession.LoginAsync(address, "HOST", token);
+        await using RemoteAccountSession secondAccount = await RemoteAccountSession.LoginAsync(address, "SECOND", token);
+        using LobbyClient host = await LobbyClient.ConnectAsync(address, "部署驗證隊長", token, hostAccount.AccessToken);
+        using LobbyClient second = await LobbyClient.ConnectAsync(address, "部署驗證隊友", token, secondAccount.AccessToken);
         JsonObject created = await host.RequestAsync("CreateRoom", new()
         {
             ["RoomName"] = "連線驗證-" + Guid.NewGuid().ToString("N")[..8], ["IsPublic"] = true

@@ -19,8 +19,26 @@ jobs:
   deploy:
     if: github.ref == 'refs/heads/main' && inputs.confirm_deployment == 'deploy'
     runs-on: ubuntu-latest
+    env:
+      WEBRPG_TEST_HOST_EMAIL: ${{ secrets.WEBRPG_TEST_HOST_EMAIL }}
+      WEBRPG_TEST_HOST_PASSWORD: ${{ secrets.WEBRPG_TEST_HOST_PASSWORD }}
+      WEBRPG_TEST_SECOND_EMAIL: ${{ secrets.WEBRPG_TEST_SECOND_EMAIL }}
+      WEBRPG_TEST_SECOND_PASSWORD: ${{ secrets.WEBRPG_TEST_SECOND_PASSWORD }}
 
     steps:
+      - name: Require dedicated remote test accounts
+        run: |
+          for name in WEBRPG_TEST_HOST_EMAIL WEBRPG_TEST_HOST_PASSWORD WEBRPG_TEST_SECOND_EMAIL WEBRPG_TEST_SECOND_PASSWORD; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Configure repository secret $name for an existing dedicated test account."
+              exit 1
+            fi
+          done
+          if [ "${WEBRPG_TEST_HOST_EMAIL,,}" = "${WEBRPG_TEST_SECOND_EMAIL,,}" ]; then
+            echo "::error::Remote lobby verification requires two distinct test accounts."
+            exit 1
+          fi
+
       - name: Check out repository
         uses: actions/checkout@v4
 

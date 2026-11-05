@@ -13,6 +13,21 @@ public sealed class AccountWebSocketTests
     private const int TestTimeoutSeconds = 10;
 
     [Test]
+    public async Task LobbyClientSendsTokenAndReportsAuthenticationRejection()
+    {
+        await using LocalLobbyServer server = await LocalLobbyServer.StartAsync(token =>
+            Task.FromResult<AccountIdentity?>(token == "test-token" ? new("fixed-account-id", "Test") : null));
+        using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(TestTimeoutSeconds));
+        using LobbyClient client = await LobbyClient.ConnectAsync(server.Address, "Test", timeout.Token, "test-token");
+        Assert.That(client.PlayerId, Is.EqualTo("fixed-account-id"));
+        InvalidOperationException? error = Assert.ThrowsAsync<InvalidOperationException>(async () =>
+        {
+            using LobbyClient rejected = await LobbyClient.ConnectAsync(server.Address, "Test", timeout.Token);
+        });
+        Assert.That(error!.Message, Does.Contain("PolicyViolation").And.Contain("Authentication required"));
+    }
+
+    [Test]
     public async Task MissingTokenIsRejected()
     {
         await using LocalLobbyServer server = await LocalLobbyServer.StartAsync(_ => Task.FromResult<AccountIdentity?>(null));

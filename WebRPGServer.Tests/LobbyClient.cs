@@ -11,13 +11,15 @@ internal sealed class LobbyClient : IDisposable
     private int _requestNumber;
     public string PlayerId { get; private set; } = string.Empty;
 
-    public static async Task<LobbyClient> ConnectAsync(Uri address, string username, CancellationToken token)
+    public static async Task<LobbyClient> ConnectAsync(Uri address, string username, CancellationToken token, string? accessToken = null)
     {
         LobbyClient client = new();
         try
         {
             await client._socket.ConnectAsync(address, token);
-            JsonObject welcome = await client.RequestAsync("Hello", new() { ["Username"] = username }, token, "Welcome");
+            JsonObject hello = new() { ["Username"] = username };
+            if (accessToken is not null) hello["AccessToken"] = accessToken;
+            JsonObject welcome = await client.RequestAsync("Hello", hello, token, "Welcome");
             client.PlayerId = welcome["PlayerId"]!.GetValue<string>();
             return client;
         }
@@ -69,7 +71,8 @@ internal sealed class LobbyClient : IDisposable
         do
         {
             result = await _socket.ReceiveAsync(buffer, token);
-            if (result.MessageType == WebSocketMessageType.Close) throw new InvalidOperationException("Unexpected close.");
+            if (result.MessageType == WebSocketMessageType.Close)
+                throw new InvalidOperationException($"WebSocket closed: {result.CloseStatus}: {result.CloseStatusDescription}");
             message.Write(buffer, 0, result.Count);
         } while (!result.EndOfMessage);
         return JsonNode.Parse(message.ToArray())!.AsObject();
