@@ -221,7 +221,6 @@ namespace WebRPG
 
         private void HandleBattleSpeed(float speed)
         {
-            if (_operations.IsMultiplayer) return;
             _operations.SetBattleSpeed(speed);
             Refresh();
         }
@@ -246,7 +245,7 @@ namespace WebRPG
         {
             if (_disposed) return;
             AdventureScreenModel screen = _screenAssembler.Build(_paused, _mapOpen);
-            float presentationSeconds = _network == null ? (_paused ? 0 : seconds * _model.BattleSpeed) : seconds;
+            float presentationSeconds = _network == null && _paused ? 0 : seconds * screen.BattleSpeed;
             _presentation.Apply(screen, presentationSeconds);
             _view.Render(screen);
         }

@@ -31,6 +31,16 @@ public sealed class MultiplayerProtocolTests
         AdventurePacket selected = registry.ExecuteAdventure("b",
             new AdventurePacket { Type = AdventurePacketType.Command, Command = "vote", Payload = "1|0" });
         Check(selected.Command == "node" && selected.Payload == "0|0", "Tie must use the leader's current vote.");
+        Reject(() => registry.ExecuteAdventure("b",
+            new AdventurePacket { Type = AdventurePacketType.Command, Command = "speed", Payload = "2|0", Turn = 1 }));
+        Reject(() => registry.ExecuteAdventure("a",
+            new AdventurePacket { Type = AdventurePacketType.Command, Command = "speed", Payload = "3|0", Turn = 1 }));
+        Reject(() => registry.ExecuteAdventure("a",
+            new AdventurePacket { Type = AdventurePacketType.Command, Command = "speed", Payload = "2|0", Turn = 0 }));
+        AdventurePacket speed = registry.ExecuteAdventure("a",
+            new AdventurePacket { Type = AdventurePacketType.Command, Command = "speed", Payload = "2|0", Turn = 1 });
+        Check(speed.Command == "speed" && speed.Payload == "2|0" && speed.Sequence == selected.Sequence + 1,
+            "Only a valid leader speed change should advance the shared sequence.");
         AdventurePacket pendingTick = registry.ExecuteAdventure("a",
             new AdventurePacket { Type = AdventurePacketType.Command, Command = "tick", Payload = "1|0", Turn = 0 });
         Check(pendingTick.Turn == 1, "An in-flight tick must adopt the new turn.");

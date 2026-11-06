@@ -54,6 +54,7 @@ namespace WebRPG
         public string LocalName => _members[_localIndex].Username;
         public bool IsLeader => _lobby.Room != null && _lobby.Room.LeaderId == PlayerId;
         public int Turn { get; private set; }
+        public int BattleSpeed { get; private set; } = 1;
         public bool CanVote => !_failed && Party.CanVote;
         public string Status => _failed ? FailureMessage : CanVote
             ? string.Format(VoteStatusFormat, _votes.Count, _members.Length) : WaitingMessage;
@@ -178,9 +179,18 @@ namespace WebRPG
                 case AdventureCommand.Target:
                     Party.LockEnemy(player, index);
                     break;
+                case AdventureCommand.Speed:
+                    if (packet.PlayerId != _lobby.Room?.LeaderId ||
+                        index < AdventureCommand.MinimumBattleSpeed || index > AdventureCommand.MaximumBattleSpeed)
+                    {
+                        Fail();
+                        return;
+                    }
+                    BattleSpeed = index;
+                    break;
                 case AdventureCommand.Tick:
                     if (packet.PlayerId != _lobby.Room?.LeaderId || index < 1 || index > MaximumStepsPerPacket) { Fail(); return; }
-                    for (int step = 0; step < index; step++) Party.Tick(NetworkStep);
+                    for (int step = 0; step < index * BattleSpeed; step++) Party.Tick(NetworkStep);
                     break;
                 case AdventureCommand.Abandon:
                     Fail();

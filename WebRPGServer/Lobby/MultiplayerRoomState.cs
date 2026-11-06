@@ -43,6 +43,12 @@ public sealed class MultiplayerRoomState
                     _votes.Clear();
                 }
                 break;
+            case AdventureCommand.Speed:
+                if (room.LeaderId != playerId)
+                    throw new ArgumentException("只有隊長可以調整戰鬥速度。");
+                if (index < AdventureCommand.MinimumBattleSpeed || index > AdventureCommand.MaximumBattleSpeed)
+                    throw new ArgumentException("無效的戰鬥速度。");
+                break;
             case AdventureCommand.Tick:
                 if (room.LeaderId != playerId || index < 1 || index > MaximumStepsPerPacket)
                     throw new ArgumentException("只有隊長可推進模擬時間。");

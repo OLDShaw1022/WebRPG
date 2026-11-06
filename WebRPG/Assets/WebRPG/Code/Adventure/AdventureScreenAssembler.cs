@@ -124,7 +124,7 @@ namespace WebRPG
                     : AdventurePartyScreenHelper.Characters(_network, localPlayer),
                 Enemies = enemies,
                 ShowBattle = fighting,
-                BattleSpeed = _model.BattleSpeed,
+                BattleSpeed = _network?.BattleSpeed ?? _model.BattleSpeed,
                 Projectile = fighting && _model.Projectile != null ? new AdventureProjectileScreenModel
                 {
                     SourceCharacterId = _model.Projectile.SourceEnemyIndex < 0 ? (_network?.ProjectileSourceId ?? localPlayer.Id)
@@ -154,7 +154,7 @@ namespace WebRPG
                 CanAbandon = !ended,
                 CanChoose = _network == null || _model.Phase == AdventurePhase.SkillReward ||
                     _model.Phase == AdventurePhase.NodeChoice || _network.CanVote,
-                CanChangeBattleSpeed = _network == null
+                CanChangeBattleSpeed = _network == null || _network.IsLeader
             };
         }
 

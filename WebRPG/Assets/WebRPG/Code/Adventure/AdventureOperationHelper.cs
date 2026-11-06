@@ -69,7 +69,15 @@ namespace WebRPG
 
         public void SetBattleSpeed(float speed)
         {
-            if (_network == null) _model.SetBattleSpeed(speed);
+            if (_network == null)
+            {
+                _model.SetBattleSpeed(speed);
+            }
+            else if (_network.IsLeader && speed >= AdventureCommand.MinimumBattleSpeed &&
+                     speed <= AdventureCommand.MaximumBattleSpeed && speed == (int)speed)
+            {
+                _network.SendCommand(AdventureCommand.Speed, (int)speed);
+            }
         }
 
         public void Tick(float seconds, bool paused)
