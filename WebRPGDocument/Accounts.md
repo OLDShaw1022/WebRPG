@@ -1,7 +1,7 @@
 # 帳號登入
 
-- 設計狀態：已核定 Email／密碼登入、註冊設定可重複的使用者名稱、開啟遊戲先登入，沿用 PostgreSQL，以及支援 WebGL 的記住登入狀態。
-- 實作狀態：已加入帳密登入與長效 Cookie 恢復登入，通過本機 PostgreSQL、Unity Editor 帳號測試、獨立 Edge 跨程序 Cookie 驗證與 WebGL 建置；正式環境驗證及部署尚未進行。
+- 設計狀態：已核定 Email／密碼登入、註冊設定可重複的使用者名稱、開啟遊戲先登入，沿用 PostgreSQL，以及支援 WebGL 和桌面平台的記住登入狀態。
+- 實作狀態：已實作帳密登入，以及 WebGL 和桌面平台的長效 Cookie 恢復登入。
 - 適用範圍：Unity 啟動入口、帳號 HTTP API、房間大廳身分與 PostgreSQL。
 - 用途：記錄第一版帳號流程、設定及驗證限制。
 
@@ -59,15 +59,13 @@ location = /ws {
 }
 ```
 
-- API 代理保留 Set-Cookie、Origin 與 CORS 回應標頭，不把 /api/accounts/ 回應快取或改寫成 index.html。正式請使用 oldshaw-webrpg.com 的遊戲頁面；Firebase 預設 web.app／firebaseapp.com 網址屬於另一個站點，不在預設來源清單內，也不承諾其跨站 Cookie 登入。正式 gateway、憑證、DNS 與 hosting 不由本次程式修正變更。
+- API 代理保留 Set-Cookie、Origin 與 CORS 回應標頭，不把 /api/accounts/ 回應快取或改寫成 index.html。正式請使用 oldshaw-webrpg.com 的遊戲頁面；Firebase 預設 web.app／firebaseapp.com 網址屬於另一個站點，不在預設來源清單內，也不承諾其跨站 Cookie 登入。
 - 上線驗收須實際確認：WebGL 勾選記住登入後重新整理、關閉再開啟瀏覽器可登入；未勾選不會留下長效憑證；登出後重新整理仍停留登入頁；Cookie 為 HttpOnly／Secure，JavaScript 無法讀取；API 與 WSS 均走 ws.oldshaw-webrpg.com，遊戲頁面走 oldshaw-webrpg.com。
 
 ## 桌面版記住我 Cookie
 
 - Windows、macOS 和 Linux 的 Unity Editor 與獨立版使用作業系統的憑證儲存。Windows 使用認證管理員，macOS 使用 Keychain，Linux 透過 `secret-tool` 使用 Secret Service。Linux 需要可用的桌面金鑰圈與 `secret-tool`，缺少其中一項時仍可手動登入。
 - 同一作業系統使用者的 Editor 與獨立版依伺服器的協定、主機與連接埠共用 Cookie。啟動時讀取 Cookie 並送出恢復登入請求。伺服器輪替 Cookie 後覆寫儲存值，遊戲內登出成功後清除共用 Cookie。
-- 三個桌面平台的 Editor 與獨立版 C# 編譯分支均已通過檢查。實機打包與重啟登入仍待驗證。
-
 
 ## WebGL 跨來源憑證
 
@@ -76,55 +74,25 @@ location = /ws {
 - Cookie 仍為 HttpOnly、Secure、SameSite=Strict、host-only、Path=/api/accounts，僅屬於 API 子網域。沒有改成 SameSite=None，沒有設定涵蓋所有子網域的 Domain，也沒有讓遊戲 JavaScript 讀取長效憑證。
 - 更新伺服器與 WebGL 客戶端須配套發布；只更新 CORS 或只更新瀏覽器端，都無法完成跨來源記住登入。
 
-## UI 與驗證
+## UI
 
-- `AccountCanvas.prefab` 保存固定帳號表單與綁定於 AccountView 的 RememberMe Toggle，可於 Editor 調整；密碼欄位使用遮罩。`Main.unity` 綁定此 Prefab，`MainMenuCanvas.prefab` 新增登出按鈕。
-- `AccountModel` 管理 HTTP 與憑證；`AccountView` 顯示表單並轉送操作；`AccountPresenter` 控制忙碌與錯誤狀態；`Main` 組裝並管理登入與主選單。
-- 已執行伺服器建置、欄位／雜湊、真實本機 WebSocket 認證／撤銷、資料庫未設定的 HTTP API、Unity Prefab 與 HTTP 登入／登出測試，以及既有回歸測試。Unity HTTP 測試使用本機模擬回應，不能代替 PostgreSQL 驗證。
-- 已建立免安裝 PostgreSQL 17.11 本機測試環境，驗證實際註冊／登入／登出、Email 大小寫唯一約束、同名帳號不同 ID、密碼與憑證僅存雜湊、憑證到期／撤銷，以及 PostgreSQL 與正式 Program 重啟後保留帳號 ID。實測找出的帶參數多 SQL 命令問題已修正為分開執行清理與新增。
-- 舊大廳測試使用隔離的本機 Kestrel 主機，可依情境注入認證；正式 Program 始終啟用帳號驗證。
-- 既有遠端部署測試仍使用匿名連線，無法通過新版認證。CI 認證更新因自動核准審查拒絕而未寫入，需另外授權處理測試帳號與遠端登入。尚未執行遠端測試、提交、推送或部署。
-- 新舊大廳認證不相容，用戶端與伺服器需配套發布；正式資料庫、反向代理與 WebGL 部署驗證完成前，尚未完成上線驗收。
-- .NET 建置略過共用專案，沒有覆寫 `Assets/Plugins/WebRPGShared.dll` 或 PDB；共用 DLL 的 SHA-256 保持 09DBE9DF7F6A5401207AE3DE3F907693EE7E815948E6DCB5FCC0AA59C51874B9。Unity 預覽／建置觸發原本已有修改的 NotoSansTC-Regular SDF.asset 自動更新；未自行還原該檔案，其後續狀態另有備份。
+- `AccountCanvas.prefab` 保存帳號表單及綁定於 `AccountView` 的 RememberMe Toggle。密碼欄位使用遮罩。`Main.unity` 綁定帳號 Prefab，`MainMenuCanvas.prefab` 提供登出按鈕。
+- `AccountModel` 管理 HTTP 與憑證，`AccountView` 顯示表單並轉送操作，`AccountPresenter` 控制忙碌與錯誤狀態，`Main` 組裝並管理登入與主選單。
 
-## 本次記住登入驗證
+## 測試與驗收
 
-- 完整本機伺服器測試 28 項通過，包含長效憑證雜湊、到期、單次換發、同時換發、未勾選撤銷舊狀態、登出、資料庫重啟及 Edge 跨程序 Cookie 恢復；未執行明確標記的遠端測試。
-- Unity Editor 帳號測試 13 項通過，包含表單綁定、記住登入送出、忙碌停用、啟動恢復、401 與服務失敗；使用 Unity 預覽場景確認登入表單與新選項排版，不更動正式場景。
-- Unity 6000.3.11f1 WebGL 建置成功，零錯誤；唯一警告為沒有 RuntimePipelineConfig，故開發用 Pipeline 在 Player 中停用，與帳號功能無關。輸出位於本機暫存目錄 WebRPGRememberLogin-WebGL-20261105-verify，未上傳或部署。
-- 已清除本次建置落盤的暫時 preloadedAssets 項目，ProjectSettings.asset 與原始基準一致；Editor 作用中平台切回原來的 StandaloneWindows64。沒有修改 WebSocket 封包或共用 DLL/PDB。
-- 本機瀏覽器測試使用相同帳號端點與獨立測試頁；正式 WebGL 遊戲在 oldshaw-webrpg.com 的整合、TLS／代理與多瀏覽器驗收仍須部署後執行。
+- 在 Unity Test Runner 的 EditMode 執行 `AccountPrefabTests`、`AccountClientTests` 與 `AccountRememberedClientTests`。帳號 HTTP 測試使用本機模擬回應，PostgreSQL 整合測試見下節。
+- 在各桌面平台的 Editor 與獨立版勾選「記住我」登入。停止並再次進入 Play Mode，接著關閉整個 Editor 或獨立版後重新啟動。確認連續兩次自動登入都成功，且同一使用者與伺服器的 Editor 和獨立版可共用登入狀態。從主選單登出後重新啟動，確認顯示登入表單。
+- 執行 `node --test WebRPGPage/ci/account-credentials.test.mjs` 檢查 WebGL 帳號請求的憑證模式。瀏覽器整合測試使用 `AccountCrossOriginBrowserTests`，需和 `RememberedBrowserTests` 一樣設定 `WEBRPG_TEST_BROWSER_BIN`。測試使用隔離的瀏覽器設定檔及本機 HTTPS；正式 WebGL 遊戲依部署章節驗收。
 
-## 跨來源修正驗證
-
-- 完整本機伺服器測試 32 項通過，包含正式來源的 credentialed CORS 預檢，以及不允許的網站／Firebase 預設來源不會取得憑證式 CORS 授權；未執行遠端測試。
-- Node 內建測試 4 項通過，驗證 Unity 的兩條 fetch 路徑、原有取消／進度參數保留、重複登記不疊加包裝，以及非帳號要求不帶入額外 Cookie。執行命令為 node --test WebRPGPage/ci/account-credentials.test.mjs。
-- AccountCrossOriginBrowserTests 使用 webrpg.test 與 api.webrpg.test 的本機 HTTPS、獨立 Edge 設定檔與實際 jslib 原始碼，驗證登入保存 Cookie、跨瀏覽器程序重啟恢復及登出撤銷。省略 credentials 的對照要求為 401，透過插件設定 include 後成功恢復；SameSite=Strict 維持不變。測試 DNS 僅在該瀏覽器程序映射至 loopback，不更動系統 hosts、正式 DNS 或使用者設定檔。
-- 本機 HTTPS 憑證僅供測試，未安裝憑證或信任根、未寫入 Git；Windows Schannel 需要暫時使用者金鑰容器，憑證物件釋放時清理。忽略憑證信任檢查的旗標僅用於這個隔離瀏覽器程序。
-- Unity Editor 帳號測試 13 項通過；Unity 6000.3.11f1 WebGL 建置成功、零錯誤，並核對產生的 framework.js 含帳號橋接與執行期憑證登記邏輯。建置有未連結 Unity Services project ID、未設定 Pipeline runtime 兩項非帳號警告，未因此改動服務設定。
-- WebGL 輸出位於本機暫存目錄 WebRPGCrossOrigin-WebGL-20261105-verify。DLL/PDB 未覆寫；字型原先已有修改，匯入／建置又觸發自動更新，匯入前狀態已備份。建置暫時的預載資產項目已清理；正式伺服器與 Firebase WebGL 尚未由本次修正部署，正式網域整合仍須配套發布後驗收。
-
-## 跨來源修正的還原基準
-
-- 比較基準為 origin/main 的 82bb92d8351b62643330b70312582c0d97bc6b41；本次首次修改的程式、測試及文件均與此版本一致，既有 DLL 不在修改範圍。
-- 驗證前快照 refs/backups/20261105-101902475-cross-origin-login 涵蓋 Program.cs、AccountCorsHelper.cs、RememberedLoginTests.cs、RememberedBrowserHelper.cs、AccountCrossOriginBrowserTests.cs、AccountModel.cs、AccountBrowserRequestHelper.cs、WebRPGAccountCredentials.jslib、WebRPGPage/ci/account-credentials.test.mjs，以及 Unity 匯入前已存在的 NotoSansTC-Regular SDF.asset 修改。原暫存區保持不變，備份不推送遠端。
-- 清理前另有 refs/backups/20261105-102817712-cross-origin-build-cleanup，涵蓋當時的 ProjectSettings.asset、Accounts.md 與 MultiplayerLobby.md；保護建置暫時狀態及驗證紀錄編輯前的文件。
-- 可用 git show <reference>:<path> 查看指定內容；僅在使用者要求時，以 git restore --source=<reference> -- <指定路徑> 還原指定檔案。要取得本次修正前的原始程式，使用上述 upstream 基準；驗證快照保留的是中途實作及字型狀態。
-
-## 前次修改的還原基準
-
-- 額外驗證快照：refs/backups/20261105-091336725-remember-login-import，涵蓋 Unity 自動更新後的 NotoSansTC-Regular SDF.asset、建置中的 ProjectSettings.asset，以及 Accounts.md、MultiplayerLobby.md、AccountHttpTestServer.cs、AccountRememberedClientTests.cs、RememberedLoginTests.cs、RememberedBrowserTests.cs、RememberedBrowserHelper.cs。字型在任務前已有修改，本快照是匯入後狀態，不是任務開始前的原始字型版本；未改動原暫存區。
-- 原始比較基準：origin/main，6864971b83ad034d520c9e6d90aca87b2fb6727d。首次寫入前本次涉及的既有檔案皆無相對 upstream 的未推送變更，故原始內容以此版本為還原基準。
-- 驗證修正前的實作快照：refs/backups/20261105-085900443-remember-login-validation，已於 109a68e 成功推送並核對後清除本機 reference。涵蓋帳號伺服器的 AccountContracts、AccountEndpoints、PostgresAccountStore、Program、新增的 Cookie／Token helper 與 RememberedSessions、RememberedLoginTests，以及 Unity AccountModel／Presenter／View、Main、LobbyClient.json、AccountCanvas.prefab、新增的 AccountRememberedClientTests／AccountClientConfigurationHelper 與其 meta。未包含既有 DLL 或字型修改，也未改動原暫存區。
-- 可用 git show <reference>:<path> 查看指定內容；使用者要求還原時才執行 git restore --source=<reference> -- <指定路徑>，僅處理指定檔案。上述 backup 是驗證修正前的實作快照，若要取得修改前內容須使用原始基準。後續首次修改的 AccountHttpTestServer.cs 與文件本身原先亦與該基準一致。
 
 ## 本機資料庫測試
 
-- 此工作站使用 `%LOCALAPPDATA%/WebRPGTest/PostgreSQL-17.11/pgsql/bin` 的免安裝執行檔，來源為 PostgreSQL 官網連結的 [EDB 壓縮套件](https://www.enterprisedb.com/download-postgresql-binaries)。不安裝 Windows 服務、不更改系統 PATH。
+- 可使用 `%LOCALAPPDATA%/WebRPGTest/PostgreSQL-17.11/pgsql/bin` 的免安裝執行檔，來源為 PostgreSQL 官網連結的 [EDB 壓縮套件](https://www.enterprisedb.com/download-postgresql-binaries)。不安裝 Windows 服務、不更改系統 PATH。
 - `RememberedBrowserTests` 另需設定 WEBRPG_TEST_BROWSER_BIN 指向 Edge／Chromium 執行檔；使用臨時獨立 user-data-dir 與本機 API，驗證 Cookie 跨瀏覽器程序保存、HttpOnly 與登出後失效，不讀取使用者原有設定檔。這項測試不等於正式 WebGL 遊戲端到端驗收。
 - `AccountPostgresTests` 透過 `LocalAccountDatabase` 為每次測試建立 `%LOCALAPPDATA%/WebRPGTest/Runs/<隨機 ID>/data`，自動選埠，只監聽 `127.0.0.1`。測試專用 cluster 使用 trust 驗證及虛構帳號資料，不得拿來保存正式使用者資料；不讀取或使用正式連線設定。
 - 測試結束自動停止 PostgreSQL，資料檔保留供排查；沒有常駐資料庫或系統服務。未提供執行檔路徑時略過需要該工具的本機整合測試；遠端測試仍需明確指定。
-- 本工作目錄已有共用專案建置產物，以下指令略過共用專案建置，以免覆寫既有 DLL。其他乾淨工作目錄需先按 AGENTS.md 備份共用產物並正常建置。
+- 若工作目錄已有可用的共用專案建置產物，可用以下指令略過共用專案建置。乾淨工作目錄需依 AGENTS.md 確認共用產物後先正常建置。
 
 ```powershell
 $env:WEBRPG_TEST_POSTGRES_BIN = Join-Path $env:LOCALAPPDATA 'WebRPGTest/PostgreSQL-17.11/pgsql/bin'

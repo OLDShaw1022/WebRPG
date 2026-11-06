@@ -46,7 +46,7 @@
 ## 相關文件
 
 - [主玩法](CoreGameplay.md)：修改遊玩流程與戰鬥行為前閱讀。
-- [單人可玩原型](AdventurePrototype.md)：查看目前的架構、設定與已驗證範圍。
+- [單人可玩原型](AdventurePrototype.md)：查看目前的架構、設定、實作範圍與限制。
 - [美術製作規範](ArtProductionRules.md)：製作角色、配色、字體與互動視覺前閱讀。
 
 ## 待確認
