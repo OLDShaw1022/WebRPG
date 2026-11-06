@@ -1,9 +1,15 @@
-#if UNITY_EDITOR || UNITY_STANDALONE_WIN
+#if UNITY_EDITOR || UNITY_STANDALONE
 using System;
 using System.Net;
+using UnityEngine;
 using UnityEngine.Networking;
-#if UNITY_EDITOR
-using UnityEditor;
+
+#if UNITY_EDITOR_WIN || (UNITY_STANDALONE_WIN && !UNITY_EDITOR)
+using DesktopCredentialStore = WebRPG.AccountWindowsCredentialStore;
+#elif UNITY_EDITOR_OSX || (UNITY_STANDALONE_OSX && !UNITY_EDITOR)
+using DesktopCredentialStore = WebRPG.AccountMacCredentialStore;
+#elif UNITY_EDITOR_LINUX || (UNITY_STANDALONE_LINUX && !UNITY_EDITOR)
+using DesktopCredentialStore = WebRPG.AccountLinuxCredentialStore;
 #endif
 
 namespace WebRPG
@@ -16,7 +22,7 @@ namespace WebRPG
         private const string CookieHeader = "Cookie";
         private const string SetCookieHeader = "Set-Cookie";
 
-        internal static void Configure(UnityWebRequest request)
+        internal static async Awaitable ConfigureAsync(UnityWebRequest request)
         {
             Uri address = request.uri;
             if (address.Scheme != Uri.UriSchemeHttps && !address.IsLoopback) return;
@@ -24,16 +30,16 @@ namespace WebRPG
             request.redirectLimit = 0;
             UnityWebRequest.ClearCookieCache(address);
             string key = SessionKeyPrefix + address.GetLeftPart(UriPartial.Authority);
-#if UNITY_EDITOR
-            string header = SessionState.GetString(key, string.Empty);
-#else
-            string header = AccountWindowsCredentialStore.Read(key);
-#endif
+            string header;
+            await Awaitable.BackgroundThreadAsync();
+            try { header = DesktopCredentialStore.Read(key); }
+            finally { await Awaitable.MainThreadAsync(); }
+
             Cookie cookie = ReadCookie(address, header);
             if (cookie != null) request.SetRequestHeader(CookieHeader, CookieName + "=" + cookie.Value);
         }
 
-        internal static void SaveResponse(UnityWebRequest request)
+        internal static async Awaitable SaveResponseAsync(UnityWebRequest request)
         {
             Uri address = request.uri;
             if (address.Scheme != Uri.UriSchemeHttps && !address.IsLoopback) return;
@@ -43,13 +49,13 @@ namespace WebRPG
 
             string key = SessionKeyPrefix + address.GetLeftPart(UriPartial.Authority);
             bool remember = ReadCookie(address, header) != null;
-#if UNITY_EDITOR
-            if (remember) SessionState.SetString(key, header);
-            else SessionState.EraseString(key);
-#else
-            if (remember) AccountWindowsCredentialStore.Write(key, header);
-            else AccountWindowsCredentialStore.Delete(key);
-#endif
+            await Awaitable.BackgroundThreadAsync();
+            try
+            {
+                if (remember) DesktopCredentialStore.Write(key, header);
+                else DesktopCredentialStore.Delete(key);
+            }
+            finally { await Awaitable.MainThreadAsync(); }
         }
 
         private static Cookie ReadCookie(Uri address, string header)

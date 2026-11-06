@@ -138,12 +138,13 @@ namespace WebRPG
             try
             {
                 AccountBrowserRequestHelper.Configure(address.Uri);
-#if UNITY_EDITOR || UNITY_STANDALONE_WIN
-                AccountNativeCookieHelper.Configure(request);
+#if UNITY_EDITOR || UNITY_STANDALONE
+                await AccountNativeCookieHelper.ConfigureAsync(request);
+                if (_disposed) throw new OperationCanceledException();
 #endif
                 await request.SendWebRequest();
-#if UNITY_EDITOR || UNITY_STANDALONE_WIN
-                AccountNativeCookieHelper.SaveResponse(request);
+#if UNITY_EDITOR || UNITY_STANDALONE
+                await AccountNativeCookieHelper.SaveResponseAsync(request);
 #endif
                 if (_disposed) throw new OperationCanceledException();
                 if (allowUnauthorized && request.responseCode == UnauthorizedStatus) return string.Empty;

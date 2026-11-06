@@ -26,12 +26,12 @@
 | --- | --- | --- |
 | `POST /api/accounts/register` | `email`、`password`、`username` | 200，註冊提示 |
 | `POST /api/accounts/login` | `email`、`password`、`rememberMe`（預設 false） | 200，`accessToken`、`accountId`、`username`、`expiresAt`；勾選時另設定 Cookie |
-| `POST /api/accounts/refresh` | 瀏覽器 Cookie、`X-WebRPG-Request: 1` | 200，同登入結果並輪替 Cookie；未登入／過期為 401 |
+| `POST /api/accounts/refresh` | Cookie、`X-WebRPG-Request: 1` | 200，同登入結果並輪替 Cookie；未登入／過期為 401 |
 | `POST /api/accounts/logout` | `Authorization: Bearer <token>` 或 Cookie；帶 Cookie 時須有 `X-WebRPG-Request: 1` | 204，撤銷登入及長效憑證並清除 Cookie |
 
 - 沿用 `ConnectionStrings:GameDatabase`，可由 `ConnectionStrings__GameDatabase` 提供；不要把密碼、憑證或連線字串寫入 Git、文件或聊天。
 - 啟動時建立 `game_accounts`、`game_account_sessions`、`game_account_remembered_sessions` 與索引，為既有工作階段表補上可空的長效工作階段關聯欄位，不改既有聊天表；資料庫角色需要建表權限。過期工作階段於後續成功登入時清理。
-- `Accounts:AllowedOrigins` 設定允許的 WebGL 來源，預設僅 `https://oldshaw-webrpg.com`。客戶端由 LobbyClient.json 的 WebSocket 位址推導帳號 API 位址，正式值為 `wss://ws.oldshaw-webrpg.com/ws?channel=lobby`，因此 API 為 `https://ws.oldshaw-webrpg.com/api/accounts/`；與遊戲頁面同站但不同來源。瀏覽器持久登入以 WebGL 為驗收範圍；Editor／桌面沿用 UnityWebRequest Cookie 管理，不承諾跨應用程式重啟保存。
+- `Accounts:AllowedOrigins` 設定允許的 WebGL 來源，預設僅 `https://oldshaw-webrpg.com`。客戶端由 LobbyClient.json 的 WebSocket 位址推導帳號 API 位址，正式值為 `wss://ws.oldshaw-webrpg.com/ws?channel=lobby`，因此 API 為 `https://ws.oldshaw-webrpg.com/api/accounts/`；與遊戲頁面同站但不同來源。
 - 預設僅信任 ASP.NET Core 的 loopback 反向代理；其他拓撲需明確設定可信代理。反向代理需轉送 `/api/accounts/`、`X-Forwarded-For` 與 `X-Forwarded-Proto`，並保留既有 WebSocket 路徑。
 
 ## 正式網域與反向代理
@@ -61,6 +61,13 @@ location = /ws {
 
 - API 代理保留 Set-Cookie、Origin 與 CORS 回應標頭，不把 /api/accounts/ 回應快取或改寫成 index.html。正式請使用 oldshaw-webrpg.com 的遊戲頁面；Firebase 預設 web.app／firebaseapp.com 網址屬於另一個站點，不在預設來源清單內，也不承諾其跨站 Cookie 登入。正式 gateway、憑證、DNS 與 hosting 不由本次程式修正變更。
 - 上線驗收須實際確認：WebGL 勾選記住登入後重新整理、關閉再開啟瀏覽器可登入；未勾選不會留下長效憑證；登出後重新整理仍停留登入頁；Cookie 為 HttpOnly／Secure，JavaScript 無法讀取；API 與 WSS 均走 ws.oldshaw-webrpg.com，遊戲頁面走 oldshaw-webrpg.com。
+
+## 桌面版記住我 Cookie
+
+- Windows、macOS 和 Linux 的 Unity Editor 與獨立版使用作業系統的憑證儲存。Windows 使用認證管理員，macOS 使用 Keychain，Linux 透過 `secret-tool` 使用 Secret Service。Linux 需要可用的桌面金鑰圈與 `secret-tool`，缺少其中一項時仍可手動登入。
+- 同一作業系統使用者的 Editor 與獨立版依伺服器的協定、主機與連接埠共用 Cookie。啟動時讀取 Cookie 並送出恢復登入請求。伺服器輪替 Cookie 後覆寫儲存值，遊戲內登出成功後清除共用 Cookie。
+- 三個桌面平台的 Editor 與獨立版 C# 編譯分支均已通過檢查。實機打包與重啟登入仍待驗證。
+
 
 ## WebGL 跨來源憑證
 
