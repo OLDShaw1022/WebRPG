@@ -113,7 +113,7 @@
 
 涵蓋路徑：
 
-- `WebRPG/Assets/WebRPG/Tests/Editor/LobbyPrefabTests.cs`
+- `WebRPG/Assets/WebRPG/Tests/Editor/Lobby/LobbyPrefabTests.cs`
 
 ### refs/backups/20261102-143001-lobby-four-player-panel
 
@@ -135,23 +135,23 @@
 - `WebRPG/Assets/WebRPG/Code/Bootstrap/Main.cs`
 - `WebRPG/Assets/WebRPG/Code/MainMenu/MainMenuView.cs`
 - `WebRPG/Assets/WebRPG/Code/MainMenu/MainMenuPresenter.cs`
-- `WebRPG/Assets/WebRPG/Tests/Editor/MainMenuPresenterTests.cs`
+- `WebRPG/Assets/WebRPG/Tests/Editor/MainMenu/MainMenuPresenterTests.cs`
 - `WebRPGShared/LobbyPacket.cs`
-- `WebRPGServer/LobbyOptions.cs`
-- `WebRPGServer/LobbyRegistry.cs`
-- `WebRPGServer/LobbySocketHelper.cs`
-- `WebRPGServer/LobbyHub.cs`
+- `WebRPGServer/Lobby/LobbyOptions.cs`
+- `WebRPGServer/Lobby/LobbyRegistry.cs`
+- `WebRPGServer/Lobby/LobbySocketHelper.cs`
+- `WebRPGServer/Lobby/LobbyHub.cs`
 - `WebRPGServer/appsettings.json`
 - `WebRPGServer/Program.cs`
 - `WebRPGServer.Tests/WebRPGServer.Tests.csproj`
-- `WebRPGServer.Tests/LobbyWebSocketTests.cs`
-- `WebRPG/Assets/WebRPG/Tests/Editor/LobbyPrefabTests.cs`
+- `WebRPGServer.Tests/Lobby/LobbyWebSocketTests.cs`
+- `WebRPG/Assets/WebRPG/Tests/Editor/Lobby/LobbyPrefabTests.cs`
 - `WebRPGDocument/MainMenu.md`
 - `WebRPGDocument/Document Directory.md`
 - `WebRPGDocument/CoreGameplay.md`
 - `WebRPGDocument/AdventurePrototype.md`
 - `WebRPGDocument/MultiplayerLobby.md`
-- `WebRPG/Assets/WebRPG/Tests/Editor/LobbyPresenterTests.cs`
+- `WebRPG/Assets/WebRPG/Tests/Editor/Lobby/LobbyPresenterTests.cs`
 - `WebRPG/Assets/WebRPG/Tests/Editor/WebRPG.Tests.Editor.asmdef`
 - `.gitignore`
 - `WebRPG/Assets/Screenshots/lobby-review.png`
@@ -184,12 +184,12 @@
 - `WebRPG/Assets/WebRPG/Code/Lobby/LobbyView.cs`
 - `WebRPG/Assets/WebRPG/Code/Lobby/LobbyPresenter.cs`
 - `WebRPG/Assets/WebRPG/Code/Bootstrap/Main.cs`
-- `WebRPG/Assets/WebRPG/Tests/Editor/LobbyPresenterTests.cs`
-- `WebRPG/Assets/WebRPG/Tests/Editor/LobbyPrefabTests.cs`
-- `WebRPG/Assets/WebRPG/Tests/Editor/LobbyServerSelectionTests.cs`
+- `WebRPG/Assets/WebRPG/Tests/Editor/Lobby/LobbyPresenterTests.cs`
+- `WebRPG/Assets/WebRPG/Tests/Editor/Lobby/LobbyPrefabTests.cs`
+- `WebRPG/Assets/WebRPG/Tests/Editor/Lobby/LobbyServerSelectionTests.cs`
 - `WebRPG/Assets/WebRPG/Prefabs/LobbyCanvas.prefab`
 - `WebRPG/Assets/WebRPG/Prefabs/LobbyCanvas.prefab.meta`
-- `WebRPGServer.Tests/LobbyWebSocketTests.cs`
+- `WebRPGServer.Tests/Lobby/LobbyWebSocketTests.cs`
 - `WebRPGDocument/MultiplayerLobby.md`
 - `WebRPG/Assets/Plugins/WebRPGShared.dll`
 - `WebRPG/Assets/Plugins/WebRPGShared.pdb`
@@ -233,10 +233,10 @@ Reference：`refs/backups/20261102-1793619821262-complete-multiplayer`
 - `WebRPG/Assets/WebRPG/Code/Bootstrap/Main.cs`
 - `WebRPG/Assets/WebRPG/Code/Lobby/LobbyModel.cs`
 - `WebRPG/Assets/WebRPG/Code/Lobby/LobbyPresenter.cs`
-- `WebRPG/Assets/WebRPG/Tests/Editor/LobbyPresenterTests.cs`
+- `WebRPG/Assets/WebRPG/Tests/Editor/Lobby/LobbyPresenterTests.cs`
 - `WebRPGDocument/MultiplayerLobby.md`
-- `WebRPGServer/LobbyHub.cs`
-- `WebRPGServer/LobbyRegistry.cs`
+- `WebRPGServer/Lobby/LobbyHub.cs`
+- `WebRPGServer/Lobby/LobbyRegistry.cs`
 - `WebRPGShared/LobbyPacket.cs`
 - `WebRPGShared/AdventurePacket.cs`
 

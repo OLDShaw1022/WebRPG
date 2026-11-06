@@ -31,3 +31,10 @@
 - 24：`WebRPG/Assets/WebRPG/` 內新增或修改遊戲美術與 UI 時，不以程式繪製或生成圖示、插圖、紋理等美術圖片；使用可替換的圖片資產。尚無圖片時，以標準 UI Image 方塊佔位並在下方顯示名稱，保留後續直接指定 Sprite 的方式。此規則不限制 UI 排版、讀條與地圖連線等必要的功能呈現，也不要求改動本次需求範圍外的既有內容。
 
 - 25：`WebRPG/`、`WebRPGServer/`、`WebRPGShared/` 與其測試中的自行維護 C# 程式碼，具有業務、協定、限制、時間、容量、比例、版面或容差意義的固定數值，須先宣告為具名常數或既有設定，再於運算、比較及呼叫參數中使用；名稱須表達用途，涉及單位時一併標明，例如 `MaximumAccumulatedTimeSeconds`，不可只用數值命名。即使只使用一次也適用；同一規則的數值應重用同一宣告。明確表示零值、索引起點、遞增量、正規化範圍或幾何中心等通用數學意義的數值，以及已具語意名稱的常數／設定預設值、列舉值與直接描述測試輸入或預期結果的資料，可保留字面值；第三方及自動產生程式碼不適用。
+
+- 26、`WebRPGServer/`、`WebRPGServer.Tests/`、`WebRPG/Assets/WebRPG/Code/` 與 `WebRPG/Assets/WebRPG/Tests/Editor/` 的自有 C# 腳本按功能放入子資料夾。新增或搬移腳本時，優先沿用既有分類，只有新增獨立功能時才建立新的功能資料夾。跨功能共用的測試輔助程式可集中在 `Common/`，只供單一功能使用的輔助程式應與對應測試放在一起。
+  - `WebRPGServer/` 依功能使用 `Accounts/`、`Chat/`、`Lobby/` 等資料夾，應用程式入口 `Program.cs` 留在專案根目錄。
+  - `WebRPGServer.Tests/` 依功能使用 `Accounts/`、`Lobby/`、`Multiplayer/` 等資料夾。需明確指定遠端環境才執行的測試及其專用輔助程式放在 `Remote/`。
+  - `WebRPG/Assets/WebRPG/Code/` 的遊戲腳本按功能放入 `Account/`、`Adventure/`、`Chat/`、`Lobby/`、`MainMenu/` 等資料夾。啟動流程放在 `Bootstrap/`，跨功能共用的程式放在 `Common/`。依既有組件邊界分類，搬移腳本時一併搬移原有 `.meta`，以保留 GUID。
+  - `WebRPG/Assets/WebRPG/Tests/Editor/` 依功能使用 `Account/`、`Adventure/`、`Lobby/`、`MainMenu/`、`Multiplayer/` 等資料夾。分類時保留 `WebRPG.Tests.Editor.asmdef` 在 `Editor/`，搬移腳本時一併搬移原有 `.meta`，以保留 GUID。
+  - 僅調整資料夾時，保留腳本內容與命名空間，並更新文件及其他依賴舊路徑的引用。
