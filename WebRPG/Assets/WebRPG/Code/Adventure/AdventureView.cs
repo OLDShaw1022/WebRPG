@@ -26,6 +26,7 @@ namespace WebRPG
         private const string MapNodeIndexSeparator = "_";
         private const string NewLine = "\n";
         private const string JournalHeading = "戰鬥紀錄";
+        private const string MultiplayerJournalHeading = "冒險紀錄";
         private const string RelicNamePrefix = "Relic";
 
         [SerializeField]
@@ -438,12 +439,9 @@ namespace WebRPG
         private void RenderJournal()
         {
             _details.Rect.gameObject.SetActive(true);
-            _detailsHeading.text = JournalHeading;
-            if (_roomChat && _roomChat.gameObject.activeSelf)
-            {
-                _roomChat.SetJournal(_screen.Journal);
-                return;
-            }
+            bool multiplayerChat = _roomChat && _roomChat.gameObject.activeSelf;
+            _detailsHeading.text = multiplayerChat ? MultiplayerJournalHeading : JournalHeading;
+            if (multiplayerChat) return;
             if (_detailsText.text != _screen.Journal)
             {
                 bool followLatest = _detailsScroll.Scroll.verticalNormalizedPosition <= JournalFollowBottomThreshold ||

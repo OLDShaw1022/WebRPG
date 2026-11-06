@@ -155,7 +155,7 @@ namespace WebRPG
                 if (multiplayer)
                 {
                     _adventureView.EnableRoomChat();
-                    _adventureChatPresenter = new RoomChatPresenter(_lobbyModel, _adventureView.RoomChat);
+                    _adventureChatPresenter = new RoomChatPresenter(_lobbyModel, _adventureView.RoomChat, model);
                 }
                 _adventurePresenter = new AdventurePresenter(model, _adventureView, _multiplayerAdventureSession);
                 _adventureMenuPresenter = new AdventureMenuPresenter(new AdventureMenuModel(!multiplayer),

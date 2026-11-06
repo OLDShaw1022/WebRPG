@@ -99,6 +99,8 @@ namespace WebRPG
         public IReadOnlyList<RelicDefinition> Relics => _readOnlyRelics;
         public IReadOnlyCollection<string> Journal => _journalSnapshot;
         public int RunVersion { get; private set; }
+        public event Action<string> JournalEntryAdded;
+
         public int JournalVersion { get; private set; }
         public IReadOnlyList<NodeDefinition> AvailableNodes => Phase == AdventurePhase.Map
             ? CurrentFloorRows[RowIndex]
@@ -471,6 +473,7 @@ namespace WebRPG
             }
             _journalSnapshot = Array.AsReadOnly(_journal.ToArray());
             JournalVersion++;
+            JournalEntryAdded?.Invoke(message);
         }
     }
 

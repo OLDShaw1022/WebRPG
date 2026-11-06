@@ -9,7 +9,6 @@ namespace WebRPG
     // Shows the room log and submits plain text through the active chat presenter.
     public sealed class RoomChatView : MonoBehaviour
     {
-        private const string JournalSeparator = "\n\n";
         private const float FollowBottomThreshold = 0.01f;
         [SerializeField] private TMP_InputField _input;
         [SerializeField] private UnityEngine.UI.Button _send;
@@ -17,8 +16,6 @@ namespace WebRPG
         [SerializeField] private TextMeshProUGUI _log;
         [SerializeField] private ScrollRect _scroll;
         private string _roomId;
-        private string _roomLog = string.Empty;
-        private string _journal = string.Empty;
 
         public event Action<string> SendRequested;
 
@@ -37,11 +34,10 @@ namespace WebRPG
                 _input.SetTextWithoutNotify(string.Empty);
                 _roomId = roomId;
             }
-            _roomLog = roomLog;
             _error.text = error;
             _input.interactable = roomId != null;
             _send.interactable = canChat;
-            RenderLog();
+            RenderLog(roomLog);
         }
 
         public void ClearDelivered(string draft)
@@ -49,19 +45,10 @@ namespace WebRPG
             if (_input.text == draft) _input.SetTextWithoutNotify(string.Empty);
         }
 
-        public void SetJournal(string journal)
-        {
-            if (_journal == journal) return;
-            _journal = journal;
-            RenderLog();
-        }
-
         private void Send() => SendRequested?.Invoke(_input.text);
 
-        private void RenderLog()
+        private void RenderLog(string text)
         {
-            string text = string.IsNullOrEmpty(_journal) ? _roomLog :
-                string.IsNullOrEmpty(_roomLog) ? _journal : _journal + JournalSeparator + _roomLog;
             if (_log.text == text) return;
             bool followLatest = _scroll.verticalNormalizedPosition <= FollowBottomThreshold || _log.text.Length == 0;
             _log.text = text;

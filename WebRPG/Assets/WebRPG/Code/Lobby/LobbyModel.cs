@@ -59,6 +59,7 @@ namespace WebRPG
         private float _chatTime;
 
         public event Action ChatChanged;
+        public event Action<string> RoomLogEntryAdded;
         public event Action<string> ChatDelivered;
         public string RoomLog { get; private set; } = string.Empty;
         public string ChatError { get; private set; } = string.Empty;
@@ -337,6 +338,7 @@ namespace WebRPG
             _roomLog.Enqueue(line);
             if (_roomLog.Count > MaximumRoomLogEntries) _roomLog.Dequeue();
             RoomLog = string.Join(NewLine, _roomLog);
+            RoomLogEntryAdded?.Invoke(line);
         }
 
         private void ClearRoomLog()
