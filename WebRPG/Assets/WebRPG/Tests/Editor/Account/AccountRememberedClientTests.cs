@@ -44,6 +44,69 @@ namespace WebRPG.Tests
         }
 
         [UnityTest]
+        public IEnumerator RotatedCookieRestoresAcrossNewPlaySessionsUntilLogout()
+        {
+            const string first = "__Secure-WebRPGRemember=initial";
+            const string second = "__Secure-WebRPGRemember=rotated";
+            const string cookiePath = "; Path=/api/accounts; HttpOnly";
+            using AccountHttpTestServer server = new AccountHttpTestServer();
+            LobbyClientConfiguration configuration = AccountClientConfigurationHelper.Create(server.SocketUrl);
+
+            using (AccountModel model = new AccountModel(configuration, true))
+            {
+                Task response = server.RespondAsync(200, SessionJson, first + cookiePath);
+                Awaitable<string>.Awaiter login = model.SubmitAsync(1, "player@example.invalid", "test-password",
+                    string.Empty, false, true).GetAwaiter();
+                while (!login.IsCompleted) yield return null;
+                login.GetResult();
+                while (!response.IsCompleted) yield return null;
+                response.GetAwaiter().GetResult();
+            }
+
+            using (AccountModel model = new AccountModel(configuration, true))
+            {
+                Task response = server.RespondAsync(200, SessionJson, second + cookiePath);
+                Awaitable<bool>.Awaiter restore = model.TryRestoreAsync(1).GetAwaiter();
+                while (!restore.IsCompleted) yield return null;
+                Assert.That(restore.GetResult(), Is.True);
+                while (!response.IsCompleted) yield return null;
+                response.GetAwaiter().GetResult();
+                Assert.That(server.LastCookie, Is.EqualTo(first));
+            }
+
+            using (AccountModel model = new AccountModel(configuration, true))
+            {
+                Task response = server.RespondAsync(200, SessionJson, second + cookiePath);
+                Awaitable<bool>.Awaiter restore = model.TryRestoreAsync(1).GetAwaiter();
+                while (!restore.IsCompleted) yield return null;
+                Assert.That(restore.GetResult(), Is.True);
+                while (!response.IsCompleted) yield return null;
+                response.GetAwaiter().GetResult();
+                Assert.That(server.LastCookie, Is.EqualTo(second));
+
+                response = server.RespondAsync(204, string.Empty,
+                    "__Secure-WebRPGRemember=; Expires=Thu, 01 Jan 1970 00:00:00 GMT" + cookiePath);
+                Awaitable.Awaiter logout = model.LogoutAsync().GetAwaiter();
+                while (!logout.IsCompleted) yield return null;
+                logout.GetResult();
+                while (!response.IsCompleted) yield return null;
+                response.GetAwaiter().GetResult();
+                Assert.That(server.LastCookie, Is.EqualTo(second));
+            }
+
+            using (AccountModel model = new AccountModel(configuration, true))
+            {
+                Task response = server.RespondAsync(401, string.Empty);
+                Awaitable<bool>.Awaiter restore = model.TryRestoreAsync(1).GetAwaiter();
+                while (!restore.IsCompleted) yield return null;
+                Assert.That(restore.GetResult(), Is.False);
+                while (!response.IsCompleted) yield return null;
+                response.GetAwaiter().GetResult();
+                Assert.That(server.LastCookie, Is.Null.Or.Empty);
+            }
+        }
+
+        [UnityTest]
         public IEnumerator LoginCheckboxSendsRememberMeThroughPresenter()
         {
             using AccountHttpTestServer server = new AccountHttpTestServer();

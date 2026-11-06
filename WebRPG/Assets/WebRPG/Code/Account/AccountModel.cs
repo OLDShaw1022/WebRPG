@@ -138,7 +138,13 @@ namespace WebRPG
             try
             {
                 AccountBrowserRequestHelper.Configure(address.Uri);
+#if UNITY_EDITOR || UNITY_STANDALONE_WIN
+                AccountNativeCookieHelper.Configure(request);
+#endif
                 await request.SendWebRequest();
+#if UNITY_EDITOR || UNITY_STANDALONE_WIN
+                AccountNativeCookieHelper.SaveResponse(request);
+#endif
                 if (_disposed) throw new OperationCanceledException();
                 if (allowUnauthorized && request.responseCode == UnauthorizedStatus) return string.Empty;
                 if (request.result != UnityWebRequest.Result.Success)

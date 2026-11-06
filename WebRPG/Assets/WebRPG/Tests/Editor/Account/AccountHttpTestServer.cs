@@ -15,6 +15,7 @@ namespace WebRPG.Tests
         public string LastAuthorization { get; private set; }
         public string LastRequestHeader { get; private set; }
         public string LastBody { get; private set; }
+        public string LastCookie { get; private set; }
 
         public AccountHttpTestServer()
         {
@@ -27,12 +28,14 @@ namespace WebRPG.Tests
             SocketUrl = $"ws://localhost:{port}/ws?channel=lobby";
         }
 
-        public async Task RespondAsync(int status, string body)
+        public async Task RespondAsync(int status, string body, string setCookie = null)
         {
             HttpListenerContext context = await _listener.GetContextAsync();
             LastPath = context.Request.Url.AbsolutePath;
             LastAuthorization = context.Request.Headers["Authorization"];
             LastRequestHeader = context.Request.Headers["X-WebRPG-Request"];
+            LastCookie = context.Request.Headers["Cookie"];
+            if (setCookie != null) context.Response.Headers.Add("Set-Cookie", setCookie);
             using (System.IO.StreamReader reader = new System.IO.StreamReader(context.Request.InputStream, Encoding.UTF8))
                 LastBody = await reader.ReadToEndAsync();
             context.Response.StatusCode = status;
