@@ -9,6 +9,11 @@ namespace WebRPG
     // 綁定大廳 Prefab 的固定控制項並顯示房間與成員。
     public sealed class LobbyView : MonoBehaviour, ILobbyView
     {
+        [SerializeField] private GameObject _browsePage;
+        [SerializeField] private GameObject _roomPage;
+        [SerializeField] private RoomChatView _roomChat;
+        public RoomChatView RoomChat => _roomChat;
+
         [SerializeField] private TMP_Dropdown _serverDropdown;
         [SerializeField] private TMP_InputField _username;
         [SerializeField] private TMP_InputField _roomName;
@@ -60,6 +65,8 @@ namespace WebRPG
 
         public void Render(LobbyScreenModel screen)
         {
+            if (_browsePage) _browsePage.SetActive(!screen.InRoom);
+            if (_roomPage) _roomPage.SetActive(screen.InRoom);
             _status.text = screen.Status;
             _members.text = screen.Members;
             _readyLabel.text = screen.ReadyLabel;

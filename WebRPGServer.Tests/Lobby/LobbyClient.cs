@@ -30,7 +30,8 @@ internal sealed class LobbyClient : IDisposable
         }
     }
 
-    public async Task<JsonObject> RequestAsync(string type, JsonObject packet, CancellationToken token, string expected = "State")
+    public async Task<JsonObject> RequestAsync(string type, JsonObject packet, CancellationToken token,
+        string expected = "State", Action<JsonObject>? observe = null)
     {
         string id = (++_requestNumber).ToString();
         packet["Type"] = type;
@@ -39,6 +40,7 @@ internal sealed class LobbyClient : IDisposable
         while (true)
         {
             JsonObject response = await ReadAsync(token);
+            observe?.Invoke(response);
             if (response["RequestId"]?.GetValue<string>() != id)
             {
                 if (response["Type"]?.GetValue<string>() == "Error")

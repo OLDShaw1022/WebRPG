@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net.WebSockets;
 using System.Text.Json;
 using WebRPGShared;
@@ -7,6 +8,7 @@ namespace WebRPGServer;
 // 序列化房間操作並向所有已連線玩家推播伺服器狀態。
 public sealed class LobbyHub
 {
+    private static readonly TimeSpan ChatSendInterval = TimeSpan.FromSeconds(1);
     private const int MaximumRequestIdLength = 64;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly Dictionary<string, LobbySendSession> _sessions = new();
@@ -23,6 +25,7 @@ public sealed class LobbyHub
         Func<string, Task<AccountIdentity?>>? authenticate = null)
     {
         string playerId = Guid.NewGuid().ToString("N");
+        long? lastChat = null;
         bool registered = false;
         string accessToken = string.Empty;
         LobbySendSession session = new(socket, _options.SendTimeoutSeconds, token);
@@ -76,6 +79,14 @@ public sealed class LobbyHub
                         LobbyPacket welcome = _registry.Snapshot(playerId, request.RequestId ?? string.Empty);
                         welcome.Type = LobbyPacketType.Welcome;
                         session.Enqueue(welcome);
+                        continue;
+                    }
+                    if (request.Type == LobbyPacketType.RoomChat)
+                    {
+                        if (lastChat.HasValue && Stopwatch.GetElapsedTime(lastChat.Value) < ChatSendInterval)
+                            throw new ArgumentException("請稍候再傳送聊天訊息。");
+                        BroadcastRoomChat(playerId, request);
+                        lastChat = Stopwatch.GetTimestamp();
                         continue;
                     }
                     if (request.Type == LobbyPacketType.Adventure)
@@ -134,6 +145,31 @@ public sealed class LobbyHub
         foreach (KeyValuePair<string, LobbySendSession> pair in _sessions)
         {
             if (pair.Key != excludedPlayerId) pair.Value.Enqueue(_registry.Snapshot(pair.Key));
+        }
+    }
+
+    private void BroadcastRoomChat(string playerId, LobbyPacket request)
+    {
+        LobbyRoomSnapshot? room = _registry.Snapshot(playerId).Room;
+        if (room is null) throw new ArgumentException("加入房間後才能聊天。");
+        string message = request.Message?.Trim() ?? string.Empty;
+        if (message.Length == 0 || message.Length > LobbyPacketLimits.ChatMessageLength ||
+            message.Any(char.IsControl))
+            throw new ArgumentException("請輸入有效的單行聊天訊息。");
+
+        LobbyMemberSnapshot sender = room.Members.Single(member => member.PlayerId == playerId);
+        foreach (LobbyMemberSnapshot member in room.Members)
+        {
+            if (!_sessions.TryGetValue(member.PlayerId, out LobbySendSession? session)) continue;
+            session.Enqueue(new LobbyPacket
+            {
+                Type = LobbyPacketType.RoomChat,
+                RoomId = room.Id,
+                PlayerId = playerId,
+                Username = sender.Username,
+                Message = message,
+                RequestId = member.PlayerId == playerId ? request.RequestId ?? string.Empty : string.Empty
+            });
         }
     }
 

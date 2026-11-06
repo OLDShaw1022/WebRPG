@@ -45,6 +45,25 @@ namespace WebRPG
         private const string TokenProperty = "AccessToken";
         private const string AuthenticationRequiredMessage = "請重新登入後再連線。";
 
+        private const int MaximumRoomLogEntries = 80;
+        private const string ChatLineFormat = "【聊天】{0}：{1}";
+        private const string JoinedLineFormat = "【房間】{0} 加入房間。";
+        private const string LeftLineFormat = "【房間】{0} 離開房間。";
+        private const string ChatTimeoutMessage = "聊天送出逾時，可重新送出。";
+        private const string ChatSendFailureMessage = "無法送出聊天，請再試一次。";
+        private const string ChatLengthMessage = "聊天訊息長度超過上限。";
+        private const string NewLine = "\n";
+        private readonly Queue<string> _roomLog = new Queue<string>();
+        private string _chatRequestId = string.Empty;
+        private string _chatDraft = string.Empty;
+        private float _chatTime;
+
+        public event Action ChatChanged;
+        public event Action<string> ChatDelivered;
+        public string RoomLog { get; private set; } = string.Empty;
+        public string ChatError { get; private set; } = string.Empty;
+        public bool CanChat => IsConnected && Room != null && _chatRequestId.Length == 0;
+
         private readonly Dictionary<string, string> _adventureRequests = new Dictionary<string, string>();
         private WebSocket _socket;
         private bool _disposed;
@@ -143,6 +162,34 @@ namespace WebRPG
             await SendPacketAsync(packet);
         }
 
+        public async Awaitable SendChatAsync(string draft)
+        {
+            if (_disposed || !CanChat || string.IsNullOrWhiteSpace(draft)) return;
+            string message = draft.Trim();
+            if (message.Length > LobbyPacketLimits.ChatMessageLength)
+            {
+                ChatError = ChatLengthMessage;
+                ChatChanged?.Invoke();
+                return;
+            }
+
+            string requestId = (++_requestNumber).ToString();
+            _chatRequestId = requestId;
+            _chatDraft = draft;
+            _chatTime = 0f;
+            ChatError = string.Empty;
+            ChatChanged?.Invoke();
+            await LobbyPacketSendHelper.SendAsync(_socket, new LobbyPacket
+            {
+                Type = LobbyPacketType.RoomChat,
+                RequestId = requestId,
+                Message = message
+            }, (_, exception) =>
+            {
+                if (_chatRequestId == requestId) CompleteChat(ChatSendFailureMessage);
+            });
+        }
+
         public async Awaitable SendAdventureAsync(AdventurePacket packet)
         {
             if (_disposed || !IsConnected || packet == null) return;
@@ -188,6 +235,18 @@ namespace WebRPG
             try { packet = JsonConvert.DeserializeObject<LobbyPacket>(json); }
             catch (JsonException) { Disconnect(InvalidPacketMessage); return; }
             if (packet == null) { Disconnect(InvalidPacketMessage); return; }
+            if (packet.Type == LobbyPacketType.RoomChat)
+            {
+                if (Room == null || packet.RoomId != Room.Id) return;
+                AppendRoomLog(string.Format(ChatLineFormat, packet.Username, packet.Message));
+                if (_chatRequestId.Length != 0 && packet.RequestId == _chatRequestId)
+                {
+                    ChatDelivered?.Invoke(_chatDraft);
+                    CompleteChat(string.Empty);
+                }
+                else ChatChanged?.Invoke();
+                return;
+            }
             if (packet.Type == LobbyPacketType.Adventure)
             {
                 if (packet.Adventure != null)
@@ -201,9 +260,12 @@ namespace WebRPG
             if (packet.Type == LobbyPacketType.Welcome || packet.Type == LobbyPacketType.State)
             {
                 PlayerId = packet.PlayerId;
+                LobbyRoomSnapshot previousRoom = Room;
                 Room = packet.Room;
+                UpdateRoomLog(previousRoom);
                 Rooms = packet.Rooms ?? Array.Empty<LobbyRoomSummary>();
                 IsConnected = true;
+                ChatChanged?.Invoke();
                 if (!string.IsNullOrEmpty(_pendingId) && packet.RequestId == _pendingId)
                 {
                     IsBusy = false;
@@ -214,6 +276,11 @@ namespace WebRPG
             else if (packet.Type == LobbyPacketType.Error)
             {
                 if (string.IsNullOrEmpty(packet.RequestId)) return;
+                if (packet.RequestId == _chatRequestId)
+                {
+                    CompleteChat(packet.Error);
+                    return;
+                }
                 if (_adventureRequests.TryGetValue(packet.RequestId, out string roomId))
                 {
                     _adventureRequests.Remove(packet.RequestId);
@@ -240,9 +307,51 @@ namespace WebRPG
 
         public void Tick(float deltaTime)
         {
-            if (!IsBusy || _disposed) return;
+            if (_disposed) return;
+            if (_chatRequestId.Length != 0)
+            {
+                _chatTime += deltaTime;
+                if (_chatTime >= _requestTimeoutSeconds) CompleteChat(ChatTimeoutMessage);
+            }
+            if (!IsBusy) return;
             _pendingTime += deltaTime;
             if (_pendingTime >= _requestTimeoutSeconds) Disconnect(TimeoutMessage);
+        }
+
+        private void UpdateRoomLog(LobbyRoomSnapshot previousRoom)
+        {
+            if (Room?.Id != previousRoom?.Id) ClearRoomLog();
+            if (Room == null) return;
+            LobbyMemberSnapshot[] previousMembers = previousRoom?.Id == Room.Id
+                ? previousRoom.Members : Array.Empty<LobbyMemberSnapshot>();
+            foreach (LobbyMemberSnapshot member in previousMembers)
+                if (!Room.Members.Any(current => current.PlayerId == member.PlayerId))
+                    AppendRoomLog(string.Format(LeftLineFormat, member.Username));
+            foreach (LobbyMemberSnapshot member in Room.Members)
+                if (!previousMembers.Any(previous => previous.PlayerId == member.PlayerId))
+                    AppendRoomLog(string.Format(JoinedLineFormat, member.Username));
+        }
+
+        private void AppendRoomLog(string line)
+        {
+            _roomLog.Enqueue(line);
+            if (_roomLog.Count > MaximumRoomLogEntries) _roomLog.Dequeue();
+            RoomLog = string.Join(NewLine, _roomLog);
+        }
+
+        private void ClearRoomLog()
+        {
+            _roomLog.Clear();
+            RoomLog = string.Empty;
+            CompleteChat(string.Empty);
+        }
+
+        private void CompleteChat(string error)
+        {
+            _chatRequestId = string.Empty;
+            _chatDraft = string.Empty;
+            ChatError = error;
+            ChatChanged?.Invoke();
         }
 
         private void Disconnect(string message)
@@ -254,6 +363,7 @@ namespace WebRPG
             IsBusy = false;
             PlayerId = string.Empty;
             Room = null;
+            ClearRoomLog();
             Rooms = Array.Empty<LobbyRoomSummary>();
             _pendingId = string.Empty;
             Status = message;
@@ -271,6 +381,7 @@ namespace WebRPG
             IsConnected = false;
             IsBusy = false;
             Room = null;
+            ClearRoomLog();
             Rooms = Array.Empty<LobbyRoomSummary>();
             if (socket != null) await CloseSocketAsync(socket);
         }

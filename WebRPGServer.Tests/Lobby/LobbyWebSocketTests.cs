@@ -80,4 +80,37 @@ public sealed class LobbyWebSocketTests
 
     }
 
+    // Verifies server identity and room membership on the chat path.
+    [Test]
+    public async Task RoomChatRequiresMembershipAndUsesServerIdentity()
+    {
+        using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(10));
+        CancellationToken token = timeout.Token;
+        using LobbyClient host = await LobbyClient.ConnectAsync(_server.Address, "Host", token);
+        using LobbyClient member = await LobbyClient.ConnectAsync(_server.Address, "Member", token);
+        JsonObject room = await host.RequestAsync("CreateRoom", new() { ["RoomName"] = "Chat" }, token);
+        string roomId = room["Room"]!["Id"]!.GetValue<string>();
+        await member.RequestAsync("RoomChat", new() { ["Message"] = "outside" }, token, "Error");
+        await member.RequestAsync("JoinRoom", new() { ["RoomId"] = roomId }, token);
+        await host.RequestAsync("RoomChat", new() { ["Message"] = "  " }, token, "Error");
+        await host.RequestAsync("RoomChat", new() { ["Message"] = new string('x', 241) }, token, "Error");
+        using LobbyClient outsider = await LobbyClient.ConnectAsync(_server.Address, "Outsider", token);
+        await outsider.RequestAsync("CreateRoom", new() { ["RoomName"] = "Other" }, token);
+        await host.RequestAsync("RoomChat",
+            new() { ["Message"] = "hello", ["Username"] = "Spoofed" }, token, "RoomChat");
+        JsonObject received = await member.ReadTypeAsync("RoomChat", token);
+        Assert.That(received["Message"]!.GetValue<string>(), Is.EqualTo("hello"));
+        Assert.That(received["Username"]!.GetValue<string>(), Is.EqualTo("Host"));
+        Assert.That(received["RoomId"]!.GetValue<string>(), Is.EqualTo(roomId));
+        await host.RequestAsync("RoomChat", new() { ["Message"] = "too fast" }, token, "Error");
+        await outsider.RequestAsync("ListRooms", new(), token, observe: AssertNoChat);
+        await outsider.RequestAsync("LeaveRoom", new(), token, observe: AssertNoChat);
+        await outsider.RequestAsync("JoinRoom", new() { ["RoomId"] = roomId }, token, observe: AssertNoChat);
+        await outsider.RequestAsync("ListRooms", new(), token, observe: AssertNoChat);
+        await member.RequestAsync("LeaveRoom", new(), token);
+        await member.RequestAsync("RoomChat", new() { ["Message"] = "left" }, token, "Error");
+
+        static void AssertNoChat(JsonObject packet) =>
+            Assert.That(packet["Type"]?.GetValue<string>(), Is.Not.EqualTo("RoomChat"));
+    }
 }

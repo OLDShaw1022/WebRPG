@@ -14,6 +14,7 @@ namespace WebRPGShared
         public string RoomId { get; set; } = string.Empty;
         public bool IsPublic { get; set; } = true;
         public bool IsReady { get; set; }
+        public string Message { get; set; } = string.Empty;
         public string Error { get; set; } = string.Empty;
         public LobbyRoomSummary[] Rooms { get; set; } = Array.Empty<LobbyRoomSummary>();
         public LobbyRoomSnapshot Room { get; set; }
@@ -63,6 +64,7 @@ namespace WebRPGShared
         public const string SetReady = "SetReady";
         public const string State = "State";
         public const string Error = "Error";
+        public const string RoomChat = "RoomChat";
         public const string Adventure = "Adventure";
     }
 
@@ -72,6 +74,7 @@ namespace WebRPGShared
         public const int UsernameLength = 24;
         public const int RoomNameLength = 40;
         public const int MaximumPlayers = 4;
+        public const int ChatMessageLength = 240;
         public const int MessageBytes = 8192;
     }
 }

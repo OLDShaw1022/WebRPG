@@ -18,11 +18,9 @@ public static class Program
         if (!string.IsNullOrWhiteSpace(connectionString))
         {
             builder.Services.AddSingleton(NpgsqlDataSource.Create(connectionString));
-            builder.Services.AddSingleton<IChatMessageStore, PostgresChatMessageStore>();
             builder.Services.AddSingleton<PostgresAccountStore>();
         }
 
-        builder.Services.AddSingleton<ChatHub>();
         AccountEndpoints.AddServices(builder.Services);
         builder.Services.Configure<ForwardedHeadersOptions>(options =>
             options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto);
@@ -36,15 +34,7 @@ public static class Program
 
         if (!string.IsNullOrWhiteSpace(connectionString))
         {
-            IChatMessageStore messageStore = application.Services.GetRequiredService<IChatMessageStore>();
-            await messageStore.InitializeAsync(CancellationToken.None);
             await application.Services.GetRequiredService<PostgresAccountStore>().InitializeAsync(CancellationToken.None);
-            application.Logger.LogInformation("Chat message database is ready.");
-        }
-        else
-        {
-            application.Logger.LogWarning(
-                "Chat message persistence is disabled: GameDatabase is not configured.");
         }
 
         application.UseForwardedHeaders();
@@ -59,22 +49,15 @@ public static class Program
 
         application.Use(async (context, next) =>
         {
-            if (context.Request.Path == "/ws" && context.WebSockets.IsWebSocketRequest)
+            if (context.Request.Path == "/ws" && context.WebSockets.IsWebSocketRequest &&
+                context.Request.Query["channel"] == "lobby")
             {
                 using WebSocket webSocket = await context.WebSockets.AcceptWebSocketAsync();
-                if (context.Request.Query["channel"] == "lobby")
-                {
-                    LobbyHub lobbyHub = context.RequestServices.GetRequiredService<LobbyHub>();
-                    PostgresAccountStore? accounts = context.RequestServices.GetService<PostgresAccountStore>();
-                    await lobbyHub.HandleConnectionAsync(webSocket, context.RequestAborted,
-                        async accessToken => accounts is null ? null :
-                            await accounts.AuthenticateAsync(accessToken, context.RequestAborted));
-                }
-                else
-                {
-                    ChatHub chatHub = context.RequestServices.GetRequiredService<ChatHub>();
-                    await chatHub.HandleConnectionAsync(webSocket, context.RequestAborted);
-                }
+                LobbyHub lobbyHub = context.RequestServices.GetRequiredService<LobbyHub>();
+                PostgresAccountStore? accounts = context.RequestServices.GetService<PostgresAccountStore>();
+                await lobbyHub.HandleConnectionAsync(webSocket, context.RequestAborted,
+                    async accessToken => accounts is null ? null :
+                        await accounts.AuthenticateAsync(accessToken, context.RequestAborted));
                 return;
             }
 

@@ -423,10 +423,27 @@ namespace WebRPG
             }
         }
 
+        private const float ChatComposerHeight = 44f;
+        [SerializeField] private RoomChatView _roomChat;
+        public RoomChatView RoomChat => _roomChat;
+
+        public void EnableRoomChat()
+        {
+            if (!_roomChat || _roomChat.gameObject.activeSelf) return;
+            RectTransform scroll = _detailsScroll.Rect;
+            scroll.offsetMin += Vector2.up * ChatComposerHeight;
+            _roomChat.gameObject.SetActive(true);
+        }
+
         private void RenderJournal()
         {
             _details.Rect.gameObject.SetActive(true);
             _detailsHeading.text = JournalHeading;
+            if (_roomChat && _roomChat.gameObject.activeSelf)
+            {
+                _roomChat.SetJournal(_screen.Journal);
+                return;
+            }
             if (_detailsText.text != _screen.Journal)
             {
                 bool followLatest = _detailsScroll.Scroll.verticalNormalizedPosition <= JournalFollowBottomThreshold ||

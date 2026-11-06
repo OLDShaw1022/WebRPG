@@ -7,21 +7,22 @@
 
 ## 規則
 
-- 1：先完成[帳號登入](Accounts.md)，主選單「多人遊玩」開啟大廳後沿用登入伺服器與使用者名稱並連線；PlayerId 使用伺服器驗證後的固定帳號 ID，名稱允許重複，不能從大廳改名或切換伺服器。
-- 2：連線後可建立房間，建立者自動加入並擔任隊長。房名為 1～40 個字元；每人同時只能加入一間房。
+- 1：先完成[帳號登入](Accounts.md)，從主選單選擇「多人遊玩」後先進入大廳瀏覽頁，沿用登入伺服器與使用者名稱並連線；PlayerId 使用伺服器驗證後的固定帳號 ID，名稱允許重複，不能從大廳改名或切換伺服器。
+- 2：大廳瀏覽頁提供公開房間列表、建立房間、依房間 ID 加入及返回主選單。建立者自動加入並擔任隊長。建立或加入成功後切換至房間頁；失敗時留在大廳瀏覽頁並顯示原因。房名為 1～40 個字元；每人同時只能加入一間房。
 - 3：公開列表顯示房名與目前／上限人數，可直接點選加入；私人房間不列出，知道完整房間 ID 的玩家仍可加入。私人房間不提供密碼保護。
 - 4：房間容量由伺服器 JSON 設定，協定允許 1～4 人，預設為 4。滿房及重複加入由伺服器拒絕，不信任用戶端提供的玩家識別碼。
-- 5：房內玩家可切換準備／取消準備，伺服器向所有大廳連線推播公開列表，並向各連線提供自己房間的完整快照。全員準備後由隊長按開始進入共同冒險。
-- 6：離開、返回主選單或伺服器偵測到連線中斷時，移除成員；空房刪除。隊長離開時由加入最早的剩餘成員接任；進行中的冒險仍依下列規則全隊失敗。重新加入時準備狀態為未準備。
-- 7：客戶端斷線或要求逾時會清空本機房間狀態，顯示重新連線入口；不自動恢復房間。伺服器重啟後，記憶體中的房間全部清空。
+- 5：房間頁顯示目前房間的名稱、ID、成員、隊長與準備狀態，並提供準備／取消準備及離房。伺服器向所有大廳連線推播公開列表，並向各連線提供自己房間的完整快照。全員準備後由隊長按開始進入共同冒險。
+- 6：離開、返回主選單或伺服器偵測到連線中斷時，移除成員；空房刪除。離房成功後回到大廳瀏覽頁並更新列表。隊長離開時由加入最早的剩餘成員接任；進行中的冒險仍依下列規則全隊失敗。重新加入時準備狀態為未準備。
+- 7：客戶端斷線或要求逾時會清空本機房間狀態，回到大廳瀏覽頁並顯示重新連線入口；不自動恢復房間。伺服器重啟後，記憶體中的房間全部清空。
 - 8：房間操作由伺服器序列化處理，避免同時加入超過容量；格式錯誤、不支援操作、過大訊息均回覆 Error。
 - 9：固定 UI 保存在 LobbyCanvas.prefab，公開列表由 RoomTemplate 動態生成；Main 組裝 Model、View、Presenter 並管理釋放。玩家提供的文字不解析 TMP rich text。
+- 10：房間頁的紀錄區（Log）可垂直捲動，顯示成員加入、離開等房內事件及同房聊天，底部提供文字輸入與送出。進入冒險後，可在冒險紀錄區繼續同一房間的聊天；訊息生命週期依[房間聊天](RoomChat.md)。
 
 ## 設定與連線
 
 - [LobbyClient.json](../WebRPG/Assets/WebRPG/Data/LobbyClient.json)：以 DefaultServerId 指定預設伺服器，Servers 陣列設定 Id、Name、Url、EditorOnly。預設為 AWS EC2，透過 `wss://ws.oldshaw-webrpg.com/ws?channel=lobby` 連線；遊戲頁面使用 `https://oldshaw-webrpg.com`，帳號 API 使用 ws 子網域並允許指定遊戲來源的 Cookie 要求，詳見[帳號登入](Accounts.md)的部署要求；本機測試只在 Editor 顯示。RequestTimeoutSeconds 預設為 10 秒。畫面使用 TMP_Dropdown，不提供網址輸入。非 Editor 選項必須使用 wss。
 - [appsettings.json](../WebRPGServer/appsettings.json)：Lobby.RoomCapacity、MaximumRooms、MaximumConnections、SendTimeoutSeconds，預設分別為 4、100、256、3。均為本批原型設定。
-- 原有 `/ws` 聊天協定保留；`/ws?channel=lobby` 使用 LobbyPacket。部署時須轉送 query string。公開網站使用時應配置對應的 wss 位址。
+- `/ws?channel=lobby` 使用 LobbyPacket，包含房間聊天。舊獨立聊天分流已停用。部署時須轉送 query string。公開網站使用時應配置對應的 wss 位址。
 - 要求類型為 Hello、ListRooms、CreateRoom、JoinRoom、LeaveRoom、SetReady；回應為 Welcome、State 或 Error。RequestId 配對要求與回應，無 RequestId 的 State 為推播。
 - 房間與成員只存在單一伺服器程序記憶體，尚未支援多個伺服器程序間共用狀態。
 
@@ -29,8 +30,8 @@
 
 1. 在儲存庫根目錄執行 `dotnet run --project WebRPGServer --no-launch-profile`，預設 PORT 為 8080。
 2. Unity 開啟 Main 場景並播放，選擇已部署帳號 API 的伺服器並完成註冊／登入，再選擇「多人遊玩」連線；多人驗證使用不同帳號，可有相同使用者名稱。原匿名正式伺服器需配套升級後才能使用新版客戶端。
-3. 建立公開房間，其他客戶端可在列表加入；最多 4 人，第 5 人加入會被拒絕。
-4. 切換準備狀態，其他房內成員同步顯示；離開或關閉連線後，成員及列表更新。
+3. 進入多人模式先顯示大廳瀏覽頁。建立公開房間後，其他客戶端可從列表加入。建立或加入成功才顯示房間頁與紀錄區；第 5 人加入預設容量 4 人的房間時被拒絕，仍停留在大廳瀏覽頁。
+4. 切換準備狀態，其他房內成員同步顯示。同房玩家可在紀錄區收發聊天並辨識加入或離開事件。離房後回到更新過的大廳列表；重新加入時不顯示上次連線的聊天。
 5. 返回主選單後可再次進入大廳，亦可開始既有單人冒險。
 6. 執行 `dotnet test WebRPGServer.Tests/WebRPGServer.Tests.csproj`。測試採用 NUnit，分類為 Unit、Component 與 Integration；本機整合測試會自動啟動及關閉獨立伺服器。遠端測試標記為 Explicit，需以 `--filter FullyQualifiedName~RemoteLobbyTests` 明確選取，並透過環境變數 `WEBRPG_TEST_SERVER_URL` 或 NUnit 的 `TestRunParameters` 提供 `ServerUrl`；預設不連線遠端。
 7. Unity EditMode 執行 LobbyPrefabTests、LobbyPresenterTests、LobbyServerSelectionTests、MainMenuPresenterTests、MainMenuPrefabTests 與 AdventureStartupTests。
@@ -71,193 +72,3 @@
 - 邀請與進階防濫用規則；固定帳號 ID、登入與帳號 API 限流見[帳號登入](Accounts.md)。
 - 正式戰鬥平衡、投票／領獎逾時機制、多人同房直接重開與伺服器完整模擬。
 - 多程序部署與房間資料保存。
-
-
-
-## 本次驗證與備份紀錄（2026-11-02）
-
-- 根目錄 solution 建置成功，0 個警告、0 個錯誤。Unity 的大廳、主選單、單人啟動測試及真實 WebSocket 整合測試均已執行。
-- Unity Play Mode 已確認四個實際客戶端收到相同四人成員快照、準備狀態更新、返回主選單後伺服器移除成員，且可啟動單人冒險。最長房名及四名最長玩家名稱另以 Prefab 渲染測試確認無裁切。
-- DLL/PDB 已更新且與 WebRPGShared 建置輸出 SHA-256 相同。原有字型修改保留，不納入本批程式處理；尚未建置或驗證 WebGL 成品。
-- 所有備份以本機記錄的 origin/main `40d82a5d0acd3a4cc8f0ec90f6ecafc060d07d76` 為比較基準。以下備份建立時尚未推送；推送後依 AGENTS.md 檢查保護內容是否已完整包含於遠端，再清理可刪除的 reference。備份用獨立 Git 暫存區建立，未變動原暫存區。
-- 需要還原時，僅依使用者指定的 reference 與路徑執行 `git restore --source=<reference> --worktree -- "<指定路徑>"`；以下僅記錄方式，本次未執行還原。
-
-### refs/backups/20261102-140721-lobby-shared-artifacts
-
-涵蓋路徑：
-
-- `WebRPG/Assets/Plugins/WebRPGShared.dll`
-- `WebRPG/Assets/Plugins/WebRPGShared.pdb`
-
-### refs/backups/20261102-142017-lobby-client-settings
-
-涵蓋路徑：
-
-- `WebRPG/Assets/WebRPG/Code/Bootstrap/Main.cs`
-- `WebRPG/Assets/WebRPG/Code/Lobby/LobbyModel.cs`
-- `WebRPG/Assets/WebRPG/Code/Lobby/LobbyView.cs`
-
-### refs/backups/20261102-142113-lobby-scene-settings
-
-涵蓋路徑：
-
-- `WebRPG/Assets/WebRPG/Scenes/Main.unity`
-
-### refs/backups/20261102-142709-lobby-member-layout
-
-涵蓋路徑：
-
-- `WebRPG/Assets/WebRPG/Code/Lobby/LobbyPresenter.cs`
-
-### refs/backups/20261102-142908-lobby-layout-test
-
-涵蓋路徑：
-
-- `WebRPG/Assets/WebRPG/Tests/Editor/Lobby/LobbyPrefabTests.cs`
-
-### refs/backups/20261102-143001-lobby-four-player-panel
-
-涵蓋路徑：
-
-- `WebRPG/Assets/WebRPG/Prefabs/LobbyCanvas.prefab`
-- `WebRPG/Assets/WebRPG/Prefabs/LobbyCanvas.prefab.meta`
-
-### refs/backups/20261102-143408-lobby-final-review
-
-涵蓋路徑：
-
-- `WebRPG/Assets/WebRPG/Code/Lobby/LobbyModel.cs`
-- `WebRPG/Assets/WebRPG/Code/Lobby/LobbyPresenter.cs`
-- `WebRPG/Assets/WebRPG/Code/Lobby/LobbyRoomRowView.cs`
-- `WebRPG/Assets/WebRPG/Code/Lobby/LobbyView.cs`
-- `WebRPG/Assets/WebRPG/Code/Lobby/LobbyClientConfiguration.cs`
-- `WebRPG/Assets/WebRPG/Data/LobbyClient.json`
-- `WebRPG/Assets/WebRPG/Code/Bootstrap/Main.cs`
-- `WebRPG/Assets/WebRPG/Code/MainMenu/MainMenuView.cs`
-- `WebRPG/Assets/WebRPG/Code/MainMenu/MainMenuPresenter.cs`
-- `WebRPG/Assets/WebRPG/Tests/Editor/MainMenu/MainMenuPresenterTests.cs`
-- `WebRPGShared/LobbyPacket.cs`
-- `WebRPGServer/Lobby/LobbyOptions.cs`
-- `WebRPGServer/Lobby/LobbyRegistry.cs`
-- `WebRPGServer/Lobby/LobbySocketHelper.cs`
-- `WebRPGServer/Lobby/LobbyHub.cs`
-- `WebRPGServer/appsettings.json`
-- `WebRPGServer/Program.cs`
-- `WebRPGServer.Tests/WebRPGServer.Tests.csproj`
-- `WebRPGServer.Tests/Lobby/LobbyWebSocketTests.cs`
-- `WebRPG/Assets/WebRPG/Tests/Editor/Lobby/LobbyPrefabTests.cs`
-- `WebRPGDocument/MainMenu.md`
-- `WebRPGDocument/Document Directory.md`
-- `WebRPGDocument/CoreGameplay.md`
-- `WebRPGDocument/AdventurePrototype.md`
-- `WebRPGDocument/MultiplayerLobby.md`
-- `WebRPG/Assets/WebRPG/Tests/Editor/Lobby/LobbyPresenterTests.cs`
-- `WebRPG/Assets/WebRPG/Tests/Editor/WebRPG.Tests.Editor.asmdef`
-- `.gitignore`
-- `WebRPG/Assets/Screenshots/lobby-review.png`
-- `WebRPG/Assets/Screenshots/lobby-review.png.meta`
-- `WebRPG/Assets/Screenshots.meta`
-### refs/backups/20261102-143510-lobby-final-build
-
-涵蓋路徑：
-
-- `WebRPG/Assets/Plugins/WebRPGShared.dll`
-- `WebRPG/Assets/Plugins/WebRPGShared.pdb`
-- `WebRPGDocument/MultiplayerLobby.md`
-
-
-## EC2 與 WebGL 部署
-
-- 由既有 `.github/workflows/deploy-server-to-ec2.yml` 部署伺服器，先執行本機 WebSocket 整合測試，再 publish、同步到現有 EC2 並重啟 webrpg。限制 main 且要求部署 revision 為最新 main。
-- EC2 部署後，workflow 透過正式 WSS 端點驗證建立／列出／加入／準備／離開／清理；只操作自己建立的短期驗證房間。
-- 由既有 `.github/workflows/deploy-web-to-firebase.yml` 建置 WebGL 並部署至 Firebase。CI 建置方法驗證正式伺服器目錄，公開版本只顯示可用的安全端點。
-- 觸發命令：`gh workflow run deploy-server-to-ec2.yml --ref main -f confirm_deployment=deploy`，以及 `gh workflow run deploy-web-to-firebase.yml --ref main`。
-- 正式遊戲網址：https://oldshaw-webrpg.com/ 。實際部署結果以對應 GitHub Actions run 為準。
-
-### refs/backups/20261102-145037-ec2-server-selector
-
-新增伺服器選單與遠端驗證前的本機備份；比較基準為 origin/main `40d82a5d0acd3a4cc8f0ec90f6ecafc060d07d76`，涵蓋路徑：
-
-- `WebRPG/Assets/WebRPG/Code/Lobby/LobbyClientConfiguration.cs`
-- `WebRPG/Assets/WebRPG/Data/LobbyClient.json`
-- `WebRPG/Assets/WebRPG/Code/Lobby/LobbyModel.cs`
-- `WebRPG/Assets/WebRPG/Code/Lobby/LobbyView.cs`
-- `WebRPG/Assets/WebRPG/Code/Lobby/LobbyPresenter.cs`
-- `WebRPG/Assets/WebRPG/Code/Bootstrap/Main.cs`
-- `WebRPG/Assets/WebRPG/Tests/Editor/Lobby/LobbyPresenterTests.cs`
-- `WebRPG/Assets/WebRPG/Tests/Editor/Lobby/LobbyPrefabTests.cs`
-- `WebRPG/Assets/WebRPG/Tests/Editor/Lobby/LobbyServerSelectionTests.cs`
-- `WebRPG/Assets/WebRPG/Prefabs/LobbyCanvas.prefab`
-- `WebRPG/Assets/WebRPG/Prefabs/LobbyCanvas.prefab.meta`
-- `WebRPGServer.Tests/Lobby/LobbyWebSocketTests.cs`
-- `WebRPGDocument/MultiplayerLobby.md`
-- `WebRPG/Assets/Plugins/WebRPGShared.dll`
-- `WebRPG/Assets/Plugins/WebRPGShared.pdb`
-### refs/backups/20261102-150430-ec2-deployment-review
-
-部署前的驗證圖片與文件備份，涵蓋路徑：
-
-- `WebRPG/Assets/Screenshots.meta`
-- `WebRPG/Assets/Screenshots/ec2-server-selector.png`
-- `WebRPG/Assets/Screenshots/ec2-server-selector.png.meta`
-- `WebRPG/Assets/Screenshots/ec2-server-selector-final.png`
-- `WebRPG/Assets/Screenshots/ec2-server-selector-final.png.meta`
-- `WebRPGDocument/MultiplayerLobby.md`
-
-驗證圖片移至根目錄已忽略的 artifacts，不納入遊戲資產或提交。
-
-## 多人冒險完成與還原紀錄（2026-11-02）
-
-- 本批實作全員節點投票、共用戰鬥、個人節點與獎勵、領獎等待、戰勝復活、組隊強化、隨機存活目標，以及任一隊員離線時全隊失敗。
-- `dotnet build WebRPG.sln` 通過（0 警告／0 錯誤）；伺服器規則與真實 WebSocket 整合測試通過。Unity EditMode 101 項測試通過，涵蓋兩人／四人獨立模型重播、四人三層通關、隨機存活目標、倒地復活、共用敵人及領獎屏障。
-- Unity Play Mode 以四個獨立 NativeWebSocket 客戶端確認開局、投票、共同戰鬥、手動技能與鎖定、個別領獎等待，以及關閉一個連線後全隊失敗；四端收到相同的敵人生命狀態。已確認幀數持續推進。隨機目標的最後調整另由 EditMode 測試驗證。
-- 驗證截圖位於儲存庫根目錄 `artifacts/multiplayer-validation/`；未新增為遊戲資產。Play Mode 測試客戶端、暫時委派及本機測試伺服器已清理。
-- 共用 DLL/PDB 由建置更新，SHA-256 已確認與 `WebRPGShared/bin/Debug/netstandard2.1/` 對應產物一致；既有字型變更保留。尚未建置或驗證 WebGL 成品，未提交、推送或部署；正式站需成對更新伺服器與客戶端。
-
-### 本批程式備份
-
-Reference：`refs/backups/20261102-1793619821262-complete-multiplayer`
-
-比較與還原基準：本機記錄的 `origin/main`，`d94eea222bf92f31d3afff15235b876f7c68fdf4`。
-
-涵蓋以下原有未推送變更（包含本批接續的未追蹤多人腳本），未包含字型：
-
-- `WebRPG/Assets/Plugins/WebRPGShared.dll`
-- `WebRPG/Assets/Plugins/WebRPGShared.pdb`
-- `WebRPG/Assets/WebRPG/Code/Adventure/AdventureBattleModel.cs`
-- `WebRPG/Assets/WebRPG/Code/Adventure/AdventureModel.cs`
-- `WebRPG/Assets/WebRPG/Code/Adventure/AdventurePresenter.cs`
-- `WebRPG/Assets/WebRPG/Code/Adventure/AdventureView.cs`
-- `WebRPG/Assets/WebRPG/Code/Adventure/MultiplayerAdventureSession.cs`
-- `WebRPG/Assets/WebRPG/Code/Adventure/MultiplayerAdventureSession.cs.meta`
-- `WebRPG/Assets/WebRPG/Code/Bootstrap/Main.cs`
-- `WebRPG/Assets/WebRPG/Code/Lobby/LobbyModel.cs`
-- `WebRPG/Assets/WebRPG/Code/Lobby/LobbyPresenter.cs`
-- `WebRPG/Assets/WebRPG/Tests/Editor/Lobby/LobbyPresenterTests.cs`
-- `WebRPGDocument/MultiplayerLobby.md`
-- `WebRPGServer/Lobby/LobbyHub.cs`
-- `WebRPGServer/Lobby/LobbyRegistry.cs`
-- `WebRPGShared/LobbyPacket.cs`
-- `WebRPGShared/AdventurePacket.cs`
-
-`AdventureConfiguration.cs`、`AdventurePrototype.json`、伺服器測試 `Program.cs` 及本批其餘既有文件在修改前相對上述基準沒有未推送變更，記錄該基準而未另建備份；本批新增檔案原先不存在。備份使用獨立 Git index，沒有改動原暫存區。Reference 的父提交另保留涵蓋路徑的原暫存狀態。
-
-僅在使用者要求還原時，針對指定路徑執行：
-
-```powershell
-git restore --source=refs/backups/20261102-1793619821262-complete-multiplayer --worktree -- "<指定路徑>"
-```
-
-若使用者也要求還原該路徑原暫存狀態，可另使用此 reference 的父提交作為 `--staged` 來源；不處理無關路徑。本批未執行還原，亦未刪除備份。
-
-### 驗證截圖搬移前備份
-
-Reference：`refs/backups/20261102-1793621335787-multiplayer-captures`。基準同上；涵蓋工具自動產生的下列路徑：
-
-- `WebRPG/Assets/artifacts.meta`
-- `WebRPG/Assets/artifacts/multiplayer-playmode-20261102.png`
-- `WebRPG/Assets/artifacts/multiplayer-playmode-20261102.png.meta`
-- `WebRPG/Assets/artifacts/multiplayer-battle-20261102.png`
-- `WebRPG/Assets/artifacts/multiplayer-battle-20261102.png.meta`
-
-圖片及 metadata 已移至根目錄的驗證產物目錄，原 Assets/artifacts 空資料夾已移除。只需要還原指定截圖時，可使用上方相同的 `git restore` 方式，將來源換成此 reference 並指定完整圖片路徑。
