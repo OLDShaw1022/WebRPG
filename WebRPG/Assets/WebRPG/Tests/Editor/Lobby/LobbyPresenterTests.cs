@@ -16,11 +16,7 @@ namespace WebRPG.Tests
             int backs = 0;
             using (LobbyPresenter presenter = new LobbyPresenter(model, view, () => backs++))
             {
-                Assert.That(view.SelectedServerIndex, Is.Zero);
-                view.SelectedServerIndex = 1;
-                view.Connect();
-                Assert.That(model.ServerIndex, Is.EqualTo(1));
-                Assert.That(model.Username, Is.EqualTo("Player"));
+                Assert.That(model.ConnectCalls, Is.EqualTo(1));
                 view.Create();
                 Assert.That(model.Last.Type, Is.EqualTo(LobbyPacketType.CreateRoom));
                 Assert.That(model.Last.RoomName, Is.EqualTo("Room"));
@@ -54,7 +50,7 @@ namespace WebRPG.Tests
         }
 
         [Test]
-        public void DisconnectedStateClearsRoomAndRetainsReconnectControls()
+        public void DisconnectedStateClearsRoomWithoutAutomaticallyRetrying()
         {
             TestLobbyModel model = new TestLobbyModel();
             TestLobbyView view = new TestLobbyView();
@@ -64,6 +60,7 @@ namespace WebRPG.Tests
                 model.Room = null;
                 model.Notify();
                 Assert.That(view.Screen.Connected, Is.False);
+                Assert.That(model.ConnectCalls, Is.EqualTo(1));
                 Assert.That(view.Screen.InRoom, Is.False);
                 Assert.That(view.Screen.Members, Does.Contain("尚未加入"));
             }
@@ -75,8 +72,6 @@ namespace WebRPG.Tests
     {
         public event Action Changed;
         public event Action<AdventurePacket> AdventureReceived;
-        public string[] ServerNames => new[] { "AWS EC2", "本機測試" };
-        public int DefaultServerIndex => 0;
         public bool IsConnected { get; set; } = true;
         public bool IsBusy => false;
         public string PlayerId => "self";
@@ -84,13 +79,11 @@ namespace WebRPG.Tests
         public LobbyRoomSnapshot Room { get; set; }
         public LobbyRoomSummary[] Rooms => Array.Empty<LobbyRoomSummary>();
         public LobbyPacket Last;
-        public string Username;
-        public int ServerIndex;
+        public int ConnectCalls;
         public void Notify() => Changed?.Invoke();
-        public Awaitable ConnectAsync(int serverIndex, string username)
+        public Awaitable ConnectAsync()
         {
-            ServerIndex = serverIndex;
-            Username = username;
+            ConnectCalls++;
             AwaitableCompletionSource source = new AwaitableCompletionSource();
             source.SetResult();
             return source.Awaitable;
@@ -114,7 +107,6 @@ namespace WebRPG.Tests
     // 模擬大廳操作並保存最後一次呈現資料。
     internal sealed class TestLobbyView : ILobbyView
     {
-        public event Action<int, string> ConnectRequested;
         public event Action<string, bool> CreateRequested;
         public event Action<string> JoinRequested;
         public event Action RefreshRequested;
@@ -122,10 +114,7 @@ namespace WebRPG.Tests
         public event Action ReadyRequested;
         public event Action BackRequested;
         public LobbyScreenModel Screen;
-        public int SelectedServerIndex;
-        public void ConfigureServers(string[] names, int defaultServerIndex) => SelectedServerIndex = defaultServerIndex;
         public void Render(LobbyScreenModel screen) => Screen = screen;
-        public void Connect() => ConnectRequested?.Invoke(SelectedServerIndex, "Player");
         public void Create() => CreateRequested?.Invoke("Room", true);
         public void Join() => JoinRequested?.Invoke(" room-id ");
         public void Refresh() => RefreshRequested?.Invoke();

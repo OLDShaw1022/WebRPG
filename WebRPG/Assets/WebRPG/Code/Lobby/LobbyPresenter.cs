@@ -7,8 +7,6 @@ namespace WebRPG
     // 定義大廳畫面的操作與呈現介面。
     public interface ILobbyView
     {
-        public event Action<int, string> ConnectRequested;
-        public void ConfigureServers(string[] names, int defaultServerIndex);
         public event Action<string, bool> CreateRequested;
         public event Action<string> JoinRequested;
         public event Action RefreshRequested;
@@ -56,15 +54,14 @@ namespace WebRPG
             _view = view ?? throw new ArgumentNullException(nameof(view));
             _back = back ?? throw new ArgumentNullException(nameof(back));
             _model.Changed += Refresh;
-            _view.ConnectRequested += Connect;
             _view.CreateRequested += Create;
             _view.JoinRequested += Join;
             _view.RefreshRequested += List;
             _view.LeaveRequested += Leave;
             _view.ReadyRequested += Ready;
             _view.BackRequested += Back;
-            _view.ConfigureServers(_model.ServerNames, _model.DefaultServerIndex);
             Refresh();
+            _model.ConnectAsync().Forget();
         }
 
         public void Dispose()
@@ -72,7 +69,6 @@ namespace WebRPG
             if (_disposed) return;
             _disposed = true;
             _model.Changed -= Refresh;
-            _view.ConnectRequested -= Connect;
             _view.CreateRequested -= Create;
             _view.JoinRequested -= Join;
             _view.RefreshRequested -= List;
@@ -81,7 +77,6 @@ namespace WebRPG
             _view.BackRequested -= Back;
         }
 
-        private void Connect(int serverIndex, string username) => _model.ConnectAsync(serverIndex, username).Forget();
         private void Create(string name, bool isPublic) =>
             _model.SendAsync(new LobbyPacket { Type = LobbyPacketType.CreateRoom, RoomName = name, IsPublic = isPublic }).Forget();
         private void Join(string roomId) =>

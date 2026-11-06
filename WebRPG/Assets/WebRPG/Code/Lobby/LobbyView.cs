@@ -14,12 +14,10 @@ namespace WebRPG
         [SerializeField] private RoomChatView _roomChat;
         public RoomChatView RoomChat => _roomChat;
 
-        [SerializeField] private TMP_Dropdown _serverDropdown;
         [SerializeField] private TMP_InputField _username;
         [SerializeField] private TMP_InputField _roomName;
         [SerializeField] private TMP_InputField _roomId;
         [SerializeField] private UnityEngine.UI.Toggle _publicToggle;
-        [SerializeField] private UnityEngine.UI.Button _connectButton;
         [SerializeField] private UnityEngine.UI.Button _createButton;
         [SerializeField] private UnityEngine.UI.Button _joinButton;
         [SerializeField] private UnityEngine.UI.Button _refreshButton;
@@ -32,8 +30,6 @@ namespace WebRPG
         [SerializeField] private RectTransform _rooms;
         [SerializeField] private LobbyRoomRowView _roomTemplate;
         private readonly List<LobbyRoomRowView> _rows = new List<LobbyRoomRowView>();
-        private bool _hasAccount;
-        public event Action<int, string> ConnectRequested;
         public event Action<string, bool> CreateRequested;
         public event Action<string> JoinRequested;
         public event Action RefreshRequested;
@@ -43,7 +39,6 @@ namespace WebRPG
 
         private void Awake()
         {
-            _connectButton.onClick.AddListener(Connect);
             _createButton.onClick.AddListener(Create);
             _joinButton.onClick.AddListener(Join);
             _refreshButton.onClick.AddListener(Refresh);
@@ -55,14 +50,6 @@ namespace WebRPG
             _members.richText = false;
         }
 
-        public void ConfigureServers(string[] names, int defaultServerIndex)
-        {
-            _serverDropdown.ClearOptions();
-            _serverDropdown.AddOptions(new List<string>(names));
-            if (!_hasAccount) _serverDropdown.SetValueWithoutNotify(defaultServerIndex);
-            _serverDropdown.RefreshShownValue();
-        }
-
         public void Render(LobbyScreenModel screen)
         {
             if (_browsePage) _browsePage.SetActive(!screen.InRoom);
@@ -71,9 +58,6 @@ namespace WebRPG
             _members.text = screen.Members;
             _readyLabel.text = screen.ReadyLabel;
             bool available = screen.Connected && !screen.Busy;
-            _serverDropdown.interactable = !_hasAccount && !screen.Connected && !screen.Busy;
-            _username.interactable = !_hasAccount && !screen.Connected && !screen.Busy;
-            _connectButton.interactable = !screen.Connected && !screen.Busy;
             _createButton.interactable = available && !screen.InRoom;
             _joinButton.interactable = available && !screen.InRoom;
             _roomName.interactable = available && !screen.InRoom;
@@ -92,13 +76,9 @@ namespace WebRPG
             }
         }
 
-        private void Connect() => ConnectRequested?.Invoke(_serverDropdown.value, _username.text);
-        public void SetAccount(string username, int serverIndex)
+        public void SetAccount(string username)
         {
-            _hasAccount = true;
             _username.text = username;
-            _serverDropdown.SetValueWithoutNotify(serverIndex);
-            _serverDropdown.interactable = false;
             _username.interactable = false;
         }
         private void Create() => CreateRequested?.Invoke(_roomName.text, _publicToggle.isOn);

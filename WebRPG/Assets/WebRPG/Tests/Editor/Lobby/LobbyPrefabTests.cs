@@ -50,7 +50,7 @@ namespace WebRPG.Tests
             Component view = prefab.GetComponent("LobbyView");
             Assert.That(view, Is.Not.Null);
             SerializedObject serialized = new SerializedObject(view);
-            foreach (string field in new[] { "_username", "_roomName", "_roomId", "_connectButton",
+            foreach (string field in new[] { "_username", "_roomName", "_roomId",
                 "_createButton", "_joinButton", "_refreshButton", "_leaveButton", "_readyButton",
                 "_backButton", "_status", "_members", "_rooms", "_publicToggle", "_browsePage", "_roomPage", "_roomChat" })
                 Assert.That(serialized.FindProperty(field).objectReferenceValue, Is.Not.Null, field);

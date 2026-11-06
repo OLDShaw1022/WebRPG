@@ -3,7 +3,6 @@ using System.Reflection;
 using WebRPGShared;
 using NUnit.Framework;
 using Newtonsoft.Json;
-using TMPro;
 using UnityEditor;
 using UnityEngine;
 
@@ -30,11 +29,10 @@ namespace WebRPG.Tests
                 configuration.Servers[0],
                 new LobbyServerConfiguration { Id = "local", Name = "本機測試", Url = "ws://localhost:8080/ws?channel=lobby", EditorOnly = true }
             };
-            LobbyModel player = new LobbyModel(configuration);
-            LobbyModel editor = new LobbyModel(configuration, true);
-            Assert.That(player.ServerNames, Is.EqualTo(new[] { "AWS EC2" }));
-            Assert.That(editor.ServerNames.Length, Is.EqualTo(2));
-            Assert.That(player.DefaultServerIndex, Is.Zero);
+            LobbyServerConfiguration[] playerServers = configuration.GetAvailableServers(false);
+            Assert.That(playerServers.Length, Is.EqualTo(1));
+            Assert.That(playerServers[0].Id, Is.EqualTo(configuration.DefaultServerId));
+            Assert.That(configuration.GetAvailableServers(true).Length, Is.EqualTo(2));
             configuration.Servers[0].Url = "ws://example.com/ws?channel=lobby";
             Assert.Throws<System.InvalidOperationException>(configuration.Validate);
         }
@@ -127,15 +125,14 @@ namespace WebRPG.Tests
         }
 
         [Test]
-        public void LobbyUsesServerDropdownInsteadOfAddressInput()
+        public void LobbyOmitsManualConnectionControls()
         {
             LobbyView view = AssetDatabase.LoadAssetAtPath<LobbyView>("Assets/WebRPG/Prefabs/LobbyCanvas.prefab");
-            SerializedObject serialized = new SerializedObject(view);
-            SerializedProperty dropdown = serialized.FindProperty("_serverDropdown");
-            Assert.That(dropdown, Is.Not.Null, "尚未實作伺服器選擇清單");
-            Assert.That(dropdown.objectReferenceValue, Is.InstanceOf<TMP_Dropdown>());
-            Assert.That(serialized.FindProperty("_serverUrl"), Is.Null);
-            Assert.That(view.transform.Find("Lobby/ServerUrl"), Is.Null);
+            Transform browsePage = view.transform.Find("Lobby/BrowsePage");
+            Assert.That(browsePage, Is.Not.Null);
+            Assert.That(browsePage.Find("ServerDropdown"), Is.Null);
+            Assert.That(browsePage.Find("ServerLabel"), Is.Null);
+            Assert.That(browsePage.Find("Connect"), Is.Null);
         }
     }
 }

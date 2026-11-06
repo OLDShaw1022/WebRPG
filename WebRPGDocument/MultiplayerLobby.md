@@ -7,20 +7,20 @@
 
 ## 規則
 
-- 1：先完成[帳號登入](Accounts.md)，從主選單選擇「多人遊玩」後先進入大廳瀏覽頁，沿用登入伺服器與使用者名稱並連線；PlayerId 使用伺服器驗證後的固定帳號 ID，名稱允許重複，不能從大廳改名或切換伺服器。
+- 1：先完成[帳號登入](Accounts.md)，從主選單選擇「多人遊玩」後先進入大廳瀏覽頁，沿用登入伺服器與使用者名稱自動連線；PlayerId 使用伺服器驗證後的固定帳號 ID，名稱允許重複，不能從大廳改名或切換伺服器。
 - 2：大廳瀏覽頁提供公開房間列表、建立房間、依房間 ID 加入及返回主選單。建立者自動加入並擔任隊長。建立或加入成功後切換至房間頁；失敗時留在大廳瀏覽頁並顯示原因。房名為 1～40 個字元；每人同時只能加入一間房。
 - 3：公開列表顯示房名與目前／上限人數，可直接點選加入；私人房間不列出，知道完整房間 ID 的玩家仍可加入。私人房間不提供密碼保護。
 - 4：房間容量由伺服器 JSON 設定，協定允許 1～4 人，預設為 4。滿房及重複加入由伺服器拒絕，不信任用戶端提供的玩家識別碼。
 - 5：房間頁顯示目前房間的名稱、ID、成員、隊長與準備狀態，並提供準備／取消準備及離房。伺服器向所有大廳連線推播公開列表，並向各連線提供自己房間的完整快照。全員準備後由隊長按開始進入共同冒險。
 - 6：離開、返回主選單或伺服器偵測到連線中斷時，移除成員；空房刪除。離房成功後回到大廳瀏覽頁並更新列表。隊長離開時由加入最早的剩餘成員接任；進行中的冒險仍依下列規則全隊失敗。重新加入時準備狀態為未準備。
-- 7：客戶端斷線或要求逾時會清空本機房間狀態，回到大廳瀏覽頁並顯示重新連線入口；不自動恢復房間。伺服器重啟後，記憶體中的房間全部清空。
+- 7：客戶端斷線或要求逾時會清空本機房間狀態並回到大廳瀏覽頁。連線失敗或斷線時，可返回主選單再選擇「多人遊玩」重試。重新連線後須重新加入房間。伺服器重啟後，記憶體中的房間全部清空。
 - 8：房間操作由伺服器序列化處理，避免同時加入超過容量；格式錯誤、不支援操作、過大訊息均回覆 Error。
 - 9：固定 UI 保存在 LobbyCanvas.prefab，公開列表由 RoomTemplate 動態生成；Main 組裝 Model、View、Presenter 並管理釋放。玩家提供的文字不解析 TMP rich text。
 - 10：房間頁的紀錄區（Log）可垂直捲動，顯示成員加入、離開等房內事件及同房聊天，底部提供文字輸入與送出。進入冒險後，可在冒險紀錄區繼續同一房間的聊天；訊息生命週期依[房間聊天](RoomChat.md)。
 
 ## 設定與連線
 
-- [LobbyClient.json](../WebRPG/Assets/WebRPG/Data/LobbyClient.json)：以 DefaultServerId 指定預設伺服器，Servers 陣列設定 Id、Name、Url、EditorOnly。預設為 AWS EC2，透過 `wss://ws.oldshaw-webrpg.com/ws?channel=lobby` 連線；遊戲頁面使用 `https://oldshaw-webrpg.com`，帳號 API 使用 ws 子網域並允許指定遊戲來源的 Cookie 要求，詳見[帳號登入](Accounts.md)的部署要求；本機測試只在 Editor 顯示。RequestTimeoutSeconds 預設為 10 秒。畫面使用 TMP_Dropdown，不提供網址輸入。非 Editor 選項必須使用 wss。
+- [LobbyClient.json](../WebRPG/Assets/WebRPG/Data/LobbyClient.json)：以 DefaultServerId 指定預設伺服器，Servers 陣列設定 Id、Name、Url、EditorOnly。預設為 AWS EC2，透過 `wss://ws.oldshaw-webrpg.com/ws?channel=lobby` 連線；遊戲頁面使用 `https://oldshaw-webrpg.com`，帳號 API 使用 ws 子網域並允許指定遊戲來源的 Cookie 要求，詳見[帳號登入](Accounts.md)的部署要求；本機測試只在 Editor 顯示。RequestTimeoutSeconds 預設為 10 秒。登入畫面使用 TMP_Dropdown 選擇伺服器。非 Editor 選項必須使用 wss。
 - [appsettings.json](../WebRPGServer/appsettings.json)：Lobby.RoomCapacity、MaximumRooms、MaximumConnections、SendTimeoutSeconds，預設分別為 4、100、256、3。均為本批原型設定。
 - `/ws?channel=lobby` 使用 LobbyPacket，包含房間聊天。舊獨立聊天分流已停用。部署時須轉送 query string。公開網站使用時應配置對應的 wss 位址。
 - 要求類型為 Hello、ListRooms、CreateRoom、JoinRoom、LeaveRoom、SetReady；回應為 Welcome、State 或 Error。RequestId 配對要求與回應，無 RequestId 的 State 為推播。
@@ -29,7 +29,7 @@
 ## 驗收與操作
 
 1. 在儲存庫根目錄執行 `dotnet run --project WebRPGServer --no-launch-profile`，預設 PORT 為 8080。
-2. Unity 開啟 Main 場景並播放，選擇已部署帳號 API 的伺服器並完成註冊／登入，再選擇「多人遊玩」連線；多人驗證使用不同帳號，可有相同使用者名稱。原匿名正式伺服器需配套升級後才能使用新版客戶端。
+2. Unity 開啟 Main 場景並播放，選擇已部署帳號 API 的伺服器並完成註冊／登入，再選擇「多人遊玩」，確認大廳自動連上同一伺服器；多人驗證使用不同帳號，可有相同使用者名稱。原匿名正式伺服器需配套升級後才能使用新版客戶端。
 3. 進入多人模式先顯示大廳瀏覽頁。建立公開房間後，其他客戶端可從列表加入。建立或加入成功才顯示房間頁與紀錄區；第 5 人加入預設容量 4 人的房間時被拒絕，仍停留在大廳瀏覽頁。
 4. 切換準備狀態，其他房內成員同步顯示。同房玩家可在紀錄區收發聊天並辨識加入或離開事件。離房後回到更新過的大廳列表；重新加入時不顯示上次連線的聊天。
 5. 返回主選單後可再次進入大廳，亦可開始既有單人冒險。

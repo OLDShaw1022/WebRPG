@@ -223,9 +223,9 @@ namespace WebRPG
                 _lobbyView = Instantiate(_lobbyViewPrefab);
                 _lobbyModel = new LobbyModel(configuration, Application.isEditor, _accountModel);
                 _lobbyModel.AdventureReceived += HandleAdventurePacket;
+                _lobbyView.SetAccount(_accountModel.Username);
                 _lobbyPresenter = new LobbyPresenter(_lobbyModel, _lobbyView, ReturnFromLobby);
                 _lobbyChatPresenter = new RoomChatPresenter(_lobbyModel, _lobbyView.RoomChat);
-                _lobbyView.SetAccount(_accountModel.Username, _accountModel.ServerIndex);
                 return true;
             }
             catch (Exception exception)

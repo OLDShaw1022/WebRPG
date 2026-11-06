@@ -13,15 +13,13 @@ namespace WebRPG
     {
         public event Action Changed;
         public event Action<AdventurePacket> AdventureReceived;
-        public string[] ServerNames { get; }
-        public int DefaultServerIndex { get; }
         public bool IsConnected { get; }
         public bool IsBusy { get; }
         public string PlayerId { get; }
         public string Status { get; }
         public LobbyRoomSnapshot Room { get; }
         public LobbyRoomSummary[] Rooms { get; }
-        public Awaitable ConnectAsync(int serverIndex, string username);
+        public Awaitable ConnectAsync();
         public Awaitable SendAsync(LobbyPacket packet);
         public Awaitable SendAdventureAsync(AdventurePacket packet);
     }
@@ -31,14 +29,14 @@ namespace WebRPG
     {
         private const string ConnectingMessage = "正在連線…";
         private const string ConnectedMessage = "已連線，可建立或加入房間。";
-        private const string DisconnectedMessage = "連線已中斷，請重新連線。";
-        private const string InitialMessage = "請輸入玩家名稱並連線。";
-        private const string ConnectionFailedFormat = "連線失敗：{0}";
+        private const string DisconnectedMessage = "連線已中斷，請返回主選單後重新進入大廳。";
+        private const string InitialMessage = "準備連線…";
+        private const string ConnectionFailedFormat = "連線失敗：{0}。請返回主選單後重新進入大廳。";
         private const string InvalidPacketMessage = "伺服器回應格式錯誤。";
         private const string InvalidNameMessage = "玩家名稱須為 1～24 個字元。";
-        private const string InvalidServerMessage = "請選擇有效的伺服器。";
+        private const string InvalidServerMessage = "登入伺服器設定無效。請重新登入。";
         private const string PendingMessage = "正在等待伺服器回應…";
-        private const string TimeoutMessage = "伺服器回應逾時，請重新連線。";
+        private const string TimeoutMessage = "伺服器回應逾時，請返回主選單後重新進入大廳。";
         private readonly LobbyServerConfiguration[] _servers;
         private readonly float _requestTimeoutSeconds;
         private readonly AccountModel _account;
@@ -73,8 +71,6 @@ namespace WebRPG
         private float _pendingTime;
         public event Action Changed;
         public event Action<AdventurePacket> AdventureReceived;
-        public string[] ServerNames { get; }
-        public int DefaultServerIndex { get; }
         public bool IsConnected { get; private set; }
         public bool IsBusy { get; private set; }
         public string PlayerId { get; private set; } = string.Empty;
@@ -88,24 +84,19 @@ namespace WebRPG
             _account = account;
             _requestTimeoutSeconds = configuration.RequestTimeoutSeconds;
             _servers = configuration.GetAvailableServers(includeEditorServers);
-            ServerNames = _servers.Select(server => server.Name).ToArray();
-            DefaultServerIndex = Array.FindIndex(_servers, server => server.Id == configuration.DefaultServerId);
         }
 
-        public async Awaitable ConnectAsync(int serverIndex, string username)
+        public async Awaitable ConnectAsync()
         {
             if (_disposed || IsBusy || IsConnected) return;
-            if (_account != null)
+            if (_account == null || !_account.IsLoggedIn)
             {
-                if (!_account.IsLoggedIn || serverIndex != _account.ServerIndex)
-                {
-                    Status = AuthenticationRequiredMessage;
-                    Changed?.Invoke();
-                    return;
-                }
-                username = _account.Username;
+                Status = AuthenticationRequiredMessage;
+                Changed?.Invoke();
+                return;
             }
-            string name = username?.Trim() ?? string.Empty;
+            int serverIndex = _account.ServerIndex;
+            string name = _account.Username.Trim();
             if (name.Length == 0 || name.Length > LobbyPacketLimits.UsernameLength)
             {
                 Status = InvalidNameMessage;

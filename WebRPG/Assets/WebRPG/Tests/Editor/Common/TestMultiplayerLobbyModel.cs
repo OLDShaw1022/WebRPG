@@ -10,8 +10,6 @@ namespace WebRPG.Tests
     {
         public event Action Changed;
         public event Action<AdventurePacket> AdventureReceived;
-        public string[] ServerNames => Array.Empty<string>();
-        public int DefaultServerIndex => 0;
         public bool IsConnected { get; set; } = true;
         public bool IsBusy => false;
         public string PlayerId { get; set; }
@@ -21,7 +19,7 @@ namespace WebRPG.Tests
         public List<AdventurePacket> Sent { get; } = new List<AdventurePacket>();
         public void Emit(AdventurePacket packet) => AdventureReceived?.Invoke(packet);
         public void Notify() => Changed?.Invoke();
-        public Awaitable ConnectAsync(int serverIndex, string username) => TestAwaitableHelper.Complete();
+        public Awaitable ConnectAsync() => TestAwaitableHelper.Complete();
         public Awaitable SendAsync(LobbyPacket packet) => TestAwaitableHelper.Complete();
         public Awaitable SendAdventureAsync(AdventurePacket packet)
         {
