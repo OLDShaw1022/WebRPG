@@ -26,19 +26,18 @@
 ### UI 基礎色票
 
 - 適用範圍：`WebRPG/Assets/WebRPG/` 內新增或調整的 UI 配色。
-- 來源：[ChatRoomCanvas prefab](../WebRPG/Assets/WebRPG/Prefabs/ChatRoomCanvas.prefab) 的背景、文字與互動狀態，以及其引用的 [FantasyUIFrame prefab](../WebRPG/Assets/WebRPG/Prefabs/FantasyUIFrame.prefab) 框線。
-- 下表記錄序列化設定的基礎色碼，共 8 色，Alpha 均為 1；色數計算依規則 10。
+- 下表列出 UI 的基礎色碼，共 8 色，Alpha 均為 1；色數計算依規則 10。
 
-| 用途 | HEX | RGB（0～255） | 來源對應 |
-| --- | --- | --- | --- |
-| 全域底色、按下底色 | `#0A0D12` | 10, 13, 18 | Backdrop、TopBar、SideBar、Pressed |
-| 內嵌區域、停用底色 | `#12141A` | 18, 20, 26 | ChatRoomFrame、MessageArea、Disabled |
-| 面板底色 | `#1A1F26` | 26, 31, 38 | LoginPanel、ChatPanel |
-| 控制項一般底色 | `#292E38` | 41, 46, 56 | Button／InputField 的 Normal、LogoMark |
-| 指向底色、目前聊天導覽項目底色 | `#3D4552` | 61, 69, 82 | Highlighted、ChatNavigationButton 的 Normal |
-| 細框、選取狀態、輸入文字選取背景 | `#737373` | 115, 115, 115 | FantasyUIFrame、Outline、Selected、SelectionColor |
-| 次要文字、欄位標籤與提示 | `#B3B8C2` | 179, 184, 194 | SidebarTitle、UsernameLabel、Placeholder、ChannelStatus |
-| 主要文字、標題與輸入游標 | `#FFFFFF` | 255, 255, 255 | MainTitle、ChannelTitle、數值文字、CaretColor |
+| 用途 | HEX | RGB（0～255） |
+| --- | --- | --- |
+| 全域底色、按下底色 | `#0A0D12` | 10, 13, 18 |
+| 內嵌區域、停用底色 | `#12141A` | 18, 20, 26 |
+| 面板底色 | `#1A1F26` | 26, 31, 38 |
+| 控制項一般底色 | `#292E38` | 41, 46, 56 |
+| 指向底色 | `#3D4552` | 61, 69, 82 |
+| 細框、選取狀態、輸入文字選取背景 | `#737373` | 115, 115, 115 |
+| 次要文字、欄位標籤與提示 | `#B3B8C2` | 179, 184, 194 |
+| 主要文字、標題與輸入游標 | `#FFFFFF` | 255, 255, 255 |
 
 - 此色票定義 UI 基礎用途；生命、品質、陣營與彩色強調資訊的語意仍待確認。
 - 此色票已用滿規則 10 的色數額度；一般新增強調色仍須提出替換方案。使用者指定的例外：僅 WebRPG/Assets/WebRPG/Prefabs/AdventureCanvas.prefab 鎖定目標框可額外使用 #E05B65，並顯示「鎖定」文字；不更動其他既有色票，也不將此色用於生命或陣營。
