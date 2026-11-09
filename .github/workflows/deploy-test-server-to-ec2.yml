@@ -1,0 +1,104 @@
+name: Deploy WebRPG test server to EC2
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_deployment:
+        description: Type deploy to publish to the test server
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: webrpg-test-server-ec2
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main' && inputs.confirm_deployment == 'deploy'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Run server tests
+        run: dotnet test WebRPGServer.Tests/WebRPGServer.Tests.csproj
+
+      - name: Publish test server
+        run: dotnet publish WebRPGServer/WebRPGServer.csproj --configuration Release --runtime linux-x64 --self-contained true --output publish
+
+      - name: Require latest main commit
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data } = await github.rest.git.getRef({
+              ...context.repo,
+              ref: 'heads/main'
+            });
+            if (data.object.sha !== context.sha) {
+              core.setFailed('This commit is no longer the latest main commit. Deployment skipped.');
+            }
+
+      - name: Deploy and verify test server
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+          EC2_SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+        run: |
+          install -m 700 -d ~/.ssh
+          install -m 600 /dev/null ~/.ssh/webrpg-test
+          printf '%s\n' "$EC2_SSH_PRIVATE_KEY" > ~/.ssh/webrpg-test
+          ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts
+          ssh_options=(-i "$HOME/.ssh/webrpg-test" -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes)
+          host="$EC2_USER@$EC2_HOST"
+          stage=$(ssh "${ssh_options[@]}" "$host" 'mktemp -d /home/ec2-user/myserver-test.deploy.XXXXXXXX')
+          [[ "$stage" =~ ^/home/ec2-user/myserver-test\.deploy\.[[:alnum:]]{8}$ ]]
+          rsync -azc -e "ssh ${ssh_options[*]}" publish/ "$host:$stage/"
+          ssh "${ssh_options[@]}" "$host" bash -s -- "$stage" <<'REMOTE'
+          set -euo pipefail
+          stage=$1
+          live=/home/ec2-user/myserver-test
+          previous="$stage.previous"
+          test -x "$stage/WebRPGServer"
+          test "$(systemctl show webrpg-test --property=WorkingDirectory --value)" = "$live"
+          test -d "$live"
+
+          mv -- "$live" "$previous"
+          rollback() {
+            if [[ -d "$live" ]]; then
+              mv -- "$live" "$stage"
+            fi
+            mv -- "$previous" "$live"
+            sudo -n systemctl restart webrpg-test
+          }
+          trap rollback ERR
+          mv -- "$stage" "$live"
+          sudo -n systemctl restart webrpg-test
+          for attempt in {1..15}; do
+            if curl --silent --output /dev/null --max-time 2 http://127.0.0.1:8081/; then
+              break
+            fi
+            sleep 1
+          done
+          curl --silent --show-error --output /dev/null --max-time 2 http://127.0.0.1:8081/
+          sudo -n systemctl is-active --quiet webrpg-test
+          trap - ERR
+          rm -rf -- "$previous"
+          REMOTE
+
+      - name: Verify public test account API
+        run: |
+          headers=$(curl --fail --silent --show-error --max-time 15 --dump-header - --output /dev/null \
+            -X OPTIONS -H 'Origin: https://test.oldshaw-webrpg.com' \
+            -H 'Access-Control-Request-Method: POST' \
+            https://ws-test.oldshaw-webrpg.com/api/accounts/login)
+          printf '%s\n' "$headers" | tr -d '\r' |
+            grep -iFx 'Access-Control-Allow-Origin: https://test.oldshaw-webrpg.com'
