@@ -15,6 +15,12 @@ namespace WebRPG
 
         [SerializeField] private UnityEngine.UI.Button _multiplayerButton;
         [SerializeField] private UnityEngine.UI.Button _logoutButton;
+        [SerializeField] private GameObject _menu;
+        [SerializeField] private UnityEngine.UI.Button _shopButton;
+        [SerializeField] private ShopView _shop;
+
+        public ShopView Shop => _shop;
+        public event Action ShopRequested;
         public event Action LogoutRequested;
 
         [SerializeField]
@@ -37,11 +43,13 @@ namespace WebRPG
             _singlePlayerButton.onClick.AddListener(HandleSinglePlayerRequested);
             _multiplayerButton.onClick.AddListener(HandleMultiplayerRequested);
             _quitButton.onClick.AddListener(HandleQuitRequested);
+            if (_shopButton) _shopButton.onClick.AddListener(HandleShopRequested);
             if (_logoutButton) _logoutButton.onClick.AddListener(HandleLogoutRequested);
         }
 
         private void OnDestroy()
         {
+            if (_shopButton) _shopButton.onClick.RemoveListener(HandleShopRequested);
             if (_logoutButton) _logoutButton.onClick.RemoveListener(HandleLogoutRequested);
             if (_multiplayerButton) _multiplayerButton.onClick.RemoveListener(HandleMultiplayerRequested);
             if (_singlePlayerButton)
@@ -54,6 +62,14 @@ namespace WebRPG
                 _quitButton.onClick.RemoveListener(HandleQuitRequested);
             }
         }
+
+        public void ShowShop(bool visible)
+        {
+            _menu.SetActive(!visible);
+            _shop.gameObject.SetActive(visible);
+        }
+
+        private void HandleShopRequested() => ShopRequested?.Invoke();
 
         public void Hide()
         {

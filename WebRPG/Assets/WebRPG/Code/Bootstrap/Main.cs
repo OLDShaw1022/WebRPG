@@ -49,6 +49,7 @@ namespace WebRPG
 
         private MainMenuView _mainMenuView;
         private MainMenuPresenter _mainMenuPresenter;
+        private ShopPresenter _shopPresenter;
 
         private void Awake()
         {
@@ -74,6 +75,8 @@ namespace WebRPG
             LobbyClientConfiguration accountConfiguration =
                 JsonConvert.DeserializeObject<LobbyClientConfiguration>(_lobbyConfiguration.text);
             _accountModel = new AccountModel(accountConfiguration, Application.isEditor);
+            _shopPresenter = new ShopPresenter(new ShopModel(_accountModel), _mainMenuView);
+            _mainMenuView.ShopRequested += OpenShop;
             _accountView = Instantiate(_accountViewPrefab);
             _accountPresenter = new AccountPresenter(_accountModel, _accountView, ShowAuthenticatedMenu);
             _accountPresenter.RestoreAsync(_accountModel.DefaultServerIndex).Forget();
@@ -91,7 +94,12 @@ namespace WebRPG
             _accountPresenter?.Dispose();
             _accountModel?.Dispose();
             if (_accountView) Destroy(_accountView.gameObject);
-            if (_mainMenuView) _mainMenuView.LogoutRequested -= Logout;
+            _shopPresenter?.Dispose();
+            if (_mainMenuView)
+            {
+                _mainMenuView.LogoutRequested -= Logout;
+                _mainMenuView.ShopRequested -= OpenShop;
+            }
             DisposeLobby();
             DisposeAdventure();
             _mainMenuPresenter?.Dispose();
@@ -287,6 +295,11 @@ namespace WebRPG
             _mainMenuView.ShowMessage(string.Format(LoggedInFormat, _accountModel.Username));
         }
 
+        private void OpenShop()
+        {
+            if (!_loggingOut && _accountModel.IsLoggedIn) _shopPresenter.Open();
+        }
+
         private void Logout()
         {
             if (!_loggingOut) LogoutAsync().Forget();
@@ -313,6 +326,7 @@ namespace WebRPG
             DisposeAdventure();
             if (_adventureView) Destroy(_adventureView.gameObject);
             _adventureView = null;
+            _shopPresenter.Reset();
             _accountModel.ClearSession();
             _mainMenuPresenter?.Dispose();
             _mainMenuPresenter = new MainMenuPresenter(new MainMenuModel(), _mainMenuView, StartAdventure, QuitGame, OpenLobby);

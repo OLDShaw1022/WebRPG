@@ -23,7 +23,7 @@ internal sealed class LocalAccountServer : IAsyncDisposable
         Address = new Uri($"http://127.0.0.1:{port}/");
     }
 
-    public static async Task<LocalAccountServer> StartAsync(LocalAccountDatabase database)
+    public static async Task<LocalAccountServer> StartAsync(LocalAccountDatabase database, params string[] configurationArguments)
     {
         TcpListener reservation = new(IPAddress.Loopback, 0);
         reservation.Start();
@@ -35,6 +35,7 @@ internal sealed class LocalAccountServer : IAsyncDisposable
             WorkingDirectory = TestContext.CurrentContext.TestDirectory
         };
         start.ArgumentList.Add(Path.Combine(TestContext.CurrentContext.TestDirectory, "WebRPGServer.dll"));
+        foreach (string argument in configurationArguments) start.ArgumentList.Add(argument);
         start.Environment["PORT"] = port.ToString();
         start.Environment["ConnectionStrings__GameDatabase"] = database.ConnectionString;
         LocalAccountServer server = new(Process.Start(start)!, port);

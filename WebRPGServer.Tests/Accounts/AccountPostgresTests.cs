@@ -71,15 +71,61 @@ public sealed class AccountPostgresTests
         Assert.That(await store.AuthenticateAsync(second.AccessToken, CancellationToken.None), Is.Null);
     }
 
+    // 驗證帳號錢包的初始狀態、同時兌換、重送及商品條件變更。
+    [Test]
+    public async Task ShopExchangeIsAtomicAndIdempotent()
+    {
+        await using NpgsqlDataSource source = NpgsqlDataSource.Create(_database.ConnectionString);
+        PostgresAccountStore accounts = new(source);
+        await accounts.InitializeAsync(CancellationToken.None);
+        string email = $"shop-{Guid.NewGuid():N}@example.invalid";
+        await accounts.RegisterAsync(new(email, "long-enough-password", "商店測試"), CancellationToken.None);
+        AccountSession session = (await accounts.LoginAsync(new(email, "long-enough-password"), CancellationToken.None))!;
+        Guid accountId = Guid.Parse(session.AccountId);
+        ShopOffer offer = new("test", 10, 100);
+        PostgresShopStore store = new(source);
+        await store.InitializeAsync(CancellationToken.None);
+        Assert.That(await store.GetBalanceAsync(accountId, CancellationToken.None), Is.EqualTo(new ShopBalance(0, 0)));
+        await using (NpgsqlCommand seed = source.CreateCommand("INSERT INTO game_wallets(account_id, crystals) VALUES ($1, 10);"))
+        {
+            seed.Parameters.AddWithValue(accountId);
+            await seed.ExecuteNonQueryAsync();
+        }
+
+        ShopExchangeRequest request = new(Guid.NewGuid(), offer.Id, offer.CrystalCost, offer.GoldAmount);
+        ShopExchangeResult stale = await store.ExchangeAsync(accountId, request, offer with { CrystalCost = 11 }, CancellationToken.None);
+        Assert.That(stale.Status, Is.EqualTo(ShopExchangeStatus.OfferChanged));
+        Assert.That(await store.ExchangeAsync(accountId, request, offer, CancellationToken.None), Is.EqualTo(stale));
+        Assert.That(await store.GetBalanceAsync(accountId, CancellationToken.None), Is.EqualTo(new ShopBalance(0, 10)));
+
+        ShopExchangeRequest first = request with { RequestId = Guid.NewGuid() };
+        ShopExchangeRequest second = first with { RequestId = Guid.NewGuid() };
+        ShopExchangeResult[] results = await Task.WhenAll(
+            store.ExchangeAsync(accountId, first, offer, CancellationToken.None),
+            store.ExchangeAsync(accountId, second, offer, CancellationToken.None));
+        Assert.That(results.Select(result => result.Status),
+            Is.EquivalentTo(new[] { ShopExchangeStatus.Exchanged, ShopExchangeStatus.InsufficientCrystals }));
+        int winner = Array.FindIndex(results, result => result.Status == ShopExchangeStatus.Exchanged);
+        Assert.That(await store.ExchangeAsync(accountId, winner == 0 ? first : second, null, CancellationToken.None),
+            Is.EqualTo(results[winner]));
+        Assert.That(await store.GetBalanceAsync(accountId, CancellationToken.None), Is.EqualTo(new ShopBalance(100, 0)));
+        await using NpgsqlCommand ledger = source.CreateCommand("SELECT COUNT(*) FROM game_wallet_entries WHERE account_id = $1;");
+        ledger.Parameters.AddWithValue(accountId);
+        Assert.That(await ledger.ExecuteScalarAsync(), Is.EqualTo(2L));
+    }
+
     [Test]
     public async Task RealApiSupportsRegistrationLoginLobbyLogoutAndDatabaseRestart()
     {
         string email = $"api-{Guid.NewGuid():N}@example.invalid";
         string otherEmail = $"api-{Guid.NewGuid():N}@example.invalid";
         string accountId;
-        await using (LocalAccountServer server = await LocalAccountServer.StartAsync(_database))
+        await using (LocalAccountServer server = await LocalAccountServer.StartAsync(_database,
+            "--Shop:Offers:0:Id=test", "--Shop:Offers:0:CrystalCost=10", "--Shop:Offers:0:GoldAmount=100"))
         {
             using HttpClient client = new() { BaseAddress = server.Address };
+            using HttpResponseMessage anonymousShop = await client.PostAsync("api/accounts/shop", null);
+            Assert.That(anonymousShop.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
             using HttpResponseMessage registration = await client.PostAsJsonAsync("api/accounts/register", new AccountRegistration(email, "long-enough-password", "同名玩家"));
             Assert.That(registration.StatusCode, Is.EqualTo(HttpStatusCode.OK));
             using HttpResponseMessage duplicate = await client.PostAsJsonAsync("api/accounts/register", new AccountRegistration(email.ToUpperInvariant(), "long-enough-password", "同名玩家"));
@@ -93,6 +139,13 @@ public sealed class AccountPostgresTests
             JsonObject session = (await login.Content.ReadFromJsonAsync<JsonObject>())!;
             accountId = session["accountId"]!.GetValue<string>();
             string accessToken = session["accessToken"]!.GetValue<string>();
+            using HttpRequestMessage shopRequest = new(HttpMethod.Post, "api/accounts/shop");
+            shopRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+            using HttpResponseMessage shopResponse = await client.SendAsync(shopRequest);
+            shopResponse.EnsureSuccessStatusCode();
+            JsonObject shop = (await shopResponse.Content.ReadFromJsonAsync<JsonObject>())!;
+            Assert.That(shop["balance"]!["crystals"]!.GetValue<long>(), Is.Zero);
+            Assert.That(shop["offers"]![0]!["goldAmount"]!.GetValue<long>(), Is.EqualTo(100L));
             using HttpResponseMessage otherLogin = await client.PostAsJsonAsync("api/accounts/login", new AccountLogin(otherEmail, "long-enough-password"));
             JsonObject otherSession = (await otherLogin.Content.ReadFromJsonAsync<JsonObject>())!;
             Assert.That(otherSession["accountId"]!.GetValue<string>(), Is.Not.EqualTo(accountId));

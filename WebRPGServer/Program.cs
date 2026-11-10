@@ -19,8 +19,10 @@ public static class Program
         {
             builder.Services.AddSingleton(NpgsqlDataSource.Create(connectionString));
             builder.Services.AddSingleton<PostgresAccountStore>();
+            builder.Services.AddSingleton<PostgresShopStore>();
         }
 
+        builder.Services.AddSingleton(new ShopCatalog(builder.Configuration));
         AccountEndpoints.AddServices(builder.Services);
         builder.Services.Configure<ForwardedHeadersOptions>(options =>
             options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto);
@@ -35,6 +37,7 @@ public static class Program
         if (!string.IsNullOrWhiteSpace(connectionString))
         {
             await application.Services.GetRequiredService<PostgresAccountStore>().InitializeAsync(CancellationToken.None);
+            await application.Services.GetRequiredService<PostgresShopStore>().InitializeAsync(CancellationToken.None);
         }
 
         application.UseForwardedHeaders();

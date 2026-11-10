@@ -59,6 +59,7 @@ public static class AccountEndpoints
                 return Results.Json(new { error = "帳號服務尚未設定。" }, statusCode: StatusCodes.Status503ServiceUnavailable);
             return await next(context);
         });
+        ShopEndpoints.Map(group, ReadToken);
         group.MapPost("/register", async (AccountRegistration registration, HttpContext context) =>
         {
             PostgresAccountStore store = context.RequestServices.GetRequiredService<PostgresAccountStore>();

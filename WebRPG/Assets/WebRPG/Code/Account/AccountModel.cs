@@ -117,6 +117,9 @@ namespace WebRPG
             ExpiresAt = default;
         }
 
+        internal Awaitable<string> SendAuthenticatedAsync(string path, string body) =>
+            SendAsync(ServerIndex, path, body, true);
+
         private async Awaitable<string> SendAsync(int serverIndex, string path, string body, bool authenticated, bool allowUnauthorized = false)
         {
             if (_disposed || _request != null || serverIndex < 0 || serverIndex >= _servers.Length)
