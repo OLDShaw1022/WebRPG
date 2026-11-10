@@ -7,8 +7,8 @@ namespace WebRPG
     // 透過登入帳號的伺服器讀取商店與送出已確認的兌換。
     internal sealed class ShopModel
     {
-        private const string ShopPath = "/shop";
-        private const string ExchangePath = "/shop/exchange";
+        private const string ShopPath = "shop";
+        private const string ExchangePath = "shop/exchange";
         private const string InvalidResponseMessage = "商店回應不完整，請重試。";
         private readonly AccountModel _account;
 

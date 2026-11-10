@@ -8,6 +8,12 @@
       "EditorOnly": false
     },
     {
+      "Id": "test",
+      "Name": "AWS EC2（測試伺服器）",
+      "Url": "wss://ws-test.oldshaw-webrpg.com/ws?channel=lobby",
+      "EditorOnly": true
+    },
+    {
       "Id": "local",
       "Name": "本機測試",
       "Url": "ws://localhost:8080/ws?channel=lobby",

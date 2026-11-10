@@ -20,7 +20,7 @@
 
 ## 設定與連線
 
-- [LobbyClient.json](../WebRPG/Assets/WebRPG/Data/LobbyClient.json)：以 DefaultServerId 指定預設伺服器，Servers 陣列設定 Id、Name、Url、EditorOnly。預設為 AWS EC2，透過 `wss://ws.oldshaw-webrpg.com/ws?channel=lobby` 連線；遊戲頁面使用 `https://oldshaw-webrpg.com`，帳號 API 使用 ws 子網域並允許指定遊戲來源的 Cookie 要求，詳見[帳號登入](Accounts.md)的部署要求；本機測試只在 Editor 顯示。RequestTimeoutSeconds 預設為 10 秒。登入畫面使用 TMP_Dropdown 選擇伺服器。非 Editor 選項必須使用 wss。
+- [LobbyClient.json](../WebRPG/Assets/WebRPG/Data/LobbyClient.json)：以 DefaultServerId 指定預設伺服器，Servers 陣列設定 Id、Name、Url、EditorOnly。預設為 AWS EC2，透過 `wss://ws.oldshaw-webrpg.com/ws?channel=lobby` 連線；遊戲頁面使用 `https://oldshaw-webrpg.com`，帳號 API 使用 ws 子網域並允許指定遊戲來源的 Cookie 要求，詳見[帳號登入](Accounts.md)的部署要求；Unity Editor 登入時可選擇「AWS EC2（測試伺服器）」連到 `wss://ws-test.oldshaw-webrpg.com/ws?channel=lobby`，也可選擇本機測試。RequestTimeoutSeconds 預設為 10 秒。登入畫面使用 TMP_Dropdown 選擇伺服器。非 Editor 選項必須使用 wss。
 - [appsettings.json](../WebRPGServer/appsettings.json)：Lobby.RoomCapacity、MaximumRooms、MaximumConnections、SendTimeoutSeconds，預設分別為 4、100、256、3。均為本批原型設定。
 - `/ws?channel=lobby` 使用 LobbyPacket，包含房間聊天。部署時須轉送 query string。公開網站使用時應配置對應的 wss 位址。
 - 要求類型為 Hello、ListRooms、CreateRoom、JoinRoom、LeaveRoom、SetReady；回應為 Welcome、State 或 Error。RequestId 配對要求與回應，無 RequestId 的 State 為推播。
