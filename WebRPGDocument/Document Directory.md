@@ -11,6 +11,7 @@
 | [Git 規則](GitRules.md) | Commit 命名與提交前確認 | Git Commit 前必讀 |
 | [Unity 規則](UnityRules.md) | 修改影響範圍、自動產生資料夾與既有內容保護 | 修改 `WebRPG/` 內的 Unity 專案檔案前必讀 |
 | [文件撰寫格式範例](DocumentTemplate.md) | 文件撰寫原則與可複製範本 | 新增或修改設計與技術文件前閱讀 |
+| [部署工作流程](DeploymentWorkflows.md) | 正式與測試環境的 EC2 和 WebGL 部署 | 設定、執行或驗收 GitHub Actions 部署時 |
 | [主玩法](CoreGameplay.md) | 核心循環、玩家目標、規則與驗收情境 | 討論或修改主要遊戲行為時 |
 | [主選單](MainMenu.md) | 遊戲入口、選項行為與 Prefab 結構 | 修改或驗收主選單及單人啟動流程時 |
 | [貨幣與商店](CurrencyAndShop.md) | 帳號錢包、挑戰發獎、水晶兌換與儲值入帳 | 設計、實作或驗收貨幣與商店時 |
