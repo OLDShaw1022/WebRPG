@@ -20,7 +20,7 @@ public sealed record ShopExchangeRequest(Guid RequestId, string OfferId,
 }
 
 // 回傳兌換結果、餘額及目前的商品條件。
-public sealed record ShopExchangeResult(ShopExchangeStatus Status, ShopBalance Balance, ShopOffer? Offer);
+public sealed record ShopExchangeResult(ShopExchangeStatus Status, ShopBalance Balance, ShopOffer? Offer, long GoldDebtPaid = 0);
 
 // 定義客戶端處理兌換結果時使用的狀態。
 public enum ShopExchangeStatus

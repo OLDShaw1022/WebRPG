@@ -20,9 +20,18 @@ public static class Program
             builder.Services.AddSingleton(NpgsqlDataSource.Create(connectionString));
             builder.Services.AddSingleton<PostgresAccountStore>();
             builder.Services.AddSingleton<PostgresShopStore>();
+            builder.Services.AddSingleton<PostgresTopUpStore>();
+            builder.Services.AddScoped<PayPalTopUpService>();
         }
 
         builder.Services.AddSingleton(new ShopCatalog(builder.Configuration));
+        builder.Services.AddSingleton(new ShopTopUpCatalog(builder.Configuration));
+        PayPalSettings payPal = new(builder.Configuration);
+        if (payPal.Enabled && !payPal.Configured)
+            throw new InvalidOperationException("Enabled PayPal checkout requires server credentials and HTTPS callback URLs.");
+        builder.Services.AddSingleton(payPal);
+        builder.Services.AddHttpClient<PayPalCheckout>(client => client.BaseAddress = new Uri(payPal.Sandbox
+            ? "https://api-m.sandbox.paypal.com/" : "https://api-m.paypal.com/"));
         AccountEndpoints.AddServices(builder.Services);
         builder.Services.Configure<ForwardedHeadersOptions>(options =>
             options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto);
@@ -49,6 +58,7 @@ public static class Program
         application.UseCors();
         application.UseRateLimiter();
         AccountEndpoints.Map(application);
+        ShopTopUpEndpoints.MapPayPal(application);
 
         application.Use(async (context, next) =>
         {

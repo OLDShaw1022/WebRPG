@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk.Web">
 
     <PropertyGroup>
         <OutputType>Exe</OutputType>
@@ -6,6 +6,10 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
     </PropertyGroup>
+
+    <ItemGroup>
+      <InternalsVisibleTo Include="WebRPGServer.Tests" />
+    </ItemGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\WebRPGShared\WebRPGShared.csproj" />

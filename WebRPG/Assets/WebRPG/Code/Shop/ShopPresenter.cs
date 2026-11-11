@@ -19,7 +19,15 @@ namespace WebRPG
         private const string ReturnToMenu = "返回主選單";
         private const string Retry = "重試";
         private const string NoticeTitle = "商店訊息";
-        private const string TopUpUnavailable = "目前儲值尚未開放。";
+        private const string TopUpUnavailable = "目前沒有可購買的儲值方案。";
+        private const string TopUpTitle = "儲值水晶";
+        private const string Checkout = "前往 PayPal";
+        private const string CreateOrder = "建立訂單";
+        private const string SyncOrder = "同步訂單";
+        private const string ExchangedWithDebt = "已取得 {0:N0} 金幣，另有 {1:N0} 金幣用於抵扣欠額。";
+        private const string ConfirmTopUpFormat = "以 {0} {1:0.##} 購買 {2:N0} 水晶？";
+        private const string OrderFormat = "{0}\n{1} {2:0.##}／{3:N0} 水晶\n訂單：{4}";
+        private const string CheckoutOpened = "付款後請回到遊戲，重新整理查看訂單與餘額。";
         private const string Exchanged = "購買成功，已獲得 {0:N0} 金幣。";
         private const string GoldPurchaseSucceeded = "購買成功，已扣除 {0:N0} 金幣。";
         private const string Changed = "商品已更新，請重新選擇並確認購買。";
@@ -38,6 +46,11 @@ namespace WebRPG
         private Guid _requestId;
         private ShopOffer _selectedOffer;
         private ShopOffer _pendingOffer;
+        private ShopTopUpOffer _selectedTopUp;
+        private ShopTopUpOrder _selectedOrder;
+        private Guid _topUpRequestId;
+        private Guid _checkoutOrderId;
+        private bool _showTopUp;
         private string _notice = string.Empty;
 
         public ShopPresenter(ShopModel model, MainMenuView menu)
@@ -50,6 +63,8 @@ namespace WebRPG
             _view.ConfirmRequested += ConfirmPurchase;
             _view.DismissRequested += DismissDialog;
             _view.TopUpRequested += ShowTopUp;
+            _view.TopUpOfferRequested += SelectTopUp;
+            _view.TopUpOrderRequested += SelectOrder;
             _view.CloseRequested += Close;
         }
 
@@ -73,6 +88,10 @@ namespace WebRPG
             _selectedOffer = null;
             _pendingOffer = null;
             _snapshot = null;
+            _selectedTopUp = null;
+            _selectedOrder = null;
+            _showTopUp = false;
+            _checkoutOrderId = Guid.Empty;
             _notice = string.Empty;
             _menu.ShowShop(false);
         }
@@ -85,15 +104,17 @@ namespace WebRPG
             _view.ConfirmRequested -= ConfirmPurchase;
             _view.DismissRequested -= DismissDialog;
             _view.TopUpRequested -= ShowTopUp;
+            _view.TopUpOfferRequested -= SelectTopUp;
+            _view.TopUpOrderRequested -= SelectOrder;
             _view.CloseRequested -= Close;
         }
 
         private void Refresh()
         {
-            if (!_busy && _pendingOffer == null) LoadAsync().Forget();
+            if (!_busy && _pendingOffer == null) LoadAsync(_checkoutOrderId).Forget();
         }
 
-        private async Awaitable LoadAsync()
+        private async Awaitable LoadAsync(Guid syncOrderId)
         {
             _busy = true;
             _notice = string.Empty;
@@ -101,8 +122,14 @@ namespace WebRPG
             Render();
             try
             {
+                if (syncOrderId != Guid.Empty) await _model.SyncTopUpAsync(syncOrderId);
+                if (version != _sessionVersion) return;
                 ShopSnapshot snapshot = await _model.LoadAsync();
-                if (version == _sessionVersion) _snapshot = snapshot;
+                if (version == _sessionVersion)
+                {
+                    _snapshot = snapshot;
+                    _checkoutOrderId = Guid.Empty;
+                }
             }
             catch (Exception)
             {
@@ -128,6 +155,29 @@ namespace WebRPG
         private void ConfirmPurchase()
         {
             if (_busy) return;
+            if (_selectedOrder != null)
+            {
+                if (_selectedOrder.CanOpenCheckout)
+                {
+                    _checkoutOrderId = _selectedOrder.OrderId;
+                    Application.OpenURL(_selectedOrder.CheckoutUrl);
+                    _selectedOrder = null;
+                    _notice = CheckoutOpened;
+                    Render();
+                }
+                else if (_selectedOrder.Status != ShopTopUpStatus.Reversed)
+                {
+                    Guid orderId = _selectedOrder.OrderId;
+                    _selectedOrder = null;
+                    LoadAsync(orderId).Forget();
+                }
+                return;
+            }
+            if (_selectedTopUp != null)
+            {
+                CreateTopUpAsync().Forget();
+                return;
+            }
             if (_pendingOffer == null)
             {
                 if (_selectedOffer == null) return;
@@ -153,6 +203,8 @@ namespace WebRPG
                 _snapshot.Balance = result.Balance;
                 _notice = result.Status switch
                 {
+                    ShopExchangeStatus.Exchanged when result.GoldDebtPaid > 0 =>
+                        string.Format(ExchangedWithDebt, offer.GoldAmount - result.GoldDebtPaid, result.GoldDebtPaid),
                     ShopExchangeStatus.Exchanged => offer.IsGoldPurchase
                         ? string.Format(GoldPurchaseSucceeded, offer.GoldCost)
                         : string.Format(Exchanged, offer.GoldAmount),
@@ -198,19 +250,76 @@ namespace WebRPG
             }
 
             _selectedOffer = null;
+            _selectedTopUp = null;
+            _selectedOrder = null;
             _notice = string.Empty;
             Render();
         }
 
         private void ShowTopUp()
         {
-            _notice = TopUpUnavailable;
+            _showTopUp = !_showTopUp;
             Render();
+        }
+
+        private void SelectTopUp(ShopTopUpOffer offer)
+        {
+            _selectedTopUp = offer;
+            _topUpRequestId = Guid.NewGuid();
+            Render();
+        }
+
+        private void SelectOrder(ShopTopUpOrder order)
+        {
+            _selectedOrder = order;
+            Render();
+        }
+
+        private async Awaitable CreateTopUpAsync()
+        {
+            _busy = true;
+            _notice = string.Empty;
+            int version = _sessionVersion;
+            Render();
+            try
+            {
+                ShopTopUpResult result = await _model.CreateTopUpAsync(_topUpRequestId, _selectedTopUp);
+                if (version != _sessionVersion) return;
+                _selectedTopUp = null;
+                if (result.OfferChanged)
+                {
+                    ShopSnapshot snapshot = await _model.LoadAsync();
+                    if (version == _sessionVersion)
+                    {
+                        _snapshot = snapshot;
+                        _notice = Changed;
+                    }
+                    return;
+                }
+
+                _selectedOrder = result.Order;
+                _snapshot.TopUpOrders = new[] { result.Order }
+                    .Concat(_snapshot.TopUpOrders.Where(order => order.OrderId != result.Order.OrderId)).ToArray();
+            }
+            catch (Exception)
+            {
+                if (version == _sessionVersion) _notice = _selectedTopUp == null ? Failed : RetryRequired;
+            }
+            finally
+            {
+                if (version == _sessionVersion)
+                {
+                    _busy = false;
+                    Render();
+                }
+            }
         }
 
         private void Close()
         {
             _selectedOffer = null;
+            _selectedTopUp = null;
+            _selectedOrder = null;
             _notice = string.Empty;
             _menu.ShowShop(false);
         }
@@ -222,12 +331,31 @@ namespace WebRPG
                 ? string.Empty
                 : string.Format(BalanceFormat, balance.Gold, balance.Crystals);
             string status = _busy && _pendingOffer == null ? Loading : string.Empty;
-            if (!_busy && _snapshot?.Offers.Length == 0) status = NoOffers;
+            if (!_busy && _snapshot != null)
+            {
+                if (_showTopUp && _snapshot.TopUpOffers.Length == 0) status = TopUpUnavailable;
+                else if (!_showTopUp && _snapshot.Offers.Length == 0) status = NoOffers;
+            }
 
-            bool modalOpen = _selectedOffer != null || _notice.Length > 0;
-            _view.Render(balanceText, _snapshot?.Offers, status, !_busy && !modalOpen);
+            bool modalOpen = _selectedOffer != null || _selectedTopUp != null || _selectedOrder != null || _notice.Length > 0;
+            _view.Render(balanceText, _snapshot, _showTopUp, status, !_busy && !modalOpen);
 
-            if (_selectedOffer != null)
+            if (_selectedOrder != null)
+            {
+                ShopTopUpOffer offer = _selectedOrder.Offer;
+                string message = string.Format(OrderFormat, ShopView.DescribeStatus(_selectedOrder.Status),
+                    offer.Currency, offer.Amount, offer.Crystals, _selectedOrder.OrderId);
+                string action = _selectedOrder.CanOpenCheckout ? Checkout :
+                    _selectedOrder.Status == ShopTopUpStatus.Reversed ? string.Empty : SyncOrder;
+                _view.ShowDialog(TopUpTitle, message, action, Dismiss, _busy);
+            }
+            else if (_selectedTopUp != null)
+            {
+                string message = _notice.Length > 0 ? _notice : string.Format(ConfirmTopUpFormat,
+                    _selectedTopUp.Currency, _selectedTopUp.Amount, _selectedTopUp.Crystals);
+                _view.ShowDialog(TopUpTitle, message, _notice.Length > 0 ? Retry : CreateOrder, Cancel, _busy);
+            }
+            else if (_selectedOffer != null)
             {
                 string message = _selectedOffer.IsGoldPurchase
                     ? string.Format(ConfirmGoldPurchaseFormat, _selectedOffer.GoldCost)

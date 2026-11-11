@@ -19,11 +19,18 @@ namespace WebRPG
 
         internal void Bind(ShopOffer offer, Action<ShopOffer> onSelected)
         {
-            _name.text = offer.IsGoldPurchase ? EmptyItemName : string.Format(NameFormat, offer.GoldAmount);
-            _cost.text = offer.IsGoldPurchase
+            string name = offer.IsGoldPurchase ? EmptyItemName : string.Format(NameFormat, offer.GoldAmount);
+            string cost = offer.IsGoldPurchase
                 ? string.Format(GoldCostFormat, offer.GoldCost)
                 : string.Format(CrystalCostFormat, offer.CrystalCost);
-            _button.onClick.AddListener(() => onSelected(offer));
+            Bind(name, cost, () => onSelected(offer));
+        }
+
+        internal void Bind(string name, string detail, Action onSelected)
+        {
+            _name.text = name;
+            _cost.text = detail;
+            _button.onClick.AddListener(() => onSelected());
         }
     }
 }

@@ -16,6 +16,7 @@ namespace WebRPG
         [SerializeField] private ShopOfferCardView _offerTemplate;
         [SerializeField] private UnityEngine.UI.Button _refresh;
         [SerializeField] private UnityEngine.UI.Button _topUp;
+        [SerializeField] private TextMeshProUGUI _topUpLabel;
         [SerializeField] private UnityEngine.UI.Button _close;
         [SerializeField] private GameObject _dialog;
         [SerializeField] private TextMeshProUGUI _dialogTitle;
@@ -26,11 +27,29 @@ namespace WebRPG
         [SerializeField] private TextMeshProUGUI _dismissLabel;
 
         private readonly List<ShopOfferCardView> _cards = new List<ShopOfferCardView>();
+        private const string TopUpLabel = "儲值水晶";
+        private const string ExchangeLabel = "兌換商品";
+        private const string CrystalFormat = "{0:N0} 水晶";
+        private const string PriceFormat = "{0} {1:0.##}";
+        private const string ReceiptFormat = "訂單 {0:MM/dd HH:mm}";
+        private const string Waiting = "等待付款";
+        private const string Processing = "處理中";
+        private const string Credited = "已入帳";
+        private const string Failed = "失敗";
+        private const string Canceled = "已取消";
+        private const string PartiallyRefunded = "部分退款";
+        private const string Reversed = "已沖銷";
+        private const string Unknown = "狀態未確認";
         private ShopOffer[] _offers;
+        private ShopTopUpOffer[] _topUpOffers;
+        private ShopTopUpOrder[] _orders;
+        private bool _showTopUp;
 
         internal event Action<ShopOffer> OfferRequested;
         internal event Action RefreshRequested;
         internal event Action TopUpRequested;
+        internal event Action<ShopTopUpOffer> TopUpOfferRequested;
+        internal event Action<ShopTopUpOrder> TopUpOrderRequested;
         internal event Action CloseRequested;
         internal event Action ConfirmRequested;
         internal event Action DismissRequested;
@@ -44,7 +63,7 @@ namespace WebRPG
             _dismiss.onClick.AddListener(() => DismissRequested?.Invoke());
         }
 
-        internal void Render(string balance, ShopOffer[] offers, string status, bool interactable)
+        internal void Render(string balance, ShopSnapshot snapshot, bool showTopUp, string status, bool interactable)
         {
             _balance.text = balance;
             _status.text = status;
@@ -52,10 +71,17 @@ namespace WebRPG
             _offersGroup.blocksRaycasts = interactable;
             _refresh.interactable = interactable;
             _topUp.interactable = interactable;
+            _topUpLabel.text = showTopUp ? ExchangeLabel : TopUpLabel;
             _close.interactable = interactable;
 
-            if (_offers == offers) return;
+            ShopOffer[] offers = showTopUp ? null : snapshot?.Offers;
+            ShopTopUpOffer[] topUps = showTopUp ? snapshot?.TopUpOffers : null;
+            ShopTopUpOrder[] orders = showTopUp ? snapshot?.TopUpOrders : null;
+            if (_offers == offers && _topUpOffers == topUps && _orders == orders && _showTopUp == showTopUp) return;
             _offers = offers;
+            _topUpOffers = topUps;
+            _orders = orders;
+            _showTopUp = showTopUp;
             foreach (ShopOfferCardView card in _cards)
             {
                 card.gameObject.SetActive(false);
@@ -63,20 +89,39 @@ namespace WebRPG
             }
 
             _cards.Clear();
-            if (offers == null) return;
-
-            foreach (ShopOffer offer in offers)
-            {
-                ShopOfferCardView card = Instantiate(_offerTemplate, _offersScroll.content);
-                card.Bind(offer, selected => OfferRequested?.Invoke(selected));
-                card.gameObject.SetActive(true);
-                _cards.Add(card);
-            }
+            foreach (ShopOffer offer in offers ?? Array.Empty<ShopOffer>())
+                AddCard(card => card.Bind(offer, selected => OfferRequested?.Invoke(selected)));
+            foreach (ShopTopUpOffer offer in topUps ?? Array.Empty<ShopTopUpOffer>())
+                AddCard(card => card.Bind(string.Format(CrystalFormat, offer.Crystals),
+                    string.Format(PriceFormat, offer.Currency, offer.Amount), () => TopUpOfferRequested?.Invoke(offer)));
+            foreach (ShopTopUpOrder order in orders ?? Array.Empty<ShopTopUpOrder>())
+                AddCard(card => card.Bind(string.Format(ReceiptFormat, order.CreatedAt.ToLocalTime()),
+                    DescribeStatus(order.Status), () => TopUpOrderRequested?.Invoke(order)));
 
             UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(_offersScroll.content);
             _offersScroll.StopMovement();
             _offersScroll.verticalNormalizedPosition = 1f;
         }
+
+        private void AddCard(Action<ShopOfferCardView> bind)
+        {
+            ShopOfferCardView card = Instantiate(_offerTemplate, _offersScroll.content);
+            bind(card);
+            card.gameObject.SetActive(true);
+            _cards.Add(card);
+        }
+
+        internal static string DescribeStatus(ShopTopUpStatus status) => status switch
+        {
+            ShopTopUpStatus.AwaitingPayment => Waiting,
+            ShopTopUpStatus.Processing => Processing,
+            ShopTopUpStatus.Credited => Credited,
+            ShopTopUpStatus.Failed => Failed,
+            ShopTopUpStatus.Canceled => Canceled,
+            ShopTopUpStatus.PartiallyRefunded => PartiallyRefunded,
+            ShopTopUpStatus.Reversed => Reversed,
+            _ => Unknown
+        };
 
         internal void ShowDialog(string title, string message, string confirm, string dismiss, bool busy)
         {

@@ -3144,6 +3144,7 @@ MonoBehaviour:
   _offerTemplate: {fileID: 2508958499699414983}
   _refresh: {fileID: 4840003796658343121}
   _topUp: {fileID: 1650719852805918285}
+  _topUpLabel: {fileID: 6078686133636325897}
   _close: {fileID: 7699820702238820351}
   _dialog: {fileID: 3683461856949540269}
   _dialogTitle: {fileID: 8877956564338053730}

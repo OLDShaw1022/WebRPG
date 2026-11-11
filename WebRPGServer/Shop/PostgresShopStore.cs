@@ -36,6 +36,7 @@ public sealed class PostgresShopStore(NpgsqlDataSource source)
             );
             """);
         await command.ExecuteNonQueryAsync(cancellationToken);
+        await new PostgresTopUpStore(source).InitializeAsync(cancellationToken);
     }
 
     public async Task<ShopBalance> GetBalanceAsync(Guid accountId, CancellationToken cancellationToken)
@@ -62,14 +63,17 @@ public sealed class PostgresShopStore(NpgsqlDataSource source)
         }
 
         ShopBalance balance;
+        long goldDebt;
         await using (NpgsqlCommand wallet = new("""
-            SELECT gold, crystals FROM game_wallets WHERE account_id = $1 FOR UPDATE;
+            SELECT gold, crystals, LEAST(gold_debt, 9223372036854775807)::bigint
+            FROM game_wallets WHERE account_id = $1 FOR UPDATE;
             """, connection, transaction))
         {
             wallet.Parameters.AddWithValue(accountId);
             await using NpgsqlDataReader reader = await wallet.ExecuteReaderAsync(cancellationToken);
             await reader.ReadAsync(cancellationToken);
             balance = new ShopBalance(reader.GetInt64(0), reader.GetInt64(1));
+            goldDebt = reader.GetInt64(2);
         }
 
         ShopOffer confirmed = request.ConfirmedOffer;
@@ -90,6 +94,7 @@ public sealed class PostgresShopStore(NpgsqlDataSource source)
             }
         }
 
+        long debtPayment = Math.Min(goldDebt, request.GoldAmount);
         ShopExchangeStatus status = ShopExchangeStatus.Exchanged;
         if (offer != confirmed)
             status = ShopExchangeStatus.OfferChanged;
@@ -97,18 +102,19 @@ public sealed class PostgresShopStore(NpgsqlDataSource source)
             status = ShopExchangeStatus.InsufficientCrystals;
         else if (balance.Gold < request.GoldCost)
             status = ShopExchangeStatus.InsufficientGold;
-        else if (balance.Gold > long.MaxValue - request.GoldAmount)
+        else if (balance.Gold > long.MaxValue - (request.GoldAmount - debtPayment))
             status = ShopExchangeStatus.BalanceLimit;
 
         bool exchanged = status == ShopExchangeStatus.Exchanged;
         long goldDelta = request.GoldAmount - request.GoldCost;
         ShopBalance updated = exchanged
-            ? new ShopBalance(balance.Gold + goldDelta, balance.Crystals - request.CrystalCost)
+            ? new ShopBalance(balance.Gold + (goldDelta - debtPayment), balance.Crystals - request.CrystalCost)
             : balance;
-        ShopExchangeResult result = new(status, updated, offer);
+        ShopExchangeResult result = new(status, updated, offer, exchanged ? debtPayment : 0);
         await using NpgsqlCommand exchange = new("""
             WITH updated_wallet AS (
-                UPDATE game_wallets SET gold = $6, crystals = $7 WHERE account_id = $1 AND $8 RETURNING account_id
+                UPDATE game_wallets SET gold = $6, crystals = $7, gold_debt = gold_debt - $12
+                WHERE account_id = $1 AND $8 RETURNING account_id
             ), receipt AS (
                 INSERT INTO game_shop_exchanges (account_id, request_id, offer_id, crystal_cost, gold_amount, result, gold_cost)
                 VALUES ($1, $2, $3, $4, $5, CAST($9 AS JSONB), $10)
@@ -116,7 +122,10 @@ public sealed class PostgresShopStore(NpgsqlDataSource source)
             INSERT INTO game_wallet_entries (account_id, source, reference_id, currency, delta)
             SELECT account_id, 'exchange', $2, movement.currency, movement.delta
             FROM updated_wallet CROSS JOIN (VALUES ('crystals', -CAST($4 AS BIGINT)), ('gold', $11)) AS movement(currency, delta)
-            WHERE movement.delta <> 0;
+            WHERE movement.delta <> 0
+            UNION ALL
+            SELECT account_id, 'gold-debt-repayment', $2, 'gold', -CAST($12 AS BIGINT)
+            FROM updated_wallet WHERE $12 > 0;
             """, connection, transaction);
         exchange.Parameters.AddWithValue(accountId);
         exchange.Parameters.AddWithValue(request.RequestId);
@@ -129,7 +138,11 @@ public sealed class PostgresShopStore(NpgsqlDataSource source)
         exchange.Parameters.AddWithValue(JsonSerializer.Serialize(result));
         exchange.Parameters.AddWithValue(request.GoldCost);
         exchange.Parameters.AddWithValue(goldDelta);
+        exchange.Parameters.AddWithValue(debtPayment);
         await exchange.ExecuteNonQueryAsync(cancellationToken);
+        if (exchanged && request.CrystalCost > 0)
+            await TopUpCrystalAllocation.RecordAsync(connection, transaction, accountId, request.RequestId,
+                balance.Crystals, request.CrystalCost, cancellationToken);
         await transaction.CommitAsync(cancellationToken);
         return result;
     }
