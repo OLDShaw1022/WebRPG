@@ -20,6 +20,8 @@ namespace WebRPG
         private const string Retry = "重試";
         private const string NoticeTitle = "商店訊息";
         private const string TopUpUnavailable = "目前沒有可購買的儲值方案。";
+        private const string NoOrders = "目前沒有儲值訂單。";
+        private const string OrderTitle = "訂單明細";
         private const string TopUpTitle = "儲值水晶";
         private const string Checkout = "前往 PayPal";
         private const string CreateOrder = "建立訂單";
@@ -27,7 +29,7 @@ namespace WebRPG
         private const string ExchangedWithDebt = "已取得 {0:N0} 金幣，另有 {1:N0} 金幣用於抵扣欠額。";
         private const string ConfirmTopUpFormat = "以 {0} {1:0.##} 購買 {2:N0} 水晶？";
         private const string OrderFormat = "{0}\n{1} {2:0.##}／{3:N0} 水晶\n訂單：{4}";
-        private const string CheckoutOpened = "付款後請回到遊戲，重新整理查看訂單與餘額。";
+        private const string CheckoutOpened = "付款後請回到遊戲，開啟歷史訂單查看進度。";
         private const string Exchanged = "購買成功，已獲得 {0:N0} 金幣。";
         private const string GoldPurchaseSucceeded = "購買成功，已扣除 {0:N0} 金幣。";
         private const string Changed = "商品已更新，請重新選擇並確認購買。";
@@ -50,7 +52,7 @@ namespace WebRPG
         private ShopTopUpOrder _selectedOrder;
         private Guid _topUpRequestId;
         private Guid _checkoutOrderId;
-        private bool _showTopUp;
+        private ShopPage _page;
         private string _notice = string.Empty;
 
         public ShopPresenter(ShopModel model, MainMenuView menu)
@@ -63,6 +65,7 @@ namespace WebRPG
             _view.ConfirmRequested += ConfirmPurchase;
             _view.DismissRequested += DismissDialog;
             _view.TopUpRequested += ShowTopUp;
+            _view.HistoryRequested += ShowHistory;
             _view.TopUpOfferRequested += SelectTopUp;
             _view.TopUpOrderRequested += SelectOrder;
             _view.CloseRequested += Close;
@@ -90,7 +93,7 @@ namespace WebRPG
             _snapshot = null;
             _selectedTopUp = null;
             _selectedOrder = null;
-            _showTopUp = false;
+            _page = ShopPage.Exchange;
             _checkoutOrderId = Guid.Empty;
             _notice = string.Empty;
             _menu.ShowShop(false);
@@ -104,6 +107,7 @@ namespace WebRPG
             _view.ConfirmRequested -= ConfirmPurchase;
             _view.DismissRequested -= DismissDialog;
             _view.TopUpRequested -= ShowTopUp;
+            _view.HistoryRequested -= ShowHistory;
             _view.TopUpOfferRequested -= SelectTopUp;
             _view.TopUpOrderRequested -= SelectOrder;
             _view.CloseRequested -= Close;
@@ -258,8 +262,14 @@ namespace WebRPG
 
         private void ShowTopUp()
         {
-            _showTopUp = !_showTopUp;
+            _page = _page == ShopPage.TopUp ? ShopPage.Exchange : ShopPage.TopUp;
             Render();
+        }
+
+        private void ShowHistory()
+        {
+            _page = ShopPage.History;
+            Refresh();
         }
 
         private void SelectTopUp(ShopTopUpOffer offer)
@@ -333,12 +343,17 @@ namespace WebRPG
             string status = _busy && _pendingOffer == null ? Loading : string.Empty;
             if (!_busy && _snapshot != null)
             {
-                if (_showTopUp && _snapshot.TopUpOffers.Length == 0) status = TopUpUnavailable;
-                else if (!_showTopUp && _snapshot.Offers.Length == 0) status = NoOffers;
+                status = _page switch
+                {
+                    ShopPage.TopUp when _snapshot.TopUpOffers.Length == 0 => TopUpUnavailable,
+                    ShopPage.History when _snapshot.TopUpOrders.Length == 0 => NoOrders,
+                    ShopPage.Exchange when _snapshot.Offers.Length == 0 => NoOffers,
+                    _ => status
+                };
             }
 
             bool modalOpen = _selectedOffer != null || _selectedTopUp != null || _selectedOrder != null || _notice.Length > 0;
-            _view.Render(balanceText, _snapshot, _showTopUp, status, !_busy && !modalOpen);
+            _view.Render(balanceText, _snapshot, _page, status, !_busy && !modalOpen);
 
             if (_selectedOrder != null)
             {
@@ -347,7 +362,7 @@ namespace WebRPG
                     offer.Currency, offer.Amount, offer.Crystals, _selectedOrder.OrderId);
                 string action = _selectedOrder.CanOpenCheckout ? Checkout :
                     _selectedOrder.Status == ShopTopUpStatus.Reversed ? string.Empty : SyncOrder;
-                _view.ShowDialog(TopUpTitle, message, action, Dismiss, _busy);
+                _view.ShowDialog(OrderTitle, message, action, Dismiss, _busy);
             }
             else if (_selectedTopUp != null)
             {

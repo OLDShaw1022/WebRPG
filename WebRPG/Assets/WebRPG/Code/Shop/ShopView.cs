@@ -9,6 +9,7 @@ namespace WebRPG
     [DisallowMultipleComponent]
     public sealed class ShopView : MonoBehaviour
     {
+        [SerializeField] private TextMeshProUGUI _title;
         [SerializeField] private TextMeshProUGUI _balance;
         [SerializeField] private TextMeshProUGUI _status;
         [SerializeField] private UnityEngine.UI.ScrollRect _offersScroll;
@@ -17,6 +18,7 @@ namespace WebRPG
         [SerializeField] private UnityEngine.UI.Button _refresh;
         [SerializeField] private UnityEngine.UI.Button _topUp;
         [SerializeField] private TextMeshProUGUI _topUpLabel;
+        [SerializeField] private UnityEngine.UI.Button _history;
         [SerializeField] private UnityEngine.UI.Button _close;
         [SerializeField] private GameObject _dialog;
         [SerializeField] private TextMeshProUGUI _dialogTitle;
@@ -27,7 +29,10 @@ namespace WebRPG
         [SerializeField] private TextMeshProUGUI _dismissLabel;
 
         private readonly List<ShopOfferCardView> _cards = new List<ShopOfferCardView>();
+        private const string ShopTitle = "商店";
         private const string TopUpLabel = "儲值水晶";
+        private const string HistoryTitle = "歷史訂單";
+        private const string ReturnToTopUp = "返回儲值";
         private const string ExchangeLabel = "兌換商品";
         private const string CrystalFormat = "{0:N0} 水晶";
         private const string PriceFormat = "{0} {1:0.##}";
@@ -43,11 +48,12 @@ namespace WebRPG
         private ShopOffer[] _offers;
         private ShopTopUpOffer[] _topUpOffers;
         private ShopTopUpOrder[] _orders;
-        private bool _showTopUp;
+        private ShopPage _page;
 
         internal event Action<ShopOffer> OfferRequested;
         internal event Action RefreshRequested;
         internal event Action TopUpRequested;
+        internal event Action HistoryRequested;
         internal event Action<ShopTopUpOffer> TopUpOfferRequested;
         internal event Action<ShopTopUpOrder> TopUpOrderRequested;
         internal event Action CloseRequested;
@@ -58,30 +64,44 @@ namespace WebRPG
         {
             _refresh.onClick.AddListener(() => RefreshRequested?.Invoke());
             _topUp.onClick.AddListener(() => TopUpRequested?.Invoke());
+            _history.onClick.AddListener(() => HistoryRequested?.Invoke());
             _close.onClick.AddListener(() => CloseRequested?.Invoke());
             _confirm.onClick.AddListener(() => ConfirmRequested?.Invoke());
             _dismiss.onClick.AddListener(() => DismissRequested?.Invoke());
         }
 
-        internal void Render(string balance, ShopSnapshot snapshot, bool showTopUp, string status, bool interactable)
+        internal void Render(string balance, ShopSnapshot snapshot, ShopPage page, string status, bool interactable)
         {
+            _title.text = page switch
+            {
+                ShopPage.TopUp => TopUpLabel,
+                ShopPage.History => HistoryTitle,
+                _ => ShopTitle
+            };
             _balance.text = balance;
             _status.text = status;
             _offersGroup.interactable = interactable;
             _offersGroup.blocksRaycasts = interactable;
             _refresh.interactable = interactable;
             _topUp.interactable = interactable;
-            _topUpLabel.text = showTopUp ? ExchangeLabel : TopUpLabel;
+            _topUpLabel.text = page switch
+            {
+                ShopPage.TopUp => ExchangeLabel,
+                ShopPage.History => ReturnToTopUp,
+                _ => TopUpLabel
+            };
+            _history.gameObject.SetActive(page == ShopPage.TopUp);
+            _history.interactable = interactable;
             _close.interactable = interactable;
 
-            ShopOffer[] offers = showTopUp ? null : snapshot?.Offers;
-            ShopTopUpOffer[] topUps = showTopUp ? snapshot?.TopUpOffers : null;
-            ShopTopUpOrder[] orders = showTopUp ? snapshot?.TopUpOrders : null;
-            if (_offers == offers && _topUpOffers == topUps && _orders == orders && _showTopUp == showTopUp) return;
+            ShopOffer[] offers = page == ShopPage.Exchange ? snapshot?.Offers : null;
+            ShopTopUpOffer[] topUps = page == ShopPage.TopUp ? snapshot?.TopUpOffers : null;
+            ShopTopUpOrder[] orders = page == ShopPage.History ? snapshot?.TopUpOrders : null;
+            if (_offers == offers && _topUpOffers == topUps && _orders == orders && _page == page) return;
             _offers = offers;
             _topUpOffers = topUps;
             _orders = orders;
-            _showTopUp = showTopUp;
+            _page = page;
             foreach (ShopOfferCardView card in _cards)
             {
                 card.gameObject.SetActive(false);
@@ -136,5 +156,13 @@ namespace WebRPG
         }
 
         internal void HideDialog() => _dialog.SetActive(false);
+    }
+
+    // 識別商店目前顯示的頁面。
+    internal enum ShopPage
+    {
+        Exchange,
+        TopUp,
+        History
     }
 }

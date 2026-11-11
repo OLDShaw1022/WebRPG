@@ -35,6 +35,22 @@ namespace WebRPG.Tests
         }
 
         [Test]
+        public void ShopHasSeparateHistoryNavigation()
+        {
+            MainMenuView menu = AssetDatabase.LoadAssetAtPath<MainMenuView>(MainMenuPrefabPath);
+            var shop = new SerializedObject(menu.Shop);
+            SerializedProperty history = shop.FindProperty("_history");
+            Assert.That(history, Is.Not.Null);
+            Assert.That(history.objectReferenceValue, Is.TypeOf<UnityEngine.UI.Button>());
+            var button = (UnityEngine.UI.Button)history.objectReferenceValue;
+            Assert.That(button.gameObject.activeSelf, Is.False);
+
+            SerializedProperty title = shop.FindProperty("_title");
+            Assert.That(title, Is.Not.Null);
+            Assert.That(title.objectReferenceValue, Is.Not.Null);
+        }
+
+        [Test]
         public void ShopHasScrollableCardsAndAnInitiallyHiddenPurchaseDialog()
         {
             MainMenuView menu = AssetDatabase.LoadAssetAtPath<MainMenuView>(MainMenuPrefabPath);

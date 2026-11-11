@@ -43,7 +43,7 @@
 - 部署環境設定 `Shop__PayPal__ClientId`、`Shop__PayPal__ClientSecret`、`Shop__PayPal__WebhookId`、`Shop__PayPal__CallbackUrl` 和 `Shop__PayPal__GameUrl`。後兩項分別是後端的公開 HTTPS `/api/payments/paypal/return` 網址及同環境的 WebGL 首頁。反向代理須將 `/api/payments/paypal/` 轉發到該環境的 WebRPGServer。
 - 在相同 PayPal REST 應用程式設定 HTTPS `/api/payments/paypal/webhook`，訂閱 `CHECKOUT.ORDER.APPROVED`、`CHECKOUT.PAYMENT-APPROVAL.REVERSED`、`PAYMENT.CAPTURE.PENDING`、`PAYMENT.CAPTURE.COMPLETED`、`PAYMENT.CAPTURE.DECLINED`、`PAYMENT.CAPTURE.REFUNDED` 與 `PAYMENT.CAPTURE.REVERSED`。PayPal 回傳的 Webhook ID 需與該應用程式及環境一致。 [PayPal 通知事件](https://developer.paypal.com/api/rest/webhooks/event-names/)
 - 測試環境使用獨立的 PostgreSQL、PayPal Sandbox 應用程式及沙盒買家帳號，設定 `Shop__PayPal__Enabled=true` 和 `Shop__PayPal__Live=false`。正式環境以正式商戶的 REST 應用程式設定 `Shop__PayPal__Live=true`，在完成付款、退款、拒付及對帳驗收後設定 `Shop__PayPal__Enabled=true`。台灣 PayPal 帳戶目前僅可付款至境外註冊的 PayPal 帳戶。 [PayPal 台灣付款說明](https://www.paypal.com/tw/cshelp/article/%E6%88%91%E8%A6%81%E5%A6%82%E4%BD%95%E4%BB%98%E6%AC%BE%E5%91%A2%EF%BC%9F-help293?locale.x=zh_TW)
-- 在商店點「儲值水晶」選擇方案、建立訂單，接著點「前往 PayPal」開啟付款頁。付款完成後回到遊戲重新整理，或從訂單明細同步狀態。儲值頁顯示該帳號最近 30 筆同環境訂單，可從等待付款的訂單重新開啟 PayPal。
+- 在商店點「儲值水晶」選擇方案、建立訂單，接著點「前往 PayPal」開啟付款頁。付款完成後回到儲值頁並點「歷史訂單」。歷史訂單頁顯示該帳號最近 30 筆同環境訂單，可重新整理或從訂單明細同步狀態。等待付款的訂單可從明細重新開啟 PayPal。點「返回儲值」可回到商品目錄。
 - 商店查詢回傳方案和訂單。建單使用 `POST /api/accounts/shop/top-ups`，付款補查使用 `POST /api/accounts/shop/top-ups/{orderId}/sync`，均使用登入帳號的 Bearer Token。訂單以建立時的金額、幣別及發放數量為準。
 - 對帳時以 `game_shop_top_ups` 的 PayPal 訂單和收款識別對應 PayPal 商戶交易。用訂單 UUID 串接 `game_wallet_entries` 的入帳及沖銷流水，從 `game_shop_top_up_allocations` 查詢受影響的兌換。退款可從 PayPal 商戶後台操作。
 
