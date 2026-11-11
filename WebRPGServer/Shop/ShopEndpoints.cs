@@ -6,7 +6,7 @@ public static class ShopEndpoints
     public static void Map(RouteGroupBuilder group, Func<HttpContext, string> readToken)
     {
         ShopTopUpEndpoints.MapPlayer(group, readToken);
-        group.MapPost("/shop", async (HttpContext context, PayPalSettings payPal, ShopTopUpCatalog topUps) =>
+        group.MapPost("/shop", async (HttpContext context) =>
         {
             PostgresAccountStore accounts = context.RequestServices.GetRequiredService<PostgresAccountStore>();
             AccountIdentity? identity = await accounts.AuthenticateAsync(readToken(context), context.RequestAborted);
@@ -15,6 +15,8 @@ public static class ShopEndpoints
             ShopCatalog catalog = context.RequestServices.GetRequiredService<ShopCatalog>();
 
             ShopBalance balance = await shop.GetBalanceAsync(Guid.Parse(identity.AccountId), context.RequestAborted);
+            PayPalSettings payPal = context.RequestServices.GetRequiredService<PayPalSettings>();
+            ShopTopUpCatalog topUps = context.RequestServices.GetRequiredService<ShopTopUpCatalog>();
             PostgresTopUpStore topUpStore = context.RequestServices.GetRequiredService<PostgresTopUpStore>();
             return Results.Ok(new
             {

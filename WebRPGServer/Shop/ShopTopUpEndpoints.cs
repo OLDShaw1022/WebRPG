@@ -11,16 +11,18 @@ internal static class ShopTopUpEndpoints
 
     internal static void MapPlayer(RouteGroupBuilder group, Func<HttpContext, string> readToken)
     {
-        group.MapPost("/shop/top-ups", async (ShopTopUpRequest request, HttpContext context,
-            PayPalSettings settings, ShopTopUpCatalog catalog, PayPalTopUpService service) =>
+        group.MapPost("/shop/top-ups", async (ShopTopUpRequest request, HttpContext context) =>
         {
             PostgresAccountStore accounts = context.RequestServices.GetRequiredService<PostgresAccountStore>();
             AccountIdentity? identity = await accounts.AuthenticateAsync(readToken(context), context.RequestAborted);
             if (identity is null) return Results.Unauthorized();
+            PayPalSettings settings = context.RequestServices.GetRequiredService<PayPalSettings>();
             if (!settings.Enabled || !settings.Configured) return Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
             if (request.RequestId == Guid.Empty || request.Offer is null || !ShopTopUpCatalog.IsValid(request.Offer))
                 return Results.BadRequest();
 
+            ShopTopUpCatalog catalog = context.RequestServices.GetRequiredService<ShopTopUpCatalog>();
+            PayPalTopUpService service = context.RequestServices.GetRequiredService<PayPalTopUpService>();
             try
             {
                 ShopTopUpOrder? order = await service.CreateAsync(Guid.Parse(identity.AccountId), request,
@@ -35,15 +37,17 @@ internal static class ShopTopUpEndpoints
             }
         });
 
-        group.MapPost("/shop/top-ups/{orderId:guid}/sync", async (Guid orderId, HttpContext context,
-            PayPalSettings settings, PostgresTopUpStore store, PayPalTopUpService service) =>
+        group.MapPost("/shop/top-ups/{orderId:guid}/sync", async (Guid orderId, HttpContext context) =>
         {
             PostgresAccountStore accounts = context.RequestServices.GetRequiredService<PostgresAccountStore>();
             AccountIdentity? identity = await accounts.AuthenticateAsync(readToken(context), context.RequestAborted);
             if (identity is null) return Results.Unauthorized();
+            PayPalSettings settings = context.RequestServices.GetRequiredService<PayPalSettings>();
+            PostgresTopUpStore store = context.RequestServices.GetRequiredService<PostgresTopUpStore>();
             ShopTopUpOrder? order = await store.FindAsync(orderId, settings.Sandbox, context.RequestAborted);
             if (order is null || order.AccountId != Guid.Parse(identity.AccountId)) return Results.NotFound();
             if (!settings.Configured) return Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
+            PayPalTopUpService service = context.RequestServices.GetRequiredService<PayPalTopUpService>();
             try
             {
                 await service.ReconcileAsync(order, true, false, null, context.RequestAborted);
