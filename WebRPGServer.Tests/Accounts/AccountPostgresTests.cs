@@ -114,6 +114,54 @@ public sealed class AccountPostgresTests
         Assert.That(await ledger.ExecuteScalarAsync(), Is.EqualTo(2L));
     }
 
+    // 驗證預設目錄的零水晶商品可兌換，且重送只記一筆金幣流水。
+    [Test]
+    public async Task FreeShopOfferCreditsGoldWithoutCrystalMovement()
+    {
+        await using LocalAccountServer server = await LocalAccountServer.StartAsync(_database);
+        using HttpClient client = new() { BaseAddress = server.Address };
+        string email = $"free-shop-{Guid.NewGuid():N}@example.invalid";
+        using HttpResponseMessage registration = await client.PostAsJsonAsync(
+            "api/accounts/register", new AccountRegistration(email, "long-enough-password", "商店測試"));
+        registration.EnsureSuccessStatusCode();
+        using HttpResponseMessage login = await client.PostAsJsonAsync(
+            "api/accounts/login", new AccountLogin(email, "long-enough-password"));
+        login.EnsureSuccessStatusCode();
+        AccountSession session = (await login.Content.ReadFromJsonAsync<AccountSession>())!;
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", session.AccessToken);
+
+        using HttpResponseMessage catalog = await client.PostAsync("api/accounts/shop", null);
+        catalog.EnsureSuccessStatusCode();
+        JsonObject snapshot = (await catalog.Content.ReadFromJsonAsync<JsonObject>())!;
+        JsonNode offer = snapshot["offers"]!.AsArray().Single(entry => entry?["id"]?.GetValue<string>() == "free-gold")!;
+        Assert.That(offer["crystalCost"]!.GetValue<long>(), Is.Zero);
+        Assert.That(offer["goldAmount"]!.GetValue<long>(), Is.EqualTo(100L));
+
+        ShopExchangeRequest request = new(Guid.NewGuid(), "free-gold", 0, 100);
+        using HttpResponseMessage missingCost = await client.PostAsJsonAsync("api/accounts/shop/exchange",
+            new { request.RequestId, request.OfferId, request.GoldAmount });
+        Assert.That(missingCost.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        using HttpResponseMessage exchanged = await client.PostAsJsonAsync("api/accounts/shop/exchange", request);
+        exchanged.EnsureSuccessStatusCode();
+        ShopExchangeResult result = (await exchanged.Content.ReadFromJsonAsync<ShopExchangeResult>())!;
+        Assert.That(result.Status, Is.EqualTo(ShopExchangeStatus.Exchanged));
+        Assert.That(result.Balance, Is.EqualTo(new ShopBalance(100, 0)));
+        using HttpResponseMessage retried = await client.PostAsJsonAsync("api/accounts/shop/exchange", request);
+        retried.EnsureSuccessStatusCode();
+        Assert.That(await retried.Content.ReadFromJsonAsync<ShopExchangeResult>(), Is.EqualTo(result));
+
+        await using NpgsqlDataSource source = NpgsqlDataSource.Create(_database.ConnectionString);
+        await using NpgsqlCommand ledger = source.CreateCommand("""
+            SELECT currency, delta FROM game_wallet_entries WHERE account_id = $1;
+            """);
+        ledger.Parameters.AddWithValue(Guid.Parse(session.AccountId));
+        await using NpgsqlDataReader entries = await ledger.ExecuteReaderAsync();
+        Assert.That(await entries.ReadAsync(), Is.True);
+        Assert.That(entries.GetString(0), Is.EqualTo("gold"));
+        Assert.That(entries.GetInt64(1), Is.EqualTo(100L));
+        Assert.That(await entries.ReadAsync(), Is.False);
+    }
+
     [Test]
     public async Task RealApiSupportsRegistrationLoginLobbyLogoutAndDatabaseRestart()
     {

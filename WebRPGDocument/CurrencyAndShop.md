@@ -33,7 +33,7 @@
 ## 第一階段設定與操作
 
 - 伺服器啟動時在帳號資料庫建立 `game_wallets`、`game_shop_exchanges` 與 `game_wallet_entries`。帳號初始金幣與水晶皆為 0。
-- 在伺服器 JSON 設定的 `Shop:Offers` 陣列配置兌換組合。每筆包含唯一的 `Id`、正整數 `CrystalCost` 與正整數 `GoldAmount`。修改設定後重啟伺服器。未配置時，商店仍顯示兩種餘額，商品目錄為空。
+- 在伺服器 JSON 設定的 `Shop:Offers` 陣列配置兌換組合。每筆包含唯一的 `Id`、非負整數 `CrystalCost` 與正整數 `GoldAmount`。正式與測試伺服器的共用設定提供「0 水晶兌換 100 金幣」組合，零成本兌換只新增金幣流水。修改設定後重啟伺服器。未配置時，商店仍顯示兩種餘額，商品目錄為空。
 - 登入後由主選單進入商店，選取組合並按「兌換」，再次確認後送出。若送出後發生連線錯誤，可在商店重試同一筆請求。水晶不足時顯示差額，可切換至儲值頁查看開放狀態。
 - 查詢使用 `POST /api/accounts/shop`，兌換使用 `POST /api/accounts/shop/exchange`。兩者沿用帳號 API 的 Bearer Token 驗證。兌換請求附上 UUID 與玩家已確認的商品條件。
 

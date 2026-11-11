@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace WebRPGServer;
 
 // 表示帳號錢包的金幣與水晶餘額。
@@ -7,7 +9,8 @@ public sealed record ShopBalance(long Gold, long Crystals);
 public sealed record ShopOffer(string Id, long CrystalCost, long GoldAmount);
 
 // 附上玩家確認的條件，避免目錄變更後仍用舊條件兌換。
-public sealed record ShopExchangeRequest(Guid RequestId, string OfferId, long CrystalCost, long GoldAmount);
+public sealed record ShopExchangeRequest(Guid RequestId, string OfferId,
+    [property: JsonRequired] long CrystalCost, long GoldAmount);
 
 // 回傳兌換結果、餘額及目前的商品條件。
 public sealed record ShopExchangeResult(ShopExchangeStatus Status, ShopBalance Balance, ShopOffer? Offer);

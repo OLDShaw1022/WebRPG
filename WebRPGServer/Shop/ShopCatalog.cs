@@ -14,7 +14,7 @@ public sealed class ShopCatalog
         foreach (ShopOffer offer in offers)
         {
             if (string.IsNullOrWhiteSpace(offer.Id) || offer.Id.Length > MaximumOfferIdLength ||
-                offer.CrystalCost <= 0 || offer.GoldAmount <= 0 || !_offers.TryAdd(offer.Id, offer))
+                offer.CrystalCost < 0 || offer.GoldAmount <= 0 || !_offers.TryAdd(offer.Id, offer))
                 throw new InvalidOperationException("Shop:Offers contains invalid or duplicate exchange terms.");
         }
     }

@@ -109,7 +109,8 @@ public sealed class PostgresShopStore(NpgsqlDataSource source)
             )
             INSERT INTO game_wallet_entries (account_id, source, reference_id, currency, delta)
             SELECT account_id, 'exchange', $2, movement.currency, movement.delta
-            FROM updated_wallet CROSS JOIN (VALUES ('crystals', -CAST($4 AS BIGINT)), ('gold', $5)) AS movement(currency, delta);
+            FROM updated_wallet CROSS JOIN (VALUES ('crystals', -CAST($4 AS BIGINT)), ('gold', $5)) AS movement(currency, delta)
+            WHERE movement.delta <> 0;
             """, connection, transaction);
         exchange.Parameters.AddWithValue(accountId);
         exchange.Parameters.AddWithValue(request.RequestId);
