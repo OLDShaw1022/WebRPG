@@ -24,8 +24,7 @@ public static class ShopEndpoints
             if (identity is null) return Results.Unauthorized();
             PostgresShopStore shop = context.RequestServices.GetRequiredService<PostgresShopStore>();
             ShopCatalog catalog = context.RequestServices.GetRequiredService<ShopCatalog>();
-            if (request.RequestId == Guid.Empty || string.IsNullOrWhiteSpace(request.OfferId) ||
-                request.OfferId.Length > ShopCatalog.MaximumOfferIdLength || request.CrystalCost < 0 || request.GoldAmount <= 0)
+            if (request.RequestId == Guid.Empty || !request.ConfirmedOffer.IsValid)
                 return Results.BadRequest();
 
             ShopExchangeResult result = await shop.ExchangeAsync(Guid.Parse(identity.AccountId), request,

@@ -27,7 +27,8 @@ namespace WebRPG
         {
             string body = JsonConvert.SerializeObject(new
             {
-                requestId, offerId = offer.Id, crystalCost = offer.CrystalCost, goldAmount = offer.GoldAmount
+                requestId, offerId = offer.Id, crystalCost = offer.CrystalCost,
+                goldAmount = offer.GoldAmount, goldCost = offer.GoldCost
             });
             string json = await _account.SendAuthenticatedAsync(ExchangePath, body);
             ShopExchangeResult result = JsonConvert.DeserializeObject<ShopExchangeResult>(json);
@@ -56,6 +57,8 @@ namespace WebRPG
         public string Id { get; set; }
         public long CrystalCost { get; set; }
         public long GoldAmount { get; set; }
+        public long GoldCost { get; set; }
+        public bool IsGoldPurchase => GoldCost > 0;
     }
 
     // 保存一次兌換的伺服器結果。
@@ -73,6 +76,7 @@ namespace WebRPG
         OfferChanged = 1,
         InsufficientCrystals = 2,
         BalanceLimit = 3,
-        RequestConflict = 4
+        RequestConflict = 4,
+        InsufficientGold = 5
     }
 }

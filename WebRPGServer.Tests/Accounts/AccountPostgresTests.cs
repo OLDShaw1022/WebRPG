@@ -162,6 +162,71 @@ public sealed class AccountPostgresTests
         Assert.That(await entries.ReadAsync(), Is.False);
     }
 
+
+    // 驗證金幣商品檢查餘額，並為同一請求只扣一次金幣。
+    [Test]
+    public async Task GoldPurchaseChecksBalanceAndOnlyDebitsGoldOnce()
+    {
+        await using LocalAccountServer server = await LocalAccountServer.StartAsync(_database);
+        using HttpClient client = new() { BaseAddress = server.Address };
+        string email = $"gold-shop-{Guid.NewGuid():N}@example.invalid";
+        using HttpResponseMessage registration = await client.PostAsJsonAsync(
+            "api/accounts/register", new AccountRegistration(email, "long-enough-password", "商店測試"));
+        registration.EnsureSuccessStatusCode();
+        using HttpResponseMessage login = await client.PostAsJsonAsync(
+            "api/accounts/login", new AccountLogin(email, "long-enough-password"));
+        login.EnsureSuccessStatusCode();
+        AccountSession session = (await login.Content.ReadFromJsonAsync<AccountSession>())!;
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", session.AccessToken);
+
+        await using NpgsqlDataSource source = NpgsqlDataSource.Create(_database.ConnectionString);
+        await using (NpgsqlCommand seed = source.CreateCommand(
+            "INSERT INTO game_wallets(account_id, gold, crystals) VALUES ($1, 99, 10);"))
+        {
+            seed.Parameters.AddWithValue(Guid.Parse(session.AccountId));
+            await seed.ExecuteNonQueryAsync();
+        }
+
+        ShopExchangeResult insufficient = await Purchase(Guid.NewGuid(), 100);
+        Assert.That(insufficient.Status, Is.EqualTo(ShopExchangeStatus.InsufficientGold));
+        Assert.That(insufficient.Balance, Is.EqualTo(new ShopBalance(99, 10)));
+
+        using HttpResponseMessage exchange = await client.PostAsJsonAsync(
+            "api/accounts/shop/exchange", new ShopExchangeRequest(Guid.NewGuid(), "crystals-for-gold", 10, 100));
+        exchange.EnsureSuccessStatusCode();
+        ShopExchangeResult credited = (await exchange.Content.ReadFromJsonAsync<ShopExchangeResult>())!;
+        Assert.That(credited.Balance, Is.EqualTo(new ShopBalance(199, 0)));
+
+        ShopExchangeResult stale = await Purchase(Guid.NewGuid(), 99);
+        Assert.That(stale.Status, Is.EqualTo(ShopExchangeStatus.OfferChanged));
+        Assert.That(stale.Balance, Is.EqualTo(credited.Balance));
+
+        Guid requestId = Guid.NewGuid();
+        ShopExchangeResult purchased = await Purchase(requestId, 100);
+        Assert.That(purchased.Status, Is.EqualTo(ShopExchangeStatus.Exchanged));
+        Assert.That(purchased.Balance, Is.EqualTo(new ShopBalance(99, 0)));
+        Assert.That(await Purchase(requestId, 100), Is.EqualTo(purchased));
+        Assert.That((await Purchase(requestId, 99)).Status, Is.EqualTo(ShopExchangeStatus.RequestConflict));
+
+        await using NpgsqlCommand ledger = source.CreateCommand(
+            "SELECT currency, delta FROM game_wallet_entries WHERE account_id = $1 AND reference_id = $2;");
+        ledger.Parameters.AddWithValue(Guid.Parse(session.AccountId));
+        ledger.Parameters.AddWithValue(requestId);
+        await using NpgsqlDataReader entries = await ledger.ExecuteReaderAsync();
+        Assert.That(await entries.ReadAsync(), Is.True);
+        Assert.That(entries.GetString(0), Is.EqualTo("gold"));
+        Assert.That(entries.GetInt64(1), Is.EqualTo(-100L));
+        Assert.That(await entries.ReadAsync(), Is.False);
+
+        async Task<ShopExchangeResult> Purchase(Guid id, long cost)
+        {
+            using HttpResponseMessage response = await client.PostAsJsonAsync("api/accounts/shop/exchange",
+                new ShopExchangeRequest(id, "empty-item", 0, 0, GoldCost: cost));
+            response.EnsureSuccessStatusCode();
+            return (await response.Content.ReadFromJsonAsync<ShopExchangeResult>())!;
+        }
+    }
+
     [Test]
     public async Task RealApiSupportsRegistrationLoginLobbyLogoutAndDatabaseRestart()
     {

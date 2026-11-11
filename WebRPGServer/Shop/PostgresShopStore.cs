@@ -23,6 +23,8 @@ public sealed class PostgresShopStore(NpgsqlDataSource source)
                 result JSONB NOT NULL,
                 PRIMARY KEY (account_id, request_id)
             );
+            ALTER TABLE game_shop_exchanges
+                ADD COLUMN IF NOT EXISTS gold_cost BIGINT NOT NULL DEFAULT 0 CHECK (gold_cost >= 0);
             CREATE TABLE IF NOT EXISTS game_wallet_entries (
                 account_id UUID NOT NULL REFERENCES game_wallets(account_id) ON DELETE CASCADE,
                 source TEXT NOT NULL,
@@ -70,8 +72,9 @@ public sealed class PostgresShopStore(NpgsqlDataSource source)
             balance = new ShopBalance(reader.GetInt64(0), reader.GetInt64(1));
         }
 
+        ShopOffer confirmed = request.ConfirmedOffer;
         await using (NpgsqlCommand previous = new("""
-            SELECT offer_id, crystal_cost, gold_amount, result
+            SELECT offer_id, crystal_cost, gold_amount, gold_cost, result
             FROM game_shop_exchanges WHERE account_id = $1 AND request_id = $2;
             """, connection, transaction))
         {
@@ -80,36 +83,39 @@ public sealed class PostgresShopStore(NpgsqlDataSource source)
             await using NpgsqlDataReader reader = await previous.ExecuteReaderAsync(cancellationToken);
             if (await reader.ReadAsync(cancellationToken))
             {
-                ShopOffer original = new(reader.GetString(0), reader.GetInt64(1), reader.GetInt64(2));
-                if (original != new ShopOffer(request.OfferId, request.CrystalCost, request.GoldAmount))
+                ShopOffer original = new(reader.GetString(0), reader.GetInt64(1), reader.GetInt64(2), reader.GetInt64(3));
+                if (original != confirmed)
                     return new ShopExchangeResult(ShopExchangeStatus.RequestConflict, balance, offer);
-                return JsonSerializer.Deserialize<ShopExchangeResult>(reader.GetString(3))!;
+                return JsonSerializer.Deserialize<ShopExchangeResult>(reader.GetString(4))!;
             }
         }
 
         ShopExchangeStatus status = ShopExchangeStatus.Exchanged;
-        if (offer != new ShopOffer(request.OfferId, request.CrystalCost, request.GoldAmount))
+        if (offer != confirmed)
             status = ShopExchangeStatus.OfferChanged;
         else if (balance.Crystals < request.CrystalCost)
             status = ShopExchangeStatus.InsufficientCrystals;
+        else if (balance.Gold < request.GoldCost)
+            status = ShopExchangeStatus.InsufficientGold;
         else if (balance.Gold > long.MaxValue - request.GoldAmount)
             status = ShopExchangeStatus.BalanceLimit;
 
         bool exchanged = status == ShopExchangeStatus.Exchanged;
+        long goldDelta = request.GoldAmount - request.GoldCost;
         ShopBalance updated = exchanged
-            ? new ShopBalance(balance.Gold + request.GoldAmount, balance.Crystals - request.CrystalCost)
+            ? new ShopBalance(balance.Gold + goldDelta, balance.Crystals - request.CrystalCost)
             : balance;
         ShopExchangeResult result = new(status, updated, offer);
         await using NpgsqlCommand exchange = new("""
             WITH updated_wallet AS (
                 UPDATE game_wallets SET gold = $6, crystals = $7 WHERE account_id = $1 AND $8 RETURNING account_id
             ), receipt AS (
-                INSERT INTO game_shop_exchanges (account_id, request_id, offer_id, crystal_cost, gold_amount, result)
-                VALUES ($1, $2, $3, $4, $5, CAST($9 AS JSONB))
+                INSERT INTO game_shop_exchanges (account_id, request_id, offer_id, crystal_cost, gold_amount, result, gold_cost)
+                VALUES ($1, $2, $3, $4, $5, CAST($9 AS JSONB), $10)
             )
             INSERT INTO game_wallet_entries (account_id, source, reference_id, currency, delta)
             SELECT account_id, 'exchange', $2, movement.currency, movement.delta
-            FROM updated_wallet CROSS JOIN (VALUES ('crystals', -CAST($4 AS BIGINT)), ('gold', $5)) AS movement(currency, delta)
+            FROM updated_wallet CROSS JOIN (VALUES ('crystals', -CAST($4 AS BIGINT)), ('gold', $11)) AS movement(currency, delta)
             WHERE movement.delta <> 0;
             """, connection, transaction);
         exchange.Parameters.AddWithValue(accountId);
@@ -121,6 +127,8 @@ public sealed class PostgresShopStore(NpgsqlDataSource source)
         exchange.Parameters.AddWithValue(updated.Crystals);
         exchange.Parameters.AddWithValue(exchanged);
         exchange.Parameters.AddWithValue(JsonSerializer.Serialize(result));
+        exchange.Parameters.AddWithValue(request.GoldCost);
+        exchange.Parameters.AddWithValue(goldDelta);
         await exchange.ExecuteNonQueryAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
         return result;
