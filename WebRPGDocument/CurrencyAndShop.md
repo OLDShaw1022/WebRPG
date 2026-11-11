@@ -39,7 +39,7 @@
 
 ## PayPal 儲值設定與操作
 
-- 在伺服器的 `Shop:TopUpOffers` 陣列設定各方案的 `Id`、`Currency`、`Amount`、`Crystals` 與 `Enabled`。預設沒有儲值商品。啟用的方案需要唯一識別、正數金額和正整數水晶。金額使用幣別的主要單位，例如 USD 的 `4.99` 或 TWD 的 `150`。 [PayPal 支援幣別](https://developer.paypal.com/api/codes/currency/)
+- 在伺服器的 `Shop:TopUpOffers` 陣列設定各方案的 `Id`、`Currency`、`Amount`、`Crystals` 與 `Enabled`。預設方案為 NT$1 購買 100 水晶，PayPal 儲值功能預設關閉。啟用的方案需要唯一識別、正數金額和正整數水晶。金額使用幣別的主要單位，例如 USD 的 `4.99` 或 TWD 的 `150`。 [PayPal 支援幣別](https://developer.paypal.com/api/codes/currency/)
 - 部署環境設定 `Shop__PayPal__ClientId`、`Shop__PayPal__ClientSecret`、`Shop__PayPal__WebhookId`、`Shop__PayPal__CallbackUrl` 和 `Shop__PayPal__GameUrl`。後兩項分別是後端的公開 HTTPS `/api/payments/paypal/return` 網址及同環境的 WebGL 首頁。反向代理須將 `/api/payments/paypal/` 轉發到該環境的 WebRPGServer。
 - 在相同 PayPal REST 應用程式設定 HTTPS `/api/payments/paypal/webhook`，訂閱 `CHECKOUT.ORDER.APPROVED`、`CHECKOUT.PAYMENT-APPROVAL.REVERSED`、`PAYMENT.CAPTURE.PENDING`、`PAYMENT.CAPTURE.COMPLETED`、`PAYMENT.CAPTURE.DECLINED`、`PAYMENT.CAPTURE.REFUNDED` 與 `PAYMENT.CAPTURE.REVERSED`。PayPal 回傳的 Webhook ID 需與該應用程式及環境一致。 [PayPal 通知事件](https://developer.paypal.com/api/rest/webhooks/event-names/)
 - 測試環境使用獨立的 PostgreSQL、PayPal Sandbox 應用程式及沙盒買家帳號，設定 `Shop__PayPal__Enabled=true` 和 `Shop__PayPal__Live=false`。正式環境以正式商戶的 REST 應用程式設定 `Shop__PayPal__Live=true`，在完成付款、退款、拒付及對帳驗收後設定 `Shop__PayPal__Enabled=true`。台灣 PayPal 帳戶目前僅可付款至境外註冊的 PayPal 帳戶。 [PayPal 台灣付款說明](https://www.paypal.com/tw/cshelp/article/%E6%88%91%E8%A6%81%E5%A6%82%E4%BD%95%E4%BB%98%E6%AC%BE%E5%91%A2%EF%BC%9F-help293?locale.x=zh_TW)

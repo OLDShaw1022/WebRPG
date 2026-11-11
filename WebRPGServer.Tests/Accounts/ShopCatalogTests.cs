@@ -4,11 +4,11 @@ using WebRPGServer;
 
 namespace WebRPGServer.Tests;
 
-// 驗證預設商品目錄包含兩種指定價格的商品。
+// 驗證預設商品目錄包含指定價格的兌換與儲值方案。
 public sealed class ShopCatalogTests
 {
     [Test]
-    public void DefaultCatalogIncludesCrystalExchangeAndGoldPurchase()
+    public void DefaultCatalogIncludesExchangePurchaseAndTopUp()
     {
         IConfigurationRoot configuration = new ConfigurationBuilder()
             .SetBasePath(TestContext.CurrentContext.TestDirectory)
@@ -21,5 +21,8 @@ public sealed class ShopCatalogTests
 
         ShopOffer? purchase = catalog.Find("empty-item");
         Assert.That(purchase, Is.EqualTo(new ShopOffer("empty-item", 0, 0, GoldCost: 100)));
+
+        ShopTopUpCatalog topUps = new(configuration);
+        Assert.That(topUps.Find("crystals-100-twd-1"), Is.EqualTo(new ShopTopUpOffer("crystals-100-twd-1", "TWD", 1m, 100)));
     }
 }
