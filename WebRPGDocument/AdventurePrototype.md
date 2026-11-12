@@ -17,12 +17,12 @@
 | 檔案 | 職責 |
 | --- | --- |
 | [Main.cs](../WebRPG/Assets/WebRPG/Code/Bootstrap/Main.cs) | 啟動時顯示主選單；選擇單人遊玩後建立冒險 Model、呼叫 StartRun，再建立 View 與 Presenter，逐幀推進並管理釋放。 |
-| [AdventureConfiguration.cs](../WebRPG/Assets/WebRPG/Code/Adventure/AdventureConfiguration.cs) | JSON 對應資料結構與設定驗證。 |
+| [AdventureConfiguration.cs](../WebRPG/Assets/WebRPG/Code/Adventure/Configuration/AdventureConfiguration.cs) | JSON 對應資料結構與設定驗證。 |
 | [AdventureModel.cs](../WebRPG/Assets/WebRPG/Code/Adventure/AdventureModel.cs) | 純 C# 挑戰狀態、地圖生成、獎勵、節點處理與已選路徑；建立單場戰鬥並依結果推進挑戰。 |
-| [AdventureBattleModel.cs](../WebRPG/Assets/WebRPG/Code/Adventure/AdventureBattleModel.cs) | 純 C# 單場戰鬥狀態、固定步長、角色動作、冷卻、鎖定目標與投射物結算。 |
-| [AdventureScreenContentHelper.cs](../WebRPG/Assets/WebRPG/Code/Adventure/AdventureScreenContentHelper.cs) | 依內容變更快取摘要、紀錄、選項、遺物與地圖資料，避免戰鬥逐幀重建。 |
-| [AdventurePresenter.cs](../WebRPG/Assets/WebRPG/Code/Adventure/AdventurePresenter.cs) | 將 View 操作轉為 Model 指令，產生本機 HUD、角色檢視、讀條與地圖顯示資料。 |
-| [AdventureView.cs](../WebRPG/Assets/WebRPG/Code/Adventure/AdventureView.cs) | 綁定 Prefab 中的固定元件、顯示畫面資料並送出互動事件；依地圖資料生成節點與連線範本實例。 |
+| [AdventureBattleModel.cs](../WebRPG/Assets/WebRPG/Code/Adventure/Battle/AdventureBattleModel.cs) | 純 C# 單場戰鬥狀態、固定步長、角色動作、冷卻、鎖定目標與投射物結算。 |
+| [AdventureScreenContentHelper.cs](../WebRPG/Assets/WebRPG/Code/Adventure/Presentation/AdventureScreenContentHelper.cs) | 依內容變更快取摘要、紀錄、選項、遺物與地圖資料，避免戰鬥逐幀重建。 |
+| [AdventurePresenter.cs](../WebRPG/Assets/WebRPG/Code/Adventure/Presentation/AdventurePresenter.cs) | 將 View 操作轉為 Model 指令，產生本機 HUD、角色檢視、讀條與地圖顯示資料。 |
+| [AdventureView.cs](../WebRPG/Assets/WebRPG/Code/Adventure/Presentation/AdventureView.cs) | 綁定 Prefab 中的固定元件、顯示畫面資料並送出互動事件；依地圖資料生成節點與連線範本實例。 |
 | [AdventureCanvas.prefab](../WebRPG/Assets/WebRPG/Prefabs/AdventureCanvas.prefab) | 保存 HUD、橫排遺物、戰鬥區、選項區、技能列、地圖容器、右側紀錄、中央選單與遮罩、共用提示窗及地圖範本，固定版面可在 Prefab Mode 編輯。 |
 
 - 挑戰選單使用獨立 Menu Model／View／Presenter；Main 組裝並管理生命週期。單人開啟選單暫停 Presenter 的戰鬥推進；返回主選單須確認，結束本輪並釋放冒險與選單，再重新建立可啟動新局的主選單 Presenter。
@@ -31,9 +31,9 @@
 - 遊戲入口與選項行為見[主選單](MainMenu.md)。單人遊玩會直接進入 Map，不需再按一次「開始挑戰」；Ready 仍是 AdventureModel 建立後、StartRun 前的初始狀態。
 - View 不自行計算戰鬥結果；上方本機資料與下方角色檢視資料分開，由 Presenter 提供。
 - UI 配置的單一規格來源為[挑戰介面](AdventureUI.md)。
-- [AdventureTooltipTargetView.cs](../WebRPG/Assets/WebRPG/Code/Adventure/AdventureTooltipTargetView.cs) 轉送圖示的滑鼠與鍵盤焦點事件；[AdventureTooltipView.cs](../WebRPG/Assets/WebRPG/Code/Adventure/AdventureTooltipView.cs) 管理共用提示內容與跟隨更新；[AdventureTooltipLayoutHelper.cs](../WebRPG/Assets/WebRPG/Code/Adventure/AdventureTooltipLayoutHelper.cs) 負責游標／焦點定位、邊緣翻向及畫面內推。
+- [AdventureTooltipTargetView.cs](../WebRPG/Assets/WebRPG/Code/Adventure/Presentation/AdventureTooltipTargetView.cs) 轉送圖示的滑鼠與鍵盤焦點事件；[AdventureTooltipView.cs](../WebRPG/Assets/WebRPG/Code/Adventure/Presentation/AdventureTooltipView.cs) 管理共用提示內容與跟隨更新；[AdventureTooltipLayoutHelper.cs](../WebRPG/Assets/WebRPG/Code/Adventure/Presentation/AdventureTooltipLayoutHelper.cs) 負責游標／焦點定位、邊緣翻向及畫面內推。
 - 固定 UI 的位置、樣式與引用保存在 Prefab；地圖節點、連線與持有遺物圖示依資料動態生成。地圖及選單內非預設顯示的按鈕可在 Prefab Mode 暫時啟用以編輯，執行時由 View 依遊戲狀態切換。
-- [AdventureUiHelper.cs](../WebRPG/Assets/WebRPG/Code/Adventure/AdventureUiHelper.cs) 負責事件綁定、讀條及互動狀態的共用處理；[AdventureDynamicLayoutHelper.cs](../WebRPG/Assets/WebRPG/Code/Adventure/AdventureDynamicLayoutHelper.cs) 只排列依資料變動的角色、技能、遺物與地圖內容，相關尺寸及間距可在 AdventureView 的 Layout Settings 中調整。
+- [AdventureUiHelper.cs](../WebRPG/Assets/WebRPG/Code/Adventure/Presentation/AdventureUiHelper.cs) 負責事件綁定、讀條及互動狀態的共用處理；[AdventureDynamicLayoutHelper.cs](../WebRPG/Assets/WebRPG/Code/Adventure/Presentation/AdventureDynamicLayoutHelper.cs) 只排列依資料變動的角色、技能、遺物與地圖內容，相關尺寸及間距可在 AdventureView 的 Layout Settings 中調整。
 
 ## JSON 設定入口
 

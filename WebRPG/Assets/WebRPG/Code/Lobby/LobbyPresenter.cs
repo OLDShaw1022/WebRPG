@@ -4,30 +4,6 @@ using WebRPGShared;
 
 namespace WebRPG
 {
-    // 定義大廳畫面的操作與呈現介面。
-    public interface ILobbyView
-    {
-        public event Action<string, bool> CreateRequested;
-        public event Action<string> JoinRequested;
-        public event Action RefreshRequested;
-        public event Action LeaveRequested;
-        public event Action ReadyRequested;
-        public event Action BackRequested;
-        public void Render(LobbyScreenModel screen);
-    }
-
-    // 保存大廳 View 所需的顯示內容與可操作狀態。
-    public sealed class LobbyScreenModel
-    {
-        public bool Connected;
-        public bool Busy;
-        public bool InRoom;
-        public string Status;
-        public string Members;
-        public string ReadyLabel;
-        public LobbyRoomSummary[] Rooms;
-    }
-
     // 將大廳操作轉成連線命令，並將伺服器快照轉為畫面資料。
     public sealed class LobbyPresenter : IDisposable
     {

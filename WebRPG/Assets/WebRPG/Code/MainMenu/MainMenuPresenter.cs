@@ -2,15 +2,6 @@ using System;
 
 namespace WebRPG
 {
-    // 定義主選單的單人遊戲、離開事件與隱藏介面。
-    public interface IMainMenuView
-    {
-        public event Action SinglePlayerRequested;
-        public event Action MultiplayerRequested;
-        public event Action QuitRequested;
-        public void Hide();
-    }
-
     // 處理主選單的單人遊戲與離開操作，協調冒險啟動及選單隱藏。
     public sealed class MainMenuPresenter : IDisposable
     {

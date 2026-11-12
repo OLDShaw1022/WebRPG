@@ -32,9 +32,12 @@
 
 - 25：`WebRPG/`、`WebRPGServer/`、`WebRPGShared/` 與其測試中的自行維護 C# 程式碼，具有業務、協定、限制、時間、容量、比例、版面或容差意義的固定數值，須先宣告為具名常數或既有設定，再於運算、比較及呼叫參數中使用；名稱須表達用途，涉及單位時一併標明，例如 `MaximumAccumulatedTimeSeconds`，不可只用數值命名。即使只使用一次也適用；同一規則的數值應重用同一宣告。明確表示零值、索引起點、遞增量、正規化範圍或幾何中心等通用數學意義的數值，以及已具語意名稱的常數／設定預設值、列舉值與直接描述測試輸入或預期結果的資料，可保留字面值；第三方及自動產生程式碼不適用。
 
-- 26、`WebRPGServer/`、`WebRPGServer.Tests/`、`WebRPG/Assets/WebRPG/Code/` 與 `WebRPG/Assets/WebRPG/Tests/Editor/` 的自有 C# 腳本按功能放入子資料夾。新增或搬移腳本時，優先沿用既有分類，只有新增獨立功能時才建立新的功能資料夾。跨功能共用的測試輔助程式可集中在 `Common/`，只供單一功能使用的輔助程式應與對應測試放在一起。
-  - `WebRPGServer/` 依功能使用 `Accounts/`、`Chat/`、`Lobby/` 等資料夾，應用程式入口 `Program.cs` 留在專案根目錄。
-  - `WebRPGServer.Tests/` 依功能使用 `Accounts/`、`Lobby/`、`Multiplayer/` 等資料夾。需明確指定遠端環境才執行的測試及其專用輔助程式放在 `Remote/`。
-  - `WebRPG/Assets/WebRPG/Code/` 的遊戲腳本按功能放入 `Account/`、`Adventure/`、`Chat/`、`Lobby/`、`MainMenu/` 等資料夾。啟動流程放在 `Bootstrap/`，跨功能共用的程式放在 `Common/`。依既有組件邊界分類，搬移腳本時一併搬移原有 `.meta`，以保留 GUID。
+- 26、`WebRPGServer/`、`WebRPGServer.Tests/`、`WebRPGShared/`、`WebRPG/Assets/WebRPG/Code/` 與 `WebRPG/Assets/WebRPG/Tests/Editor/` 的自有 C# 腳本按功能放入子資料夾。新增或搬移腳本時，優先沿用既有分類。同一功能可依職責再分子資料夾。跨功能共用的測試輔助程式可集中在 `Common/`，只供單一功能使用的輔助程式應與對應測試放在一起。
+  - `WebRPGServer/` 依功能使用 `Accounts/`、`Chat/`、`Lobby/`、`Shop/` 等資料夾。儲值及付款整合放在 `Shop/TopUp/`。應用程式入口 `Program.cs` 留在專案根目錄。
+  - `WebRPGServer.Tests/` 依功能使用 `Accounts/`、`Lobby/`、`Multiplayer/`、`Shop/` 等資料夾。需明確指定遠端環境才執行的測試及其專用輔助程式放在 `Remote/`。
+  - `WebRPGShared/` 依通訊功能使用 `Adventure/`、`Chat/`、`Lobby/`，封包、相關型別及輔助程式放在對應資料夾。
+  - `WebRPG/Assets/WebRPG/Code/` 的遊戲腳本按功能放入 `Account/`、`Adventure/`、`Chat/`、`Lobby/`、`MainMenu/`、`Shop/` 等資料夾。`Adventure/` 依職責使用 `Battle/`、`Configuration/`、`Menu/`、`Multiplayer/`、`Presentation/`。儲值相關資料型別放在 `Shop/TopUp/`。啟動流程放在 `Bootstrap/`，跨功能共用的程式放在 `Common/`。依既有組件邊界分類，搬移腳本時一併搬移原有 `.meta`，以保留 GUID。
   - `WebRPG/Assets/WebRPG/Tests/Editor/` 依功能使用 `Account/`、`Adventure/`、`Lobby/`、`MainMenu/`、`Multiplayer/` 等資料夾。分類時保留 `WebRPG.Tests.Editor.asmdef` 在 `Editor/`，搬移腳本時一併搬移原有 `.meta`，以保留 GUID。
   - 僅調整資料夾時，保留腳本內容與命名空間，並更新文件及其他依賴舊路徑的引用。
+
+- 27、本專案自行維護的 C# 程式碼，新增或拆分頂層類別、介面、結構、列舉、記錄或委派時，每個型別使用獨立的 `.cs` 檔案，檔名與型別名稱一致。既有基於職責分工的 `partial` 型別可保留。巢狀型別留在外層型別原有的檔案內，避免為了拆出巢狀型別而新增 `partial`。第三方及自動產生的程式碼不適用。

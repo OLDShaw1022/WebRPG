@@ -1,6 +1,4 @@
-using System;
 using NUnit.Framework;
-using UnityEngine;
 using WebRPGShared;
 
 namespace WebRPG.Tests
@@ -65,61 +63,5 @@ namespace WebRPG.Tests
                 Assert.That(view.Screen.Members, Does.Contain("尚未加入"));
             }
         }
-    }
-
-    // 模擬伺服器狀態並記錄送出的命令。
-    internal sealed class TestLobbyModel : ILobbyModel
-    {
-        public event Action Changed;
-        public event Action<AdventurePacket> AdventureReceived;
-        public bool IsConnected { get; set; } = true;
-        public bool IsBusy => false;
-        public string PlayerId => "self";
-        public string Status => "Connected";
-        public LobbyRoomSnapshot Room { get; set; }
-        public LobbyRoomSummary[] Rooms => Array.Empty<LobbyRoomSummary>();
-        public LobbyPacket Last;
-        public int ConnectCalls;
-        public void Notify() => Changed?.Invoke();
-        public Awaitable ConnectAsync()
-        {
-            ConnectCalls++;
-            AwaitableCompletionSource source = new AwaitableCompletionSource();
-            source.SetResult();
-            return source.Awaitable;
-        }
-        public Awaitable SendAsync(LobbyPacket packet)
-        {
-            Last = packet;
-            AwaitableCompletionSource source = new AwaitableCompletionSource();
-            source.SetResult();
-            return source.Awaitable;
-        }
-        public Awaitable SendAdventureAsync(AdventurePacket packet)
-        {
-            AdventureReceived?.Invoke(packet);
-            AwaitableCompletionSource source = new AwaitableCompletionSource();
-            source.SetResult();
-            return source.Awaitable;
-        }
-    }
-
-    // 模擬大廳操作並保存最後一次呈現資料。
-    internal sealed class TestLobbyView : ILobbyView
-    {
-        public event Action<string, bool> CreateRequested;
-        public event Action<string> JoinRequested;
-        public event Action RefreshRequested;
-        public event Action LeaveRequested;
-        public event Action ReadyRequested;
-        public event Action BackRequested;
-        public LobbyScreenModel Screen;
-        public void Render(LobbyScreenModel screen) => Screen = screen;
-        public void Create() => CreateRequested?.Invoke("Room", true);
-        public void Join() => JoinRequested?.Invoke(" room-id ");
-        public void Refresh() => RefreshRequested?.Invoke();
-        public void Leave() => LeaveRequested?.Invoke();
-        public void Ready() => ReadyRequested?.Invoke();
-        public void Back() => BackRequested?.Invoke();
     }
 }
