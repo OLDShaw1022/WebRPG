@@ -17,7 +17,7 @@
 - 8：大廳 Hello 的 `AccessToken` 欄位傳入憑證，不放進 URL；伺服器查詢固定帳號 ID 與名稱，不採信客戶端名稱。每次操作均重新確認憑證有效，撤銷或到期後拒絕操作並關閉連線；同帳號同時僅允許一條大廳連線。
 
 - 9：長效憑證從帳密登入起算固定 30 天，恢復登入時在交易內輪替，不延長期限；同一長效憑證只能換發一次。輪替後前一個 Access Token 失效，新 Access Token 到期不得晚於長效憑證。重新登入會撤銷同一 Cookie 的舊記住登入狀態，未勾選時也會清除 Cookie。
-- 10：主選單登出會撤銷目前長效憑證及關聯 Access Token，再清除 Cookie。僅有 Bearer 的登出同樣撤銷所屬長效工作階段；網路失敗保留本機狀態以便重試。Access Token 到期仍返回登入頁並結束目前遊戲，不在遊玩途中自動換發；下次開啟或重新整理時才恢復登入。清除網站資料、封鎖 Cookie 或私人模式結束後可能需要重新登入。
+- 10：主選單登出會撤銷目前長效憑證及關聯 Access Token，再清除 Cookie。僅有 Bearer 的登出同樣撤銷所屬長效工作階段；網路失敗保留本機狀態以便重試。開啟或重新整理遊戲時會檢查恢復登入憑證。使用「記住我」的登入工作階段會在 Access Token 到期前 5 分鐘嘗試背景換發。網路暫時失敗時每 15 秒重試，直到到期。未勾選「記住我」的登入沒有背景換發。Access Token 到期時若仍未成功換發，客戶端會取消尚未完成的換發、關閉大廳連線、結束目前冒險、清除本機登入狀態並顯示登入表單。清除網站資料、封鎖 Cookie 或私人模式結束後可能需要重新登入。
 - 11：帳號 API 拒絕未允許的 Origin 與 Sec-Fetch-Site: cross-site 要求；恢復登入與攜帶 Cookie 的登出另須提供 X-WebRPG-Request: 1，防止跨站表單偽造。WebGL 的 Cookie 由瀏覽器管理，遊戲程式不讀取或自行設定 Cookie header。
 
 ## API 與設定
@@ -26,7 +26,7 @@
 | --- | --- | --- |
 | `POST /api/accounts/register` | `email`、`password`、`username` | 200，註冊提示 |
 | `POST /api/accounts/login` | `email`、`password`、`rememberMe`（預設 false） | 200，`accessToken`、`accountId`、`username`、`expiresAt`；勾選時另設定 Cookie |
-| `POST /api/accounts/refresh` | Cookie、`X-WebRPG-Request: 1` | 200，同登入結果並輪替 Cookie；未登入／過期為 401 |
+| `POST /api/accounts/refresh` | Cookie、`X-WebRPG-Request: 1`。遊玩中換發另傳原 Access Token 作為 Bearer，須與 Cookie 屬於同一工作階段 | 200，同登入結果並輪替 Cookie；憑證無效、到期或不相符為 401 |
 | `POST /api/accounts/logout` | `Authorization: Bearer <token>` 或 Cookie；帶 Cookie 時須有 `X-WebRPG-Request: 1` | 204，撤銷登入及長效憑證並清除 Cookie |
 
 - 沿用 `ConnectionStrings:GameDatabase`，可由 `ConnectionStrings__GameDatabase` 提供；不要把密碼、憑證或連線字串寫入 Git、文件或聊天。

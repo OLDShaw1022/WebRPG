@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using NativeWebSocket;
 using Newtonsoft.Json;
 using UnityEngine;
@@ -37,8 +39,15 @@ namespace WebRPG
         private readonly LobbyServerConfiguration[] _servers;
         private readonly float _requestTimeoutSeconds;
         private readonly AccountModel _account;
+        private readonly SemaphoreSlim _sendGate = new SemaphoreSlim(1, 1);
         private WebSocket _socket;
         private bool _disposed;
+
+        private bool _refreshingSession;
+        private TaskCompletionSource<bool> _refreshReply;
+        private string _refreshRequestId;
+        private string _refreshResponseType;
+        private float _refreshReplyTime;
 
         private int _requestNumber;
         private string _pendingId = string.Empty;
@@ -161,7 +170,7 @@ namespace WebRPG
             _chatTime = 0f;
             ChatError = string.Empty;
             ChatChanged?.Invoke();
-            await LobbyPacketSendHelper.SendAsync(_socket, new LobbyPacket
+            await SendSocketPacketAsync(_socket, new LobbyPacket
             {
                 Type = LobbyPacketType.RoomChat,
                 RequestId = requestId,
@@ -178,7 +187,7 @@ namespace WebRPG
             WebSocket socket = _socket;
             packet.RequestId = (++_requestNumber).ToString();
             _adventureRequests.Add(packet.RequestId, Room?.Id ?? string.Empty);
-            await LobbyPacketSendHelper.SendAsync(socket, new LobbyPacket
+            await SendSocketPacketAsync(socket, new LobbyPacket
             {
                 Type = LobbyPacketType.Adventure,
                 RequestId = packet.RequestId,
@@ -195,14 +204,80 @@ namespace WebRPG
             IsBusy = true;
             Status = PendingMessage;
             Changed?.Invoke();
+            await SendSocketPacketAsync(socket, packet, HandleSendFailure);
+        }
+
+        private async Awaitable SendSocketPacketAsync(
+            WebSocket socket, LobbyPacket packet, Action<WebSocket, Exception> failed)
+        {
+            await _sendGate.WaitAsync();
+            try
+            {
+                if (_disposed || socket != _socket || socket == null) return;
+                await SendSocketPacketCoreAsync(socket, packet, failed);
+            }
+            finally { _sendGate.Release(); }
+        }
+
+        private async Awaitable SendSocketPacketCoreAsync(
+            WebSocket socket, LobbyPacket packet, Action<WebSocket, Exception> failed)
+        {
             if (packet.Type == LobbyPacketType.Hello && _account != null)
             {
                 Newtonsoft.Json.Linq.JObject json = Newtonsoft.Json.Linq.JObject.FromObject(packet);
                 json[TokenProperty] = _account.AccessToken;
                 try { await socket.SendText(json.ToString(Formatting.None)); }
-                catch (Exception exception) { HandleSendFailure(socket, exception); }
+                catch (Exception exception) { failed(socket, exception); }
             }
-            else await LobbyPacketSendHelper.SendAsync(socket, packet, HandleSendFailure);
+            else await LobbyPacketSendHelper.SendAsync(socket, packet, failed);
+        }
+
+        internal async Awaitable<bool> RefreshSessionAsync(CancellationToken cancellationToken)
+        {
+            while (!_disposed && _socket != null && !IsConnected && IsBusy)
+                await Awaitable.NextFrameAsync(cancellationToken);
+
+            await _sendGate.WaitAsync(cancellationToken);
+            _refreshingSession = true;
+            try
+            {
+                WebSocket socket = _socket;
+                // ListRooms 的回覆確認所有先前送出的封包都已使用舊憑證完成驗證。
+                if (socket != null && !await WaitForRefreshReplyAsync(
+                        socket, LobbyPacketType.ListRooms, LobbyPacketType.State) && socket == _socket)
+                    throw new InvalidOperationException(TimeoutMessage);
+
+                cancellationToken.ThrowIfCancellationRequested();
+                bool refreshed = await _account.TryRefreshSessionAsync();
+                cancellationToken.ThrowIfCancellationRequested();
+                if (refreshed && socket != null && socket == _socket &&
+                    !await WaitForRefreshReplyAsync(socket, LobbyPacketType.Hello, LobbyPacketType.Welcome) &&
+                    socket == _socket)
+                    Disconnect(AuthenticationRequiredMessage);
+                return refreshed;
+            }
+            finally
+            {
+                _refreshingSession = false;
+                _sendGate.Release();
+            }
+        }
+
+        private async Awaitable<bool> WaitForRefreshReplyAsync(WebSocket socket, string type, string responseType)
+        {
+            TaskCompletionSource<bool> reply = new TaskCompletionSource<bool>(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+            _refreshReply = reply;
+            _refreshRequestId = (++_requestNumber).ToString();
+            _refreshResponseType = responseType;
+            _refreshReplyTime = 0f;
+            try
+            {
+                await SendSocketPacketCoreAsync(socket,
+                    new LobbyPacket { Type = type, RequestId = _refreshRequestId }, HandleSendFailure);
+                return await reply.Task;
+            }
+            finally { _refreshReply = null; }
         }
 
         private void HandleSendFailure(WebSocket socket, Exception exception)
@@ -217,6 +292,11 @@ namespace WebRPG
             try { packet = JsonConvert.DeserializeObject<LobbyPacket>(json); }
             catch (JsonException) { Disconnect(InvalidPacketMessage); return; }
             if (packet == null) { Disconnect(InvalidPacketMessage); return; }
+            if (_refreshReply != null && packet.RequestId == _refreshRequestId)
+            {
+                _refreshReply.TrySetResult(packet.Type == _refreshResponseType);
+                return;
+            }
             if (packet.Type == LobbyPacketType.RoomChat)
             {
                 if (Room == null || packet.RoomId != Room.Id) return;
@@ -327,6 +407,12 @@ namespace WebRPG
         public void Tick(float deltaTime)
         {
             if (_disposed) return;
+            if (_refreshingSession)
+            {
+                _refreshReplyTime += deltaTime;
+                if (_refreshReplyTime >= _requestTimeoutSeconds) _refreshReply?.TrySetResult(false);
+                return;
+            }
             if (_chatRequestId.Length != 0)
             {
                 _chatTime += deltaTime;
@@ -341,6 +427,7 @@ namespace WebRPG
         {
             WebSocket socket = _socket;
             _socket = null;
+            _refreshReply?.TrySetResult(false);
             _adventureRequests.Clear();
             IsConnected = false;
             IsBusy = false;
@@ -360,6 +447,7 @@ namespace WebRPG
             _disposed = true;
             WebSocket socket = _socket;
             _socket = null;
+            _refreshReply?.TrySetResult(false);
             _adventureRequests.Clear();
             IsConnected = false;
             IsBusy = false;

@@ -159,6 +159,33 @@ public sealed class RememberedLoginTests
     }
 
     [Test]
+    public async Task InGameRefreshRequiresBearerFromTheSameRememberedSession()
+    {
+        await using NpgsqlDataSource source = NpgsqlDataSource.Create(_database.ConnectionString);
+        PostgresAccountStore store = new(source);
+        await store.InitializeAsync(CancellationToken.None);
+        string email = $"refresh-{Guid.NewGuid():N}@example.invalid";
+        AccountLogin credentials = new(email, "long-enough-password");
+        await store.RegisterAsync(new(email, credentials.Password, "玩家"), CancellationToken.None);
+        AccountSession first = (await store.LoginAsync(credentials, CancellationToken.None))!;
+        RememberedAccountSession remembered = await store.RememberAsync(first, CancellationToken.None);
+        AccountSession other = (await store.LoginAsync(credentials, CancellationToken.None))!;
+        RememberedAccountSession otherRemembered = await store.RememberAsync(other, CancellationToken.None);
+
+        Assert.That(await store.RefreshAsync(remembered.RefreshToken, CancellationToken.None,
+            otherRemembered.Session.AccessToken), Is.Null);
+
+        RememberedAccountSession? refreshed = await store.RefreshAsync(remembered.RefreshToken,
+            CancellationToken.None, first.AccessToken);
+        Assert.That(refreshed, Is.Not.Null);
+        Assert.That(refreshed!.Session.AccountId, Is.EqualTo(first.AccountId));
+        Assert.That(await store.AuthenticateAsync(first.AccessToken, CancellationToken.None), Is.Null);
+        Assert.That(await store.AuthenticateAsync(refreshed.Session.AccessToken, CancellationToken.None),
+            Is.Not.Null);
+        Assert.That(await store.AuthenticateAsync(other.AccessToken, CancellationToken.None), Is.Not.Null);
+    }
+
+    [Test]
     public async Task ExpiredOrMalformedRefreshTokensCannotRestoreSession()
     {
         await using NpgsqlDataSource source = NpgsqlDataSource.Create(_database.ConnectionString);

@@ -37,6 +37,7 @@ namespace WebRPG
         private const string LoginFailedMessage = "Email 或密碼錯誤。";
         private const string RateLimitMessage = "操作過於頻繁，請稍候一分鐘再試。";
         private const int RequestTimeoutSeconds = 15;
+        private const int RefreshTimeoutSeconds = 5;
         private const int UnauthorizedStatus = 401;
         private const int RateLimitStatus = 429;
         private const int MinimumPasswordLength = 8;
@@ -53,6 +54,8 @@ namespace WebRPG
         public string Username { get; private set; } = string.Empty;
         public DateTimeOffset ExpiresAt { get; private set; }
         public bool RegistrationSucceeded { get; private set; }
+        internal bool CanRefreshSession { get; private set; }
+        internal bool IsRequestInProgress => _request != null;
         public bool IsLoggedIn => !string.IsNullOrEmpty(AccessToken) && DateTimeOffset.UtcNow < ExpiresAt;
 
         public AccountModel(LobbyClientConfiguration configuration, bool includeEditorServers)
@@ -87,6 +90,7 @@ namespace WebRPG
                 return RegisteredMessage;
             }
             ApplySession(serverIndex, response);
+            CanRefreshSession = rememberMe;
             return string.Empty;
         }
 
@@ -95,16 +99,30 @@ namespace WebRPG
             string response = await SendAsync(serverIndex, RefreshPath, string.Empty, false, true);
             if (string.IsNullOrEmpty(response)) return false;
             ApplySession(serverIndex, response);
+            CanRefreshSession = true;
             return true;
         }
 
-        private void ApplySession(int serverIndex, string response)
+        internal async Awaitable<bool> TryRefreshSessionAsync()
+        {
+            if (!CanRefreshSession || !IsLoggedIn) return false;
+            string accountId = AccountId;
+            DateTimeOffset previousExpiry = ExpiresAt;
+            string response = await SendAsync(
+                ServerIndex, RefreshPath, string.Empty, true, true, RefreshTimeoutSeconds);
+            if (string.IsNullOrEmpty(response) || DateTimeOffset.UtcNow >= previousExpiry) return false;
+            ApplySession(ServerIndex, response, accountId);
+            return true;
+        }
+
+        private void ApplySession(int serverIndex, string response, string expectedAccountId = null)
         {
             AccountResponseModel session = JsonConvert.DeserializeObject<AccountResponseModel>(response);
             if (session == null ||
                 string.IsNullOrEmpty(session.AccessToken) ||
                 string.IsNullOrEmpty(session.AccountId) ||
-                string.IsNullOrEmpty(session.Username) || session.ExpiresAt <= DateTimeOffset.UtcNow)
+                string.IsNullOrEmpty(session.Username) || session.ExpiresAt <= DateTimeOffset.UtcNow ||
+                (expectedAccountId != null && session.AccountId != expectedAccountId))
                 throw new InvalidOperationException(InvalidResponseMessage);
             ServerIndex = serverIndex;
             AccessToken = session.AccessToken;
@@ -125,6 +143,10 @@ namespace WebRPG
             AccountId = string.Empty;
             Username = string.Empty;
             ExpiresAt = default;
+            CanRefreshSession = false;
+            UnityWebRequest request = _request;
+            _request = null;
+            request?.Abort();
         }
 
         internal Awaitable<string> SendAuthenticatedAsync(string path, string body) =>
@@ -135,7 +157,8 @@ namespace WebRPG
             string path,
             string body,
             bool authenticated,
-            bool allowUnauthorized = false)
+            bool allowUnauthorized = false,
+            int timeoutSeconds = RequestTimeoutSeconds)
         {
             if (_disposed || _request != null || serverIndex < 0 || serverIndex >= _servers.Length)
                 throw new InvalidOperationException(RequestFailedMessage);
@@ -151,20 +174,21 @@ namespace WebRPG
             request.SetRequestHeader(ContentType, JsonContentType);
             request.SetRequestHeader(RequestHeader, RequestHeaderValue);
             if (authenticated) request.SetRequestHeader(AuthorizationHeader, BearerPrefix + AccessToken);
-            request.timeout = RequestTimeoutSeconds;
+            request.timeout = timeoutSeconds;
             _request = request;
             try
             {
                 AccountBrowserRequestHelper.Configure(address.Uri);
 #if UNITY_EDITOR || UNITY_STANDALONE
                 await AccountNativeCookieHelper.ConfigureAsync(request);
-                if (_disposed) throw new OperationCanceledException();
+                if (_request != request) throw new OperationCanceledException();
 #endif
                 await request.SendWebRequest();
+                if (_request != request) throw new OperationCanceledException();
 #if UNITY_EDITOR || UNITY_STANDALONE
                 await AccountNativeCookieHelper.SaveResponseAsync(request);
+                if (_request != request) throw new OperationCanceledException();
 #endif
-                if (_disposed) throw new OperationCanceledException();
                 if (allowUnauthorized && request.responseCode == UnauthorizedStatus) return string.Empty;
                 if (request.result != UnityWebRequest.Result.Success)
                 {
@@ -179,13 +203,15 @@ namespace WebRPG
                 }
                 return request.downloadHandler.text;
             }
-            finally { _request = null; }
+            finally
+            {
+                if (_request == request) _request = null;
+            }
         }
 
         public void Dispose()
         {
             _disposed = true;
-            _request?.Abort();
             ClearSession();
         }
     }

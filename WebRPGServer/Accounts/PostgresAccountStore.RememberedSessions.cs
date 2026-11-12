@@ -37,9 +37,13 @@ public sealed partial class PostgresAccountStore
         return new RememberedAccountSession(session, token, expires);
     }
 
-    public async Task<RememberedAccountSession?> RefreshAsync(string? token, CancellationToken cancellationToken)
+    public async Task<RememberedAccountSession?> RefreshAsync(
+        string? token, CancellationToken cancellationToken, string? previousAccessToken = null)
     {
-        if (string.IsNullOrEmpty(token) || token.Length > AccountTokenHelper.MaximumTokenLength) return null;
+        if (string.IsNullOrEmpty(token) || token.Length > AccountTokenHelper.MaximumTokenLength ||
+            previousAccessToken?.Length > AccountTokenHelper.MaximumTokenLength) return null;
+        string? previousTokenHash = string.IsNullOrEmpty(previousAccessToken)
+            ? null : AccountTokenHelper.Hash(previousAccessToken);
         string rotatedToken = AccountTokenHelper.Create();
         Guid family;
         Guid accountId;
@@ -50,11 +54,16 @@ public sealed partial class PostgresAccountStore
         await using (NpgsqlCommand rotate = new("""
             UPDATE game_account_remembered_sessions SET token_hash = $2
             WHERE token_hash = $1 AND expires_at > CURRENT_TIMESTAMP
+              AND ($3 IS NULL OR EXISTS (
+                  SELECT 1 FROM game_account_sessions s
+                  WHERE s.remembered_session_id = game_account_remembered_sessions.remembered_session_id
+                    AND s.token_hash = $3))
             RETURNING remembered_session_id, account_id, expires_at;
             """, connection, transaction))
         {
             rotate.Parameters.AddWithValue(AccountTokenHelper.Hash(token));
             rotate.Parameters.AddWithValue(AccountTokenHelper.Hash(rotatedToken));
+            rotate.Parameters.AddWithValue(NpgsqlTypes.NpgsqlDbType.Text, (object?)previousTokenHash ?? DBNull.Value);
             await using NpgsqlDataReader reader = await rotate.ExecuteReaderAsync(cancellationToken);
             if (!await reader.ReadAsync(cancellationToken)) return null;
             family = reader.GetGuid(0);

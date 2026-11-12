@@ -43,15 +43,15 @@ public sealed class LobbyHub
                 AccountIdentity? identity = null;
                 if (authenticate is not null && request is not null)
                 {
-                    if (!registered)
+                    if (request.Type == LobbyPacketType.Hello)
                     {
                         using JsonDocument document = JsonDocument.Parse(json);
-                        if (document.RootElement.TryGetProperty("AccessToken", out JsonElement property) &&
-                            property.ValueKind == JsonValueKind.String) accessToken = property.GetString()
-                                ?? string.Empty;
+                        accessToken = document.RootElement.TryGetProperty("AccessToken", out JsonElement property) &&
+                            property.ValueKind == JsonValueKind.String ? property.GetString() ?? string.Empty
+                            : string.Empty;
                     }
                     identity = await authenticate(accessToken);
-                    if (identity is null)
+                    if (identity is null || (registered && identity.AccountId != playerId))
                     {
                         await socket.CloseAsync(WebSocketCloseStatus.PolicyViolation, "Authentication required", token);
                         break;
@@ -79,6 +79,13 @@ public sealed class LobbyHub
                         _registry.Connect(playerId, identity?.Username ?? request.Username);
                         _sessions.Add(playerId, session);
                         registered = true;
+                        LobbyPacket welcome = _registry.Snapshot(playerId, request.RequestId ?? string.Empty);
+                        welcome.Type = LobbyPacketType.Welcome;
+                        session.Enqueue(welcome);
+                        continue;
+                    }
+                    if (request.Type == LobbyPacketType.Hello && authenticate is not null)
+                    {
                         LobbyPacket welcome = _registry.Snapshot(playerId, request.RequestId ?? string.Empty);
                         welcome.Type = LobbyPacketType.Welcome;
                         session.Enqueue(welcome);

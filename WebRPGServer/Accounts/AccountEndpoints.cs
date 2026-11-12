@@ -90,11 +90,12 @@ public static class AccountEndpoints
             if (!AccountCookieHelper.HasRequestHeader(context)) return Results.StatusCode(
                 StatusCodes.Status403Forbidden);
             PostgresAccountStore store = context.RequestServices.GetRequiredService<PostgresAccountStore>();
+            string accessToken = ReadToken(context);
             RememberedAccountSession? session = await store.RefreshAsync(
-                AccountCookieHelper.Read(context), context.RequestAborted);
+                AccountCookieHelper.Read(context), context.RequestAborted, accessToken);
             if (session is null)
             {
-                AccountCookieHelper.Clear(context);
+                if (string.IsNullOrEmpty(accessToken)) AccountCookieHelper.Clear(context);
                 return Results.Unauthorized();
             }
             AccountCookieHelper.Write(context, session);

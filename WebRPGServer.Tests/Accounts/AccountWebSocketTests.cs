@@ -27,6 +27,56 @@ public sealed class AccountWebSocketTests
         Assert.That(error!.Message, Does.Contain("PolicyViolation").And.Contain("Authentication required"));
     }
 
+    [TestCase(true)]
+    [TestCase(false)]
+    public async Task LobbyReauthenticationPreservesRoomAndRequiresSameAccount(bool sameAccount)
+    {
+        int rotated = 0;
+        await using LocalLobbyServer server = await LocalLobbyServer.StartAsync(token =>
+            Task.FromResult<AccountIdentity?>(token switch
+            {
+                "peer-token" => new("peer-account", "Peer"),
+                "original-token" when Volatile.Read(ref rotated) == 0 => new("original-account", "Player"),
+                "renewed-token" when Volatile.Read(ref rotated) != 0 =>
+                    new(sameAccount ? "original-account" : "different-account", "Player"),
+                _ => null
+            }));
+        using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(TestTimeoutSeconds));
+        CancellationToken cancellation = timeout.Token;
+        using LobbyClient client = await LobbyClient.ConnectAsync(server.Address, "Player", cancellation,
+            "original-token");
+        JsonObject created = await client.RequestAsync("CreateRoom", new() { ["RoomName"] = "Refresh" }, cancellation);
+        string roomId = created["Room"]!["Id"]!.GetValue<string>();
+        using LobbyClient peer = await LobbyClient.ConnectAsync(server.Address, "Peer", cancellation, "peer-token");
+        await peer.RequestAsync("JoinRoom", new() { ["RoomId"] = roomId }, cancellation);
+        await client.RequestAsync("SetReady", new() { ["IsReady"] = true }, cancellation);
+        await peer.RequestAsync("SetReady", new() { ["IsReady"] = true }, cancellation);
+        await client.SendRawAsync("""{"Type":"Adventure","Adventure":{"Type":"AdventureStart"}}""", cancellation);
+        await client.ReadTypeAsync("Adventure", cancellation);
+        await peer.ReadTypeAsync("Adventure", cancellation);
+        await client.RequestAsync("ListRooms", new(), cancellation);
+        Volatile.Write(ref rotated, 1);
+
+        JsonObject reauthentication = new() { ["AccessToken"] = "renewed-token" };
+        if (!sameAccount)
+        {
+            InvalidOperationException? error = Assert.ThrowsAsync<InvalidOperationException>(async () =>
+                await client.RequestAsync("Hello", reauthentication, cancellation, "Welcome"));
+            Assert.That(error!.Message, Does.Contain("PolicyViolation"));
+            return;
+        }
+
+        JsonObject welcome = await client.RequestAsync("Hello", reauthentication, cancellation, "Welcome");
+        Assert.That(welcome["PlayerId"]!.GetValue<string>(), Is.EqualTo(client.PlayerId));
+        Assert.That(welcome["Room"]!["Id"]!.GetValue<string>(), Is.EqualTo(roomId));
+        await client.SendRawAsync(
+            """{"Type":"Adventure","Adventure":{"Type":"AdventureCommand","Command":"vote","Payload":"1|0"}}""",
+            cancellation);
+        JsonObject vote = await peer.ReadTypeAsync("Adventure", cancellation);
+        Assert.That(vote["Adventure"]!["Command"]!.GetValue<string>(), Is.EqualTo("vote"));
+        Assert.That(vote["Adventure"]!["Sequence"]!.GetValue<long>(), Is.EqualTo(1));
+    }
+
     [Test]
     public async Task MissingTokenIsRejected()
     {

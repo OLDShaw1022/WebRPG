@@ -48,6 +48,63 @@ namespace WebRPG.Tests
         }
 
         [UnityTest]
+        public IEnumerator InGameRefreshSendsPreviousBearerAndUpdatesTheSameAccount()
+        {
+            const string initialCookie = "__Secure-WebRPGRemember=initial";
+            const string renewedCookie = "__Secure-WebRPGRemember=renewed";
+            const string cookieAttributes = "; Path=/api/accounts; HttpOnly";
+            using AccountHttpTestServer server = new AccountHttpTestServer();
+            using AccountModel model = new AccountModel(
+                AccountClientConfigurationHelper.Create(server.SocketUrl), true);
+            Task response = server.RespondAsync(200, SessionJson, initialCookie + cookieAttributes);
+            Awaitable<string>.Awaiter login = model.SubmitAsync(1, "player@example.invalid", "test-password",
+                string.Empty, false, true).GetAwaiter();
+            while (!login.IsCompleted) yield return null;
+            login.GetResult();
+            while (!response.IsCompleted) yield return null;
+            response.GetAwaiter().GetResult();
+
+            response = server.RespondAsync(200, SessionJson.Replace("restored-token", "renewed-token"),
+                renewedCookie + cookieAttributes);
+            var refreshMethod = typeof(AccountModel).GetMethod("TryRefreshSessionAsync",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            var refresh = ((Awaitable<bool>)refreshMethod.Invoke(model, null)).GetAwaiter();
+            while (!refresh.IsCompleted) yield return null;
+            Assert.That(refresh.GetResult(), Is.True);
+            while (!response.IsCompleted) yield return null;
+            response.GetAwaiter().GetResult();
+
+            Assert.That(server.LastPath, Is.EqualTo("/api/accounts/refresh"));
+            Assert.That(server.LastAuthorization, Is.EqualTo("Bearer restored-token"));
+            Assert.That(server.LastCookie, Is.EqualTo(initialCookie));
+            Assert.That(model.AccessToken, Is.EqualTo("renewed-token"));
+            Assert.That(model.AccountId, Is.EqualTo("account-1"));
+        }
+
+        [UnityTest]
+        public IEnumerator ClearingExpiredSessionCancelsPendingRefresh()
+        {
+            using AccountHttpTestServer server = new AccountHttpTestServer();
+            using AccountModel model = new AccountModel(
+                AccountClientConfigurationHelper.Create(server.SocketUrl), true);
+            Task response = server.RespondAsync(200, SessionJson);
+            var restore = model.TryRestoreAsync(1).GetAwaiter();
+            while (!restore.IsCompleted) yield return null;
+            Assert.That(restore.GetResult(), Is.True);
+            while (!response.IsCompleted) yield return null;
+            response.GetAwaiter().GetResult();
+
+            var refreshMethod = typeof(AccountModel).GetMethod("TryRefreshSessionAsync",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            var refresh = ((Awaitable<bool>)refreshMethod.Invoke(model, null)).GetAwaiter();
+            model.ClearSession();
+            while (!refresh.IsCompleted) yield return null;
+            Assert.Catch<OperationCanceledException>(() => refresh.GetResult());
+            Assert.That(model.IsLoggedIn, Is.False);
+            Assert.That(model.AccessToken, Is.Empty);
+        }
+
+        [UnityTest]
         public IEnumerator RotatedCookieRestoresAcrossNewPlaySessionsUntilLogout()
         {
             const string first = "__Secure-WebRPGRemember=initial";

@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using Newtonsoft.Json;
 using UnityEngine;
 using WebRPGShared;
@@ -12,6 +13,9 @@ namespace WebRPG
         private const string MissingAccountPrefabMessage = "Main requires an AccountView prefab reference.";
         private const string LoggedInFormat = "已登入：{0}";
         private const string SessionExpiredMessage = "登入已到期，請重新登入。";
+        private const int RefreshLeadSeconds = 300;
+        private const int RefreshRetrySeconds = 15;
+        private const int MaximumRefreshWaitSeconds = 60;
         private const string MissingMainMenuPrefabMessage = "Main requires a MainMenuView prefab reference.";
         private const string WebGlQuitMessage = "請關閉瀏覽器分頁以離開遊戲。";
         private const string MissingLobbyPrefabMessage = "Main requires a LobbyView prefab reference.";
@@ -26,6 +30,8 @@ namespace WebRPG
         private AccountView _accountView;
         private AccountPresenter _accountPresenter;
         private bool _loggingOut;
+        private bool _refreshingSession;
+        private CancellationTokenSource _sessionLifetime;
 
         [SerializeField]
         private MainMenuView _mainMenuViewPrefab;
@@ -86,8 +92,6 @@ namespace WebRPG
 
         private void Update()
         {
-            if (_accountModel != null && !string.IsNullOrEmpty(_accountModel.AccessToken) && !_accountModel.IsLoggedIn)
-                ShowLogin(SessionExpiredMessage);
             _adventurePresenter?.Tick(Time.deltaTime);
             _lobbyModel?.Tick(Time.unscaledDeltaTime);
         }
@@ -101,6 +105,7 @@ namespace WebRPG
 
         private void OnDestroy()
         {
+            StopSessionMonitoring();
             _accountPresenter?.Dispose();
             _accountModel?.Dispose();
             if (_accountView) Destroy(_accountView.gameObject);
@@ -133,6 +138,75 @@ namespace WebRPG
             _accountView.gameObject.SetActive(false);
             _mainMenuView.gameObject.SetActive(true);
             _mainMenuView.ShowMessage(string.Format(LoggedInFormat, _accountModel.Username));
+            _sessionLifetime = new CancellationTokenSource();
+            CancellationToken cancellationToken = _sessionLifetime.Token;
+            WatchSessionExpiryAsync(cancellationToken).Forget();
+            if (_accountModel.CanRefreshSession) RefreshSessionAsync(cancellationToken).Forget();
+        }
+
+        private async Awaitable WatchSessionExpiryAsync(CancellationToken cancellationToken)
+        {
+            while (!cancellationToken.IsCancellationRequested && !string.IsNullOrEmpty(_accountModel.AccessToken))
+            {
+                double secondsUntilExpiry = (_accountModel.ExpiresAt - DateTimeOffset.UtcNow).TotalSeconds;
+                if (secondsUntilExpiry <= 0)
+                {
+                    ShowLogin(SessionExpiredMessage);
+                    return;
+                }
+
+                await AwaitableExtensions.WaitForSecondsRealtimeAsync(
+                    (float)Math.Min(secondsUntilExpiry, MaximumRefreshWaitSeconds), cancellationToken);
+            }
+        }
+
+        private async Awaitable RefreshSessionAsync(CancellationToken cancellationToken)
+        {
+            DateTimeOffset refreshAt = _accountModel.ExpiresAt.AddSeconds(-RefreshLeadSeconds);
+            while (!cancellationToken.IsCancellationRequested && _accountModel.IsLoggedIn)
+            {
+                double wait = (refreshAt - DateTimeOffset.UtcNow).TotalSeconds;
+                if (wait > 0)
+                {
+                    await AwaitableExtensions.WaitForSecondsRealtimeAsync(
+                        (float)Math.Min(wait, MaximumRefreshWaitSeconds), cancellationToken);
+                    continue;
+                }
+                if (_loggingOut || _accountModel.IsRequestInProgress)
+                {
+                    await AwaitableExtensions.WaitForSecondsRealtimeAsync(RefreshRetrySeconds, cancellationToken);
+                    continue;
+                }
+                DateTimeOffset previousExpiry = _accountModel.ExpiresAt;
+                _refreshingSession = true;
+                try
+                {
+                    bool refreshed = _lobbyModel == null
+                        ? await _accountModel.TryRefreshSessionAsync()
+                        : await _lobbyModel.RefreshSessionAsync(cancellationToken);
+                    if (cancellationToken.IsCancellationRequested || !refreshed ||
+                        _accountModel.ExpiresAt <= previousExpiry) return;
+
+                    refreshAt = _accountModel.ExpiresAt.AddSeconds(-RefreshLeadSeconds);
+                }
+                catch (Exception exception) when (exception is InvalidOperationException || exception is JsonException)
+                {
+                    if (cancellationToken.IsCancellationRequested) return;
+                    refreshAt = DateTimeOffset.UtcNow.AddSeconds(RefreshRetrySeconds);
+                }
+                finally
+                {
+                    if (!cancellationToken.IsCancellationRequested) _refreshingSession = false;
+                }
+            }
+        }
+
+        private void StopSessionMonitoring()
+        {
+            _sessionLifetime?.Cancel();
+            _sessionLifetime?.Dispose();
+            _sessionLifetime = null;
+            _refreshingSession = false;
         }
 
         private void Logout()
@@ -143,20 +217,25 @@ namespace WebRPG
         private async Awaitable LogoutAsync()
         {
             _loggingOut = true;
+            CancellationToken cancellationToken = _sessionLifetime?.Token ?? default;
             try
             {
+                while (this && _refreshingSession) await Awaitable.NextFrameAsync(cancellationToken);
+                if (!this || cancellationToken.IsCancellationRequested) return;
                 await _accountModel.LogoutAsync();
-                if (this) ShowLogin(string.Empty);
+                if (this && !cancellationToken.IsCancellationRequested) ShowLogin(string.Empty);
             }
             catch (Exception exception)
             {
-                if (_mainMenuView) _mainMenuView.ShowMessage(exception.Message);
+                if (_mainMenuView && !cancellationToken.IsCancellationRequested)
+                    _mainMenuView.ShowMessage(exception.Message);
             }
             finally { _loggingOut = false; }
         }
 
         private void ShowLogin(string message)
         {
+            StopSessionMonitoring();
             DisposeLobby();
             DisposeAdventure();
             if (_adventureView) Destroy(_adventureView.gameObject);
@@ -190,7 +269,7 @@ namespace WebRPG
 
         private bool OpenLobby()
         {
-            if (_accountModel == null || !_accountModel.IsLoggedIn) return false;
+            if (_refreshingSession || _accountModel == null || !_accountModel.IsLoggedIn) return false;
             if (_lobbyPresenter != null || _adventurePresenter != null) return false;
             try
             {
