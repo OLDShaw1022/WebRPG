@@ -34,24 +34,28 @@ namespace WebRPG
 
 
         private readonly AdventureConfiguration _configuration;
+        private readonly bool _partyMode;
         private readonly Random _mapRandom;
         private readonly Random _encounterRandom;
         private readonly Random _relicRandom;
         private readonly Random _skillRandom;
-        private readonly bool _partyMode;
+
         private readonly List<AdventureSkillState> _skills = new List<AdventureSkillState>();
-        private AdventureBattleModel _battle;
         private readonly IReadOnlyList<AdventureSkillState> _readOnlySkills;
-        private readonly IReadOnlyList<SkillDefinition> _readOnlyRewards;
-        private readonly IReadOnlyList<RelicDefinition> _readOnlyRelics;
-        private IReadOnlyCollection<string> _journalSnapshot = Array.Empty<string>();
-        private readonly List<IReadOnlyList<int>> _readOnlyChosenPaths = new List<IReadOnlyList<int>>();
         private readonly List<SkillDefinition> _rewards = new List<SkillDefinition>();
+        private readonly IReadOnlyList<SkillDefinition> _readOnlyRewards;
         private readonly List<RelicDefinition> _relics = new List<RelicDefinition>();
+        private readonly IReadOnlyList<RelicDefinition> _readOnlyRelics;
+
+        private IReadOnlyCollection<string> _journalSnapshot = Array.Empty<string>();
         private readonly Queue<string> _journal = new Queue<string>();
+
+        private readonly List<IReadOnlyList<int>> _readOnlyChosenPaths = new List<IReadOnlyList<int>>();
         private readonly List<IReadOnlyList<IReadOnlyList<NodeDefinition>>> _map =
             new List<IReadOnlyList<IReadOnlyList<NodeDefinition>>>();
         private readonly List<List<int>> _chosenPaths = new List<List<int>>();
+
+        private AdventureBattleModel _battle;
         private int _damageBonus;
         private long _projectileSequence;
 

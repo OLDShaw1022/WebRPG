@@ -9,13 +9,14 @@ namespace WebRPG
     {
         private const int MaximumAdventureLogEntries = 80;
         private const string NewLine = "\n";
-        private readonly AdventureModel _adventure;
-        private readonly List<(string Text, bool IsRoomEntry)> _adventureLog =
-            new List<(string Text, bool IsRoomEntry)>();
-        private string _roomId;
 
         private readonly LobbyModel _model;
         private readonly RoomChatView _view;
+        private readonly AdventureModel _adventure;
+
+        private string _roomId;
+        private readonly List<(string Text, bool IsRoomEntry)> _adventureLog =
+            new List<(string Text, bool IsRoomEntry)>();
 
         public RoomChatPresenter(LobbyModel model, RoomChatView view, AdventureModel adventure = null)
         {

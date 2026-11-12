@@ -62,8 +62,8 @@ namespace WebRPG
         private const string EventNodeLabel = "事件";
 
         private readonly AdventureModel _model;
+
         private int _runVersion = -1;
-        private int _journalVersion = -1;
         private AdventurePhase _phase;
         private NodeDefinition _node;
         private int _floorIndex = -1;
@@ -72,6 +72,8 @@ namespace WebRPG
         private int _maximumHealth = -1;
         private int _gold = -1;
         private int _relicCount = -1;
+        private int _journalVersion = -1;
+
         private int _mapRunVersion = -1;
         private int _mapFloorIndex = -1;
         private int _mapRowIndex = -1;

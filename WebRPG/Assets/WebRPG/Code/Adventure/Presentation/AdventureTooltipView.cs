@@ -7,11 +7,16 @@ namespace WebRPG
     // 跟隨滑鼠顯示圖示說明，保留鍵盤定位且不攔截游標事件。
     public sealed class AdventureTooltipView : MonoBehaviour
     {
-        [SerializeField] private RectTransform _root;
-        [SerializeField] private RectTransform _panel;
-        [SerializeField] private TextMeshProUGUI _title;
-        [SerializeField] private TextMeshProUGUI _description;
-        [SerializeField] private TextMeshProUGUI _status;
+        [SerializeField]
+        private RectTransform _root;
+        [SerializeField]
+        private RectTransform _panel;
+        [SerializeField]
+        private TextMeshProUGUI _title;
+        [SerializeField]
+        private TextMeshProUGUI _description;
+        [SerializeField]
+        private TextMeshProUGUI _status;
         private AdventureTooltipTargetView _owner;
         private RectTransform _anchor;
         private PointerEventData _pointer;

@@ -8,12 +8,14 @@ namespace WebRPGServer;
 // 序列化房間操作並向所有已連線玩家推播伺服器狀態。
 public sealed class LobbyHub
 {
-    private static readonly TimeSpan ChatSendInterval = TimeSpan.FromSeconds(1);
     private const int MaximumRequestIdLength = 64;
+    private static readonly TimeSpan ChatSendInterval = TimeSpan.FromSeconds(1);
+
+    private readonly LobbyOptions _options;
+    private readonly LobbyRegistry _registry;
+
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly Dictionary<string, LobbySendSession> _sessions = new();
-    private readonly LobbyRegistry _registry;
-    private readonly LobbyOptions _options;
 
     public LobbyHub(LobbyOptions options)
     {

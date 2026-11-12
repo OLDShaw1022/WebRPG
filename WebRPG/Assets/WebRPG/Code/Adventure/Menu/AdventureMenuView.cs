@@ -6,18 +6,30 @@ namespace WebRPG
     // 呈現獨立中央選單、設定提示與返回確認，並轉送按鈕事件。
     public sealed class AdventureMenuView : MonoBehaviour, IAdventureMenuView
     {
-        [SerializeField] private RectTransform _overlay;
-        [SerializeField] private RectTransform _menu;
-        [SerializeField] private RectTransform _settings;
-        [SerializeField] private RectTransform _confirmation;
-        [SerializeField] private AdventureButtonViewReferences _resume;
-        [SerializeField] private AdventureButtonViewReferences _abandon;
-        [SerializeField] private AdventureButtonViewReferences _restart;
-        [SerializeField] private AdventureButtonViewReferences _openSettings;
-        [SerializeField] private AdventureButtonViewReferences _return;
-        [SerializeField] private AdventureButtonViewReferences _confirm;
-        [SerializeField] private AdventureButtonViewReferences _cancel;
-        [SerializeField] private AdventureButtonViewReferences _back;
+        [SerializeField]
+        private RectTransform _overlay;
+        [SerializeField]
+        private RectTransform _menu;
+        [SerializeField]
+        private RectTransform _settings;
+        [SerializeField]
+        private RectTransform _confirmation;
+        [SerializeField]
+        private AdventureButtonViewReferences _resume;
+        [SerializeField]
+        private AdventureButtonViewReferences _abandon;
+        [SerializeField]
+        private AdventureButtonViewReferences _restart;
+        [SerializeField]
+        private AdventureButtonViewReferences _openSettings;
+        [SerializeField]
+        private AdventureButtonViewReferences _return;
+        [SerializeField]
+        private AdventureButtonViewReferences _confirm;
+        [SerializeField]
+        private AdventureButtonViewReferences _cancel;
+        [SerializeField]
+        private AdventureButtonViewReferences _back;
 
         public event Action ResumeRequested;
         public event Action AbandonRequested;

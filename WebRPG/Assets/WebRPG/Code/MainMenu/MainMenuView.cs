@@ -13,24 +13,28 @@ namespace WebRPG
         [SerializeField]
         private UnityEngine.UI.Button _singlePlayerButton;
 
-        [SerializeField] private UnityEngine.UI.Button _multiplayerButton;
-        [SerializeField] private UnityEngine.UI.Button _logoutButton;
-        [SerializeField] private GameObject _menu;
-        [SerializeField] private UnityEngine.UI.Button _shopButton;
-        [SerializeField] private ShopView _shop;
-
-        public ShopView Shop => _shop;
-        public event Action ShopRequested;
-        public event Action LogoutRequested;
-
+        [SerializeField]
+        private UnityEngine.UI.Button _multiplayerButton;
+        [SerializeField]
+        private UnityEngine.UI.Button _logoutButton;
+        [SerializeField]
+        private GameObject _menu;
+        [SerializeField]
+        private UnityEngine.UI.Button _shopButton;
+        [SerializeField]
+        private ShopView _shop;
         [SerializeField]
         private UnityEngine.UI.Button _quitButton;
 
         [SerializeField]
         private TextMeshProUGUI _message;
 
+        public ShopView Shop => _shop;
+
         public event Action SinglePlayerRequested;
         public event Action MultiplayerRequested;
+        public event Action ShopRequested;
+        public event Action LogoutRequested;
         public event Action QuitRequested;
 
         private void Awake()
@@ -69,8 +73,6 @@ namespace WebRPG
             _shop.gameObject.SetActive(visible);
         }
 
-        private void HandleShopRequested() => ShopRequested?.Invoke();
-
         public void Hide()
         {
             gameObject.SetActive(false);
@@ -87,6 +89,7 @@ namespace WebRPG
         }
 
         private void HandleMultiplayerRequested() => MultiplayerRequested?.Invoke();
+        private void HandleShopRequested() => ShopRequested?.Invoke();
         private void HandleLogoutRequested() => LogoutRequested?.Invoke();
 
         private void HandleQuitRequested()

@@ -42,18 +42,21 @@ namespace WebRPG
         private readonly ShopModel _model;
         private readonly MainMenuView _menu;
         private readonly ShopView _view;
+
         private ShopSnapshot _snapshot;
         private int _sessionVersion;
         private bool _busy;
-        private Guid _requestId;
-        private ShopOffer _selectedOffer;
-        private ShopOffer _pendingOffer;
-        private ShopTopUpOffer _selectedTopUp;
-        private ShopTopUpOrder _selectedOrder;
-        private Guid _topUpRequestId;
-        private Guid _checkoutOrderId;
         private ShopPage _page;
         private string _notice = string.Empty;
+
+        private ShopOffer _selectedOffer;
+        private ShopOffer _pendingOffer;
+        private Guid _requestId;
+
+        private ShopTopUpOffer _selectedTopUp;
+        private Guid _topUpRequestId;
+        private ShopTopUpOrder _selectedOrder;
+        private Guid _checkoutOrderId;
 
         public ShopPresenter(ShopModel model, MainMenuView menu)
         {
@@ -82,6 +85,15 @@ namespace WebRPG
 
             _notice = RetryRequired;
             Render();
+        }
+
+        private void Close()
+        {
+            _selectedOffer = null;
+            _selectedTopUp = null;
+            _selectedOrder = null;
+            _notice = string.Empty;
+            _menu.ShowShop(false);
         }
 
         public void Reset()
@@ -149,13 +161,6 @@ namespace WebRPG
             }
         }
 
-        private void SelectOffer(ShopOffer offer)
-        {
-            if (_busy || _selectedOffer != null || _pendingOffer != null || _notice.Length > 0) return;
-            _selectedOffer = offer;
-            Render();
-        }
-
         private void ConfirmPurchase()
         {
             if (_busy) return;
@@ -190,6 +195,29 @@ namespace WebRPG
             }
 
             ExchangeAsync().Forget();
+        }
+
+        private void DismissDialog()
+        {
+            if (_busy) return;
+            if (_pendingOffer != null)
+            {
+                Close();
+                return;
+            }
+
+            _selectedOffer = null;
+            _selectedTopUp = null;
+            _selectedOrder = null;
+            _notice = string.Empty;
+            Render();
+        }
+
+        private void SelectOffer(ShopOffer offer)
+        {
+            if (_busy || _selectedOffer != null || _pendingOffer != null || _notice.Length > 0) return;
+            _selectedOffer = offer;
+            Render();
         }
 
         private async Awaitable ExchangeAsync()
@@ -244,44 +272,16 @@ namespace WebRPG
             }
         }
 
-        private void DismissDialog()
-        {
-            if (_busy) return;
-            if (_pendingOffer != null)
-            {
-                Close();
-                return;
-            }
-
-            _selectedOffer = null;
-            _selectedTopUp = null;
-            _selectedOrder = null;
-            _notice = string.Empty;
-            Render();
-        }
-
         private void ShowTopUp()
         {
             _page = _page == ShopPage.TopUp ? ShopPage.Exchange : ShopPage.TopUp;
             Render();
         }
 
-        private void ShowHistory()
-        {
-            _page = ShopPage.History;
-            Refresh();
-        }
-
         private void SelectTopUp(ShopTopUpOffer offer)
         {
             _selectedTopUp = offer;
             _topUpRequestId = Guid.NewGuid();
-            Render();
-        }
-
-        private void SelectOrder(ShopTopUpOrder order)
-        {
-            _selectedOrder = order;
             Render();
         }
 
@@ -325,13 +325,16 @@ namespace WebRPG
             }
         }
 
-        private void Close()
+        private void ShowHistory()
         {
-            _selectedOffer = null;
-            _selectedTopUp = null;
-            _selectedOrder = null;
-            _notice = string.Empty;
-            _menu.ShowShop(false);
+            _page = ShopPage.History;
+            Refresh();
+        }
+
+        private void SelectOrder(ShopTopUpOrder order)
+        {
+            _selectedOrder = order;
+            Render();
         }
 
         private void Render()

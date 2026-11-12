@@ -9,31 +9,12 @@ namespace WebRPG
     [DisallowMultipleComponent]
     public sealed class ShopView : MonoBehaviour
     {
-        [SerializeField] private TextMeshProUGUI _title;
-        [SerializeField] private TextMeshProUGUI _balance;
-        [SerializeField] private TextMeshProUGUI _status;
-        [SerializeField] private UnityEngine.UI.ScrollRect _offersScroll;
-        [SerializeField] private CanvasGroup _offersGroup;
-        [SerializeField] private ShopOfferCardView _offerTemplate;
-        [SerializeField] private UnityEngine.UI.Button _refresh;
-        [SerializeField] private UnityEngine.UI.Button _topUp;
-        [SerializeField] private TextMeshProUGUI _topUpLabel;
-        [SerializeField] private UnityEngine.UI.Button _history;
-        [SerializeField] private UnityEngine.UI.Button _close;
-        [SerializeField] private GameObject _dialog;
-        [SerializeField] private TextMeshProUGUI _dialogTitle;
-        [SerializeField] private TextMeshProUGUI _dialogMessage;
-        [SerializeField] private UnityEngine.UI.Button _confirm;
-        [SerializeField] private TextMeshProUGUI _confirmLabel;
-        [SerializeField] private UnityEngine.UI.Button _dismiss;
-        [SerializeField] private TextMeshProUGUI _dismissLabel;
-
-        private readonly List<ShopOfferCardView> _cards = new List<ShopOfferCardView>();
         private const string ShopTitle = "商店";
         private const string TopUpLabel = "儲值水晶";
         private const string HistoryTitle = "歷史訂單";
         private const string ReturnToTopUp = "返回儲值";
         private const string ExchangeLabel = "兌換商品";
+
         private const string CrystalFormat = "{0:N0} 水晶";
         private const string PriceFormat = "{0} {1:0.##}";
         private const string ReceiptFormat = "訂單 {0:MM/dd HH:mm}";
@@ -45,6 +26,46 @@ namespace WebRPG
         private const string PartiallyRefunded = "部分退款";
         private const string Reversed = "已沖銷";
         private const string Unknown = "狀態未確認";
+
+        [SerializeField]
+        private TextMeshProUGUI _title;
+        [SerializeField]
+        private TextMeshProUGUI _balance;
+        [SerializeField]
+        private TextMeshProUGUI _status;
+        [SerializeField]
+        private UnityEngine.UI.ScrollRect _offersScroll;
+        [SerializeField]
+        private CanvasGroup _offersGroup;
+        [SerializeField]
+        private ShopOfferCardView _offerTemplate;
+        [SerializeField]
+        private UnityEngine.UI.Button _refresh;
+        [SerializeField]
+        private UnityEngine.UI.Button _topUp;
+        [SerializeField]
+        private TextMeshProUGUI _topUpLabel;
+        [SerializeField]
+        private UnityEngine.UI.Button _history;
+        [SerializeField]
+        private UnityEngine.UI.Button _close;
+
+        [SerializeField]
+        private GameObject _dialog;
+        [SerializeField]
+        private TextMeshProUGUI _dialogTitle;
+        [SerializeField]
+        private TextMeshProUGUI _dialogMessage;
+        [SerializeField]
+        private UnityEngine.UI.Button _confirm;
+        [SerializeField]
+        private TextMeshProUGUI _confirmLabel;
+        [SerializeField]
+        private UnityEngine.UI.Button _dismiss;
+        [SerializeField]
+        private TextMeshProUGUI _dismissLabel;
+
+        private readonly List<ShopOfferCardView> _cards = new List<ShopOfferCardView>();
         private ShopOffer[] _offers;
         private ShopTopUpOffer[] _topUpOffers;
         private ShopTopUpOrder[] _orders;

@@ -6,7 +6,8 @@ namespace WebRPG
     // 保存共用圖示對照，讓所有槽位依識別碼取得正確圖片。
     public sealed class AdventureIconSpriteCatalog : ScriptableObject
     {
-        [SerializeField] private AdventureIconSpriteEntry[] _entries = Array.Empty<AdventureIconSpriteEntry>();
+        [SerializeField]
+        private AdventureIconSpriteEntry[] _entries = Array.Empty<AdventureIconSpriteEntry>();
 
         public Sprite GetSprite(string id)
         {

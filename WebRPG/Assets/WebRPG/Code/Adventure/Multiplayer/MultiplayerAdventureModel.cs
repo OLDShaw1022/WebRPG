@@ -8,8 +8,9 @@ namespace WebRPG
     public sealed class MultiplayerAdventureModel
     {
         private readonly AdventureConfiguration _configuration;
-        private AdventurePartyBattleModel _battle;
         private readonly Random _targetRandom;
+        private AdventurePartyBattleModel _battle;
+
         public IReadOnlyList<AdventureModel> Players { get; }
         public bool CanVote => Players.All(player => player.Phase == AdventurePhase.Map) &&
             Players.All(player => player.FloorIndex == Players[0].FloorIndex && player.RowIndex == Players[0].RowIndex);

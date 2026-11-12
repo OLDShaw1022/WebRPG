@@ -10,11 +10,16 @@ namespace WebRPG
     public sealed class RoomChatView : MonoBehaviour
     {
         private const float FollowBottomThreshold = 0.01f;
-        [SerializeField] private TMP_InputField _input;
-        [SerializeField] private UnityEngine.UI.Button _send;
-        [SerializeField] private TextMeshProUGUI _error;
-        [SerializeField] private TextMeshProUGUI _log;
-        [SerializeField] private ScrollRect _scroll;
+        [SerializeField]
+        private TMP_InputField _input;
+        [SerializeField]
+        private UnityEngine.UI.Button _send;
+        [SerializeField]
+        private TextMeshProUGUI _error;
+        [SerializeField]
+        private TextMeshProUGUI _log;
+        [SerializeField]
+        private ScrollRect _scroll;
         private string _roomId;
 
         public event Action<string> SendRequested;

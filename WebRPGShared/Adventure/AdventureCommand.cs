@@ -10,9 +10,10 @@ namespace WebRPGShared
         public const string Skill = "skill";
         public const string Target = "target";
         public const string Speed = "speed";
-        public const int MinimumBattleSpeed = 0;
-        public const int MaximumBattleSpeed = 2;
         public const string Tick = "tick";
         public const string Abandon = "abandon";
+
+        public const int MinimumBattleSpeed = 0;
+        public const int MaximumBattleSpeed = 2;
     }
 }

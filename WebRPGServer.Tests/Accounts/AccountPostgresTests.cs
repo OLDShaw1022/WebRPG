@@ -227,6 +227,7 @@ public sealed class AccountPostgresTests
         Assert.That(entries.GetString(0), Is.EqualTo("gold"));
         Assert.That(entries.GetInt64(1), Is.EqualTo(-100L));
         Assert.That(await entries.ReadAsync(), Is.False);
+        return;
 
         async Task<ShopExchangeResult> Purchase(Guid id, long cost)
         {

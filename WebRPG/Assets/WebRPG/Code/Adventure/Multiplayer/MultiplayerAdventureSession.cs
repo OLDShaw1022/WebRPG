@@ -12,21 +12,26 @@ namespace WebRPG
     {
         private const float MaximumAccumulatedTimeSeconds = 0.2f;
         private const int MaximumStepsPerPacket = 4;
+        private const float NetworkStep = 0.05f;
+        internal const float PacketInterval = 0.1f;
+
         private const string PayloadFormat = "{0}|0";
         private const string VoteStatusFormat = "節點投票：{0}/{1}；全員投票後前進，平票優先採隊長選擇。";
         private const string WaitingMessage = "等待隊友完成節點或領取獎勵。";
         private const string FailureMessage = "本輪多人冒險已結束；隊員離開或連線中斷時全隊失敗。";
-        private const float NetworkStep = 0.05f;
-        internal const float PacketInterval = 0.1f;
+
         private readonly ILobbyModel _lobby;
         private readonly string _roomId;
         private readonly LobbyMemberSnapshot[] _members;
         private readonly int _localIndex;
+
         private readonly Dictionary<string, int> _votes = new Dictionary<string, int>();
+
         private readonly float _timeout;
         private long _lastSequence;
         private float _accumulatedTime;
         private float _silenceTime;
+
         private bool _disposed;
         private bool _failed;
 

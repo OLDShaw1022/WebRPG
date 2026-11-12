@@ -10,6 +10,11 @@ namespace WebRPG
     public sealed class AdventureView : MonoBehaviour, IAdventureView
     {
         private const float JournalFollowBottomThreshold = 0.01f;
+        private const float ChatComposerHeight = 44f;
+        private const string JournalHeading = "戰鬥紀錄";
+        private const string MultiplayerJournalHeading = "冒險紀錄";
+        private const string NewLine = "\n";
+
         private const string MissingPrefabReferencesMessage = "AdventureView requires complete prefab references.";
         private const string InspectedSkillsTitleSuffix = " · 技能狀態";
         private const string PlayerDefeatedText = "已倒下";
@@ -18,21 +23,18 @@ namespace WebRPG
         private const string TeammateBadgeText = "隊友";
         private const string EnemyBadgeText = "敵方";
         private const string LockedBadgeText = "鎖定";
+        private const string RelicNamePrefix = "Relic";
+
         private const string PauseSpeedText = "暫停";
         private const string NormalSpeedText = "1×";
         private const string DoubleSpeedText = "2×";
         private const string SelectedSpeedFormat = "[{0}]";
+
         private const string MapNodeNamePrefix = "Node";
         private const string MapNodeIndexSeparator = "_";
-        private const string NewLine = "\n";
-        private const string JournalHeading = "戰鬥紀錄";
-        private const string MultiplayerJournalHeading = "冒險紀錄";
-        private const string RelicNamePrefix = "Relic";
 
         [SerializeField]
         private RectTransform _root;
-
-
         [SerializeField]
         private AdventureSurfaceViewReferences _header;
         [SerializeField]
@@ -49,6 +51,7 @@ namespace WebRPG
         private TextMeshProUGUI _summary;
         [SerializeField]
         private AdventureButtonViewReferences[] _toolbar;
+
         [SerializeField]
         private RectTransform _arena;
         [SerializeField]
@@ -60,6 +63,11 @@ namespace WebRPG
         [SerializeField]
         private AdventureActorViewReferences[] _enemies;
         [SerializeField]
+        private RectTransform _projectile;
+        [SerializeField]
+        private TextMeshProUGUI _projectileLabel;
+
+        [SerializeField]
         private AdventureSurfaceViewReferences _actionPanel;
         [SerializeField]
         private TextMeshProUGUI _situation;
@@ -70,6 +78,9 @@ namespace WebRPG
         [SerializeField]
         private AdventureButtonViewReferences _resultReturn;
         [SerializeField]
+        private AdventureButtonViewReferences[] _battleSpeedControls;
+
+        [SerializeField]
         private AdventureSurfaceViewReferences _skillPanel;
         [SerializeField]
         private TextMeshProUGUI _skillHeading;
@@ -77,6 +88,7 @@ namespace WebRPG
         private AdventureContentViewReferences _skillArea;
         [SerializeField]
         private AdventureSkillViewReferences[] _skills;
+
         [SerializeField]
         private AdventureSurfaceViewReferences _mapPanel;
         [SerializeField]
@@ -87,8 +99,12 @@ namespace WebRPG
         private RectTransform _mapLines;
         [SerializeField]
         private RectTransform _mapNodes;
-        private readonly List<List<AdventureMapNodeViewState>> _mapRows = new List<List<AdventureMapNodeViewState>>();
-        private readonly List<AdventureSurfaceViewReferences> _connections = new List<AdventureSurfaceViewReferences>();
+        [SerializeField]
+        private AdventureButtonTemplateView _mapNodeTemplate;
+
+        [SerializeField]
+        private AdventureSurfaceTemplateView _mapConnectionTemplate;
+
         [SerializeField]
         private AdventureSurfaceViewReferences _details;
         [SerializeField]
@@ -98,10 +114,7 @@ namespace WebRPG
         [SerializeField]
         private AdventureScrollViewReferences _detailsScroll;
         [SerializeField]
-        private AdventureButtonTemplateView _mapNodeTemplate;
-
-        [SerializeField]
-        private AdventureSurfaceTemplateView _mapConnectionTemplate;
+        private RoomChatView _roomChat;
 
         [SerializeField]
         private AdventureDynamicLayoutSettings _layoutSettings = new AdventureDynamicLayoutSettings();
@@ -120,21 +133,23 @@ namespace WebRPG
 
         [SerializeField]
         private Color _insetBackground = new Color32(18, 20, 26, 255);
+        [SerializeField]
+        private Color _targetOutlineColor = new Color32(224, 91, 101, 255);
 
-        [SerializeField] private AdventureButtonViewReferences[] _battleSpeedControls;
-        [SerializeField] private RectTransform _projectile;
-        [SerializeField] private TextMeshProUGUI _projectileLabel;
-        [SerializeField] private Color _targetOutlineColor = new Color32(224, 91, 101, 255);
         private bool _bound;
         private AdventureDynamicLayoutHelper _layout;
-
         private AdventureScreenModel _screen;
         private Vector2 _lastSize = new Vector2(-1, -1);
-        private readonly List<AdventureIconItemView> _relicIcons = new List<AdventureIconItemView>();
-        private int _lastMapRow = -1;
         private bool _layoutDirty = true;
 
+        private readonly List<AdventureIconItemView> _relicIcons = new List<AdventureIconItemView>();
+        private readonly List<List<AdventureMapNodeViewState>> _mapRows = new List<List<AdventureMapNodeViewState>>();
+        private readonly List<AdventureSurfaceViewReferences> _connections = new List<AdventureSurfaceViewReferences>();
+        private int _lastMapRow = -1;
+
         public AdventureMenuView Menu => _menu;
+        public RoomChatView RoomChat => _roomChat;
+
         public event Action MenuRequested;
         public event Action StartRequested;
         public event Action AbandonRequested;
@@ -259,6 +274,52 @@ namespace WebRPG
             RenderJournal();
         }
 
+        public void RequestAbandon()
+        {
+            _tooltip.HideAll();
+            AbandonRequested?.Invoke();
+        }
+
+        public void RequestStart()
+        {
+            _tooltip.HideAll();
+            StartRequested?.Invoke();
+        }
+
+        public void EnableRoomChat()
+        {
+            if (!_roomChat || _roomChat.gameObject.activeSelf) return;
+            RectTransform scroll = _detailsScroll.Rect;
+            scroll.offsetMin += Vector2.up * ChatComposerHeight;
+            _roomChat.gameObject.SetActive(true);
+        }
+
+        private void ToggleMenu()
+        {
+            _tooltip.HideAll();
+            MenuRequested?.Invoke();
+        }
+
+        private void RenderRelics(AdventureIconScreenModel[] relics)
+        {
+            _noRelics.enabled = relics.Length == 0;
+            while (_relicIcons.Count < relics.Length)
+            {
+                AdventureIconItemView item = Instantiate(_relicTemplate, _relicArea.Content);
+                item.name = RelicNamePrefix + _relicIcons.Count;
+                _relicIcons.Add(item);
+            }
+            for (int index = 0; index < _relicIcons.Count; index++)
+            {
+                bool visible = index < relics.Length;
+                _relicIcons[index].gameObject.SetActive(visible);
+                if (visible)
+                {
+                    _relicIcons[index].Render(relics[index]);
+                }
+            }
+        }
+
         private void RenderActor(AdventureActorViewReferences control, AdventureCharacterScreenModel character)
         {
             control.Hit.Rect.gameObject.SetActive(character != null);
@@ -280,47 +341,6 @@ namespace WebRPG
             AdventureUiHelper.SetGauge(control.Cast, character.Action, false);
             control.Tooltip.SetContent(character.Name, character.ActionDescription, character.SpecialIntent);
             AdventureUiHelper.SetGauge(control.Health, character.Health, false);
-        }
-
-        private void RenderTimeControls()
-        {
-            string[] labels = { PauseSpeedText, NormalSpeedText, DoubleSpeedText };
-            for (int index = 0; index < _battleSpeedControls.Length; index++)
-            {
-                bool selected = _screen.BattleSpeed == index;
-                _battleSpeedControls[index].Label.text = selected
-                    ? string.Format(SelectedSpeedFormat, labels[index]) : labels[index];
-                _battleSpeedControls[index].Outline.effectColor = selected ? _foreground : _border;
-                _battleSpeedControls[index].Button.interactable = _screen.CanChangeBattleSpeed;
-            }
-        }
-
-        private void RenderProjectile()
-        {
-            if (_screen == null)
-            {
-                return;
-            }
-            AdventureProjectileScreenModel projectile = _screen.Projectile;
-            bool visible = _screen.ShowBattle && !_screen.ShowMap && projectile != null;
-            _projectile.gameObject.SetActive(visible);
-            if (!visible)
-            {
-                return;
-            }
-            AdventureActorViewReferences source = AdventureUiHelper.FindActor(
-                _players, _enemies, projectile.SourceCharacterId);
-            AdventureActorViewReferences target = AdventureUiHelper.FindActor(
-                _players, _enemies, projectile.TargetCharacterId);
-            if (source == null || target == null)
-            {
-                _projectile.gameObject.SetActive(false);
-                return;
-            }
-            _projectile.position = Vector3.Lerp(
-                source.Badge.rectTransform.position, target.Badge.rectTransform.position,
-                Mathf.Clamp01(projectile.Progress));
-            _projectileLabel.text = projectile.Name;
         }
 
         private void RenderMap(AdventureMapRowScreenModel[] rows)
@@ -374,70 +394,45 @@ namespace WebRPG
             _layout.UpdateMap(_screen);
         }
 
-        private void UpdateLayout()
+        private void RenderTimeControls()
+        {
+            string[] labels = { PauseSpeedText, NormalSpeedText, DoubleSpeedText };
+            for (int index = 0; index < _battleSpeedControls.Length; index++)
+            {
+                bool selected = _screen.BattleSpeed == index;
+                _battleSpeedControls[index].Label.text = selected
+                    ? string.Format(SelectedSpeedFormat, labels[index]) : labels[index];
+                _battleSpeedControls[index].Outline.effectColor = selected ? _foreground : _border;
+                _battleSpeedControls[index].Button.interactable = _screen.CanChangeBattleSpeed;
+            }
+        }
+
+        private void RenderProjectile()
         {
             if (_screen == null)
             {
                 return;
             }
-            Vector2 size = _root.rect.size;
-            if (!_layoutDirty && size == _lastSize)
+            AdventureProjectileScreenModel projectile = _screen.Projectile;
+            bool visible = _screen.ShowBattle && !_screen.ShowMap && projectile != null;
+            _projectile.gameObject.SetActive(visible);
+            if (!visible)
             {
                 return;
             }
-            _lastSize = size;
-            _layoutDirty = false;
-            _layout.Update(_screen);
-        }
-
-        private void ToggleMenu()
-        {
-            _tooltip.HideAll();
-            MenuRequested?.Invoke();
-        }
-
-        public void RequestAbandon()
-        {
-            _tooltip.HideAll();
-            AbandonRequested?.Invoke();
-        }
-
-        public void RequestStart()
-        {
-            _tooltip.HideAll();
-            StartRequested?.Invoke();
-        }
-
-        private void RenderRelics(AdventureIconScreenModel[] relics)
-        {
-            _noRelics.enabled = relics.Length == 0;
-            while (_relicIcons.Count < relics.Length)
+            AdventureActorViewReferences source = AdventureUiHelper.FindActor(
+                _players, _enemies, projectile.SourceCharacterId);
+            AdventureActorViewReferences target = AdventureUiHelper.FindActor(
+                _players, _enemies, projectile.TargetCharacterId);
+            if (source == null || target == null)
             {
-                AdventureIconItemView item = Instantiate(_relicTemplate, _relicArea.Content);
-                item.name = RelicNamePrefix + _relicIcons.Count;
-                _relicIcons.Add(item);
+                _projectile.gameObject.SetActive(false);
+                return;
             }
-            for (int index = 0; index < _relicIcons.Count; index++)
-            {
-                bool visible = index < relics.Length;
-                _relicIcons[index].gameObject.SetActive(visible);
-                if (visible)
-                {
-                    _relicIcons[index].Render(relics[index]);
-                }
-            }
-        }
-
-        private const float ChatComposerHeight = 44f;
-        [SerializeField] private RoomChatView _roomChat;
-        public RoomChatView RoomChat => _roomChat;
-
-        public void EnableRoomChat()
-        {
-            if (!_roomChat || _roomChat.gameObject.activeSelf) return;
-            RectTransform scroll = _detailsScroll.Rect;
-            scroll.offsetMin += Vector2.up * ChatComposerHeight;
-            _roomChat.gameObject.SetActive(true);
+            _projectile.position = Vector3.Lerp(
+                source.Badge.rectTransform.position, target.Badge.rectTransform.position,
+                Mathf.Clamp01(projectile.Progress));
+            _projectileLabel.text = projectile.Name;
         }
 
         private void RenderJournal()
@@ -457,6 +452,22 @@ namespace WebRPG
                     _detailsScroll.Scroll.verticalNormalizedPosition = 0;
                 }
             }
+        }
+
+        private void UpdateLayout()
+        {
+            if (_screen == null)
+            {
+                return;
+            }
+            Vector2 size = _root.rect.size;
+            if (!_layoutDirty && size == _lastSize)
+            {
+                return;
+            }
+            _lastSize = size;
+            _layoutDirty = false;
+            _layout.Update(_screen);
         }
 
     }

@@ -17,15 +17,13 @@ namespace WebRPG
         private const string InitialMessage = "準備連線…";
         private const string ConnectionFailedFormat = "連線失敗：{0}。請返回主選單後重新進入大廳。";
         private const string InvalidPacketMessage = "伺服器回應格式錯誤。";
-        private const string InvalidNameMessage = "玩家名稱須為 1～24 個字元。";
         private const string InvalidServerMessage = "登入伺服器設定無效。請重新登入。";
-        private const string PendingMessage = "正在等待伺服器回應…";
-        private const string TimeoutMessage = "伺服器回應逾時，請返回主選單後重新進入大廳。";
-        private readonly LobbyServerConfiguration[] _servers;
-        private readonly float _requestTimeoutSeconds;
-        private readonly AccountModel _account;
         private const string TokenProperty = "AccessToken";
         private const string AuthenticationRequiredMessage = "請重新登入後再連線。";
+
+        private const string InvalidNameMessage = "玩家名稱須為 1～24 個字元。";
+        private const string PendingMessage = "正在等待伺服器回應…";
+        private const string TimeoutMessage = "伺服器回應逾時，請返回主選單後重新進入大廳。";
 
         private const int MaximumRoomLogEntries = 80;
         private const string ChatLineFormat = "【聊天】{0}：{1}";
@@ -35,32 +33,39 @@ namespace WebRPG
         private const string ChatSendFailureMessage = "無法送出聊天，請再試一次。";
         private const string ChatLengthMessage = "聊天訊息長度超過上限。";
         private const string NewLine = "\n";
+
+        private readonly LobbyServerConfiguration[] _servers;
+        private readonly float _requestTimeoutSeconds;
+        private readonly AccountModel _account;
+        private WebSocket _socket;
+        private bool _disposed;
+
+        private int _requestNumber;
+        private string _pendingId = string.Empty;
+        private float _pendingTime;
+        private readonly Dictionary<string, string> _adventureRequests = new Dictionary<string, string>();
+
         private readonly Queue<string> _roomLog = new Queue<string>();
         private string _chatRequestId = string.Empty;
         private string _chatDraft = string.Empty;
         private float _chatTime;
 
+        public event Action Changed;
+        public event Action<AdventurePacket> AdventureReceived;
         public event Action ChatChanged;
         public event Action<string> RoomLogEntryAdded;
         public event Action<string> ChatDelivered;
-        public string RoomLog { get; private set; } = string.Empty;
-        public string ChatError { get; private set; } = string.Empty;
-        public bool CanChat => IsConnected && Room != null && _chatRequestId.Length == 0;
 
-        private readonly Dictionary<string, string> _adventureRequests = new Dictionary<string, string>();
-        private WebSocket _socket;
-        private bool _disposed;
-        private int _requestNumber;
-        private string _pendingId = string.Empty;
-        private float _pendingTime;
-        public event Action Changed;
-        public event Action<AdventurePacket> AdventureReceived;
         public bool IsConnected { get; private set; }
         public bool IsBusy { get; private set; }
         public string PlayerId { get; private set; } = string.Empty;
         public string Status { get; private set; } = InitialMessage;
         public LobbyRoomSnapshot Room { get; private set; }
         public LobbyRoomSummary[] Rooms { get; private set; } = Array.Empty<LobbyRoomSummary>();
+
+        public string RoomLog { get; private set; } = string.Empty;
+        public string ChatError { get; private set; } = string.Empty;
+        public bool CanChat => IsConnected && Room != null && _chatRequestId.Length == 0;
 
         public LobbyModel(
             LobbyClientConfiguration configuration, bool includeEditorServers = false, AccountModel account = null)
@@ -282,19 +287,6 @@ namespace WebRPG
             Changed?.Invoke();
         }
 
-        public void Tick(float deltaTime)
-        {
-            if (_disposed) return;
-            if (_chatRequestId.Length != 0)
-            {
-                _chatTime += deltaTime;
-                if (_chatTime >= _requestTimeoutSeconds) CompleteChat(ChatTimeoutMessage);
-            }
-            if (!IsBusy) return;
-            _pendingTime += deltaTime;
-            if (_pendingTime >= _requestTimeoutSeconds) Disconnect(TimeoutMessage);
-        }
-
         private void UpdateRoomLog(LobbyRoomSnapshot previousRoom)
         {
             if (Room?.Id != previousRoom?.Id) ClearRoomLog();
@@ -330,6 +322,19 @@ namespace WebRPG
             _chatDraft = string.Empty;
             ChatError = error;
             ChatChanged?.Invoke();
+        }
+
+        public void Tick(float deltaTime)
+        {
+            if (_disposed) return;
+            if (_chatRequestId.Length != 0)
+            {
+                _chatTime += deltaTime;
+                if (_chatTime >= _requestTimeoutSeconds) CompleteChat(ChatTimeoutMessage);
+            }
+            if (!IsBusy) return;
+            _pendingTime += deltaTime;
+            if (_pendingTime >= _requestTimeoutSeconds) Disconnect(TimeoutMessage);
         }
 
         private void Disconnect(string message)

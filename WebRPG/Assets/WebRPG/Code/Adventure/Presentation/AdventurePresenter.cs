@@ -6,16 +6,17 @@ namespace WebRPG
     public sealed class AdventurePresenter : IDisposable
     {
         private const string EnemyIdPrefix = "enemy:";
+
         private readonly AdventureModel _model;
-        private readonly AdventureScreenAssembler _screenAssembler;
-        private readonly AdventureOperationHelper _operations;
         private readonly IAdventureView _view;
         private readonly MultiplayerAdventureSession _network;
+        private readonly AdventureScreenAssembler _screenAssembler;
+        private readonly AdventureOperationHelper _operations;
         private readonly AdventurePresentationHelper _presentation;
+
         private bool _disposed;
         private bool _paused;
         private bool _mapOpen;
-
 
         public AdventurePresenter(AdventureModel model, IAdventureView view, MultiplayerAdventureSession network = null)
         {

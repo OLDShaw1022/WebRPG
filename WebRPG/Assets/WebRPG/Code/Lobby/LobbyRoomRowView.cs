@@ -9,8 +9,10 @@ namespace WebRPG
     public sealed class LobbyRoomRowView : MonoBehaviour
     {
         private const string RoomLabelFormat = "{0}　{1}/{2}　加入";
-        [SerializeField] private UnityEngine.UI.Button _join;
-        [SerializeField] private TextMeshProUGUI _label;
+        [SerializeField]
+        private UnityEngine.UI.Button _join;
+        [SerializeField]
+        private TextMeshProUGUI _label;
         private string _roomId;
         private Action<string> _selected;
 

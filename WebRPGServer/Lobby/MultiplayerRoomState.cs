@@ -9,13 +9,16 @@ public sealed class MultiplayerRoomState
     private const int MaximumStepsPerPacket = 4;
     private const int SimulationStepsPerSecond = 20;
     private const int AllowedSimulationLeadSteps = 20;
+
     private const int MaximumSkillSlotIndex = 5;
     private const int MaximumEnemyTargetIndex = 3;
     private const int MaximumChoiceIndex = 2;
     private const int MaximumResolveOptionIndex = 1;
+
     private readonly Dictionary<string, int> _votes = new();
     private readonly DateTime _startedAt = DateTime.UtcNow;
     private int _ticks;
+
     public long Sequence { get; private set; }
     public int Turn { get; private set; }
     public bool Failed { get; private set; }

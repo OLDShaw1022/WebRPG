@@ -113,6 +113,7 @@ public sealed class LobbyWebSocketTests
         await outsider.RequestAsync("ListRooms", new(), token, observe: AssertNoChat);
         await member.RequestAsync("LeaveRoom", new(), token);
         await member.RequestAsync("RoomChat", new() { ["Message"] = "left" }, token, "Error");
+        return;
 
         static void AssertNoChat(JsonObject packet) =>
             Assert.That(packet["Type"]?.GetValue<string>(), Is.Not.EqualTo("RoomChat"));

@@ -13,9 +13,12 @@ namespace WebRPG
         private const string CrystalCostFormat = "花費 {0:N0} 水晶";
         private const string GoldCostFormat = "花費 {0:N0} 金幣";
 
-        [SerializeField] private UnityEngine.UI.Button _button;
-        [SerializeField] private TextMeshProUGUI _name;
-        [SerializeField] private TextMeshProUGUI _cost;
+        [SerializeField]
+        private UnityEngine.UI.Button _button;
+        [SerializeField]
+        private TextMeshProUGUI _name;
+        [SerializeField]
+        private TextMeshProUGUI _cost;
 
         internal void Bind(ShopOffer offer, Action<ShopOffer> onSelected)
         {

@@ -12,17 +12,20 @@ internal sealed class ControlledLobbySocket : WebSocket
     private readonly Channel<LobbyPacket> _outgoing = Channel.CreateUnbounded<LobbyPacket>();
     private readonly CancellationTokenSource _aborted = new();
     private WebSocketState _state = WebSocketState.Open;
+
     private TaskCompletionSource? _sendRelease;
     private TaskCompletionSource _sendStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private int _sending;
+
     public bool ConcurrentSendDetected { get; private set; }
+    public Task SendStarted => _sendStarted.Task;
+
     public override WebSocketState State => _state;
     public override WebSocketCloseStatus? CloseStatus => null;
     public override string? CloseStatusDescription => null;
     public override string? SubProtocol => null;
 
     public void PauseSending() => _sendRelease = new(TaskCreationOptions.RunContinuationsAsynchronously);
-    public Task SendStarted => _sendStarted.Task;
     public void ResumeSending() => _sendRelease?.TrySetResult();
 
     public void Submit(LobbyPacket packet) => _incoming.Writer.TryWrite(JsonSerializer.SerializeToUtf8Bytes(packet));

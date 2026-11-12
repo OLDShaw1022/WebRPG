@@ -8,23 +8,42 @@ namespace WebRPG
     // 顯示登入與註冊表單，並轉送使用者操作。
     public sealed class AccountView : MonoBehaviour
     {
-        [SerializeField] private TMP_InputField _email;
-        [SerializeField] private TMP_InputField _password;
-        [SerializeField] private TMP_InputField _username;
-        [SerializeField] private TMP_Dropdown _server;
-        [SerializeField] private UnityEngine.UI.Button _login;
-        [SerializeField] private UnityEngine.UI.Button _register;
-        [SerializeField] private TextMeshProUGUI _status;
-        [SerializeField] private GameObject _loginPage;
-        [SerializeField] private GameObject _registrationPage;
-        [SerializeField] private TMP_InputField _registrationEmail;
-        [SerializeField] private TMP_InputField _registrationPassword;
-        [SerializeField] private TMP_Dropdown _registrationServer;
-        [SerializeField] private TextMeshProUGUI _registrationStatus;
-        [SerializeField] private UnityEngine.UI.Button _openRegistration;
-        [SerializeField] private UnityEngine.UI.Button _backToLogin;
-        [SerializeField] private UnityEngine.UI.Toggle _rememberMe;
+        [SerializeField]
+        private GameObject _loginPage;
+        [SerializeField]
+        private TMP_InputField _email;
+        [SerializeField]
+        private TMP_InputField _password;
+        [SerializeField]
+        private TMP_Dropdown _server;
+        [SerializeField]
+        private UnityEngine.UI.Toggle _rememberMe;
+        [SerializeField]
+        private UnityEngine.UI.Button _login;
+        [SerializeField]
+        private TextMeshProUGUI _status;
+        [SerializeField]
+        private UnityEngine.UI.Button _openRegistration;
+
+        [SerializeField]
+        private GameObject _registrationPage;
+        [SerializeField]
+        private TMP_InputField _registrationEmail;
+        [SerializeField]
+        private TMP_InputField _registrationPassword;
+        [SerializeField]
+        private TMP_Dropdown _registrationServer;
+        [SerializeField]
+        private TextMeshProUGUI _registrationStatus;
+        [SerializeField]
+        private TMP_InputField _username;
+        [SerializeField]
+        private UnityEngine.UI.Button _register;
+        [SerializeField]
+        private UnityEngine.UI.Button _backToLogin;
+
         public bool RememberMe => _rememberMe.isOn;
+
         public event Action<bool> PageRequested;
         public event Action<int, string, string, string, bool> Submitted;
 
@@ -36,6 +55,14 @@ namespace WebRPG
             _registrationStatus.richText = false;
             _openRegistration.onClick.AddListener(OpenRegistration);
             _backToLogin.onClick.AddListener(BackToLogin);
+        }
+
+        private void OnDestroy()
+        {
+            _login.onClick.RemoveListener(Login);
+            _register.onClick.RemoveListener(Register);
+            _openRegistration.onClick.RemoveListener(OpenRegistration);
+            _backToLogin.onClick.RemoveListener(BackToLogin);
         }
 
         public void Configure(string[] servers, int defaultIndex)
@@ -93,17 +120,11 @@ namespace WebRPG
             _password.text = string.Empty;
             _registrationPassword.text = string.Empty;
         }
+
         private void OpenRegistration() => PageRequested?.Invoke(true);
         private void BackToLogin() => PageRequested?.Invoke(false);
         private void Login() => Submitted?.Invoke(_server.value, _email.text, _password.text, _username.text, false);
         private void Register() => Submitted?.Invoke(
             _registrationServer.value, _registrationEmail.text, _registrationPassword.text, _username.text, true);
-        private void OnDestroy()
-        {
-            _login.onClick.RemoveListener(Login);
-            _register.onClick.RemoveListener(Register);
-            _openRegistration.onClick.RemoveListener(OpenRegistration);
-            _backToLogin.onClick.RemoveListener(BackToLogin);
-        }
     }
 }

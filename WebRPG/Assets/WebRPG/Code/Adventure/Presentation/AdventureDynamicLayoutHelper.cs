@@ -16,22 +16,27 @@ namespace WebRPG
         private const string ConnectionNamePrefix = "Connection";
 
         private readonly RectTransform _root;
+        private readonly AdventureDynamicLayoutSettings _settings;
+        private readonly Color _foreground;
+        private readonly Color _controlHighlight;
+
         private readonly AdventureContentViewReferences _actorArea;
         private readonly AdventureActorViewReferences[] _players;
         private readonly AdventureActorViewReferences[] _enemies;
         private readonly TextMeshProUGUI _versus;
+
         private readonly AdventureContentViewReferences _skillArea;
+        private readonly AdventureSkillViewReferences[] _skills;
+
         private readonly AdventureContentViewReferences _relicArea;
         private readonly List<AdventureIconItemView> _relicIcons;
-        private readonly AdventureSkillViewReferences[] _skills;
+
         private readonly AdventureScrollViewReferences _mapScroll;
         private readonly RectTransform _mapLines;
         private readonly List<List<AdventureMapNodeViewState>> _mapRows;
         private readonly List<AdventureSurfaceViewReferences> _connections;
         private readonly AdventureSurfaceTemplateView _mapConnectionTemplate;
-        private readonly AdventureDynamicLayoutSettings _settings;
-        private readonly Color _foreground;
-        private readonly Color _controlHighlight;
+
         private AdventureScreenModel _screen;
 
         public AdventureDynamicLayoutHelper(RectTransform root, AdventureContentViewReferences actorArea,

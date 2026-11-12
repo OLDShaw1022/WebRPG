@@ -7,8 +7,10 @@ namespace WebRPG
     public sealed class AdventureTooltipTargetView : MonoBehaviour,
         IPointerEnterHandler, IPointerExitHandler, IPointerMoveHandler, ISelectHandler, IDeselectHandler
     {
-        [SerializeField] private RectTransform _rect;
-        [SerializeField] private AdventureTooltipView _tooltip;
+        [SerializeField]
+        private RectTransform _rect;
+        [SerializeField]
+        private AdventureTooltipView _tooltip;
         private string _title = string.Empty;
         private string _description = string.Empty;
         private string _status = string.Empty;

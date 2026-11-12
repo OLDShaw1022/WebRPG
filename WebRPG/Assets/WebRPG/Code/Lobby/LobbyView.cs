@@ -9,27 +9,47 @@ namespace WebRPG
     // 綁定大廳 Prefab 的固定控制項並顯示房間與成員。
     public sealed class LobbyView : MonoBehaviour, ILobbyView
     {
-        [SerializeField] private GameObject _browsePage;
-        [SerializeField] private GameObject _roomPage;
-        [SerializeField] private RoomChatView _roomChat;
+        [SerializeField]
+        private GameObject _browsePage;
+        [SerializeField]
+        private GameObject _roomPage;
+        [SerializeField]
+        private RoomChatView _roomChat;
+        [SerializeField]
+        private TMP_InputField _username;
+        [SerializeField]
+        private TMP_InputField _roomName;
+        [SerializeField]
+        private TMP_InputField _roomId;
+        [SerializeField]
+        private UnityEngine.UI.Toggle _publicToggle;
+        [SerializeField]
+        private UnityEngine.UI.Button _createButton;
+        [SerializeField]
+        private UnityEngine.UI.Button _joinButton;
+        [SerializeField]
+        private UnityEngine.UI.Button _refreshButton;
+        [SerializeField]
+        private UnityEngine.UI.Button _leaveButton;
+        [SerializeField]
+        private UnityEngine.UI.Button _readyButton;
+        [SerializeField]
+        private TextMeshProUGUI _readyLabel;
+        [SerializeField]
+        private UnityEngine.UI.Button _backButton;
+        [SerializeField]
+        private TextMeshProUGUI _status;
+        [SerializeField]
+        private TextMeshProUGUI _members;
+        [SerializeField]
+        private RectTransform _rooms;
+        [SerializeField]
+        private LobbyRoomRowView _roomTemplate;
+
+        private readonly List<LobbyRoomRowView> _rows = new List<LobbyRoomRowView>();
+
         public RoomChatView RoomChat => _roomChat;
 
-        [SerializeField] private TMP_InputField _username;
-        [SerializeField] private TMP_InputField _roomName;
-        [SerializeField] private TMP_InputField _roomId;
-        [SerializeField] private UnityEngine.UI.Toggle _publicToggle;
-        [SerializeField] private UnityEngine.UI.Button _createButton;
-        [SerializeField] private UnityEngine.UI.Button _joinButton;
-        [SerializeField] private UnityEngine.UI.Button _refreshButton;
-        [SerializeField] private UnityEngine.UI.Button _leaveButton;
-        [SerializeField] private UnityEngine.UI.Button _readyButton;
-        [SerializeField] private TextMeshProUGUI _readyLabel;
-        [SerializeField] private UnityEngine.UI.Button _backButton;
-        [SerializeField] private TextMeshProUGUI _status;
-        [SerializeField] private TextMeshProUGUI _members;
-        [SerializeField] private RectTransform _rooms;
-        [SerializeField] private LobbyRoomRowView _roomTemplate;
-        private readonly List<LobbyRoomRowView> _rows = new List<LobbyRoomRowView>();
         public event Action<string, bool> CreateRequested;
         public event Action<string> JoinRequested;
         public event Action RefreshRequested;
