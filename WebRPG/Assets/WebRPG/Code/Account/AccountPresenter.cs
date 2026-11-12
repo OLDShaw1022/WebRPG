@@ -22,20 +22,20 @@ namespace WebRPG
             _model = model;
             _view = view;
             _loggedIn = loggedIn;
-            _view.Configure(model.ServerNames, model.DefaultServerIndex);
+            _view.Configure(model.ServerNames, model.StartupServerIndex);
             _view.Submitted += Submit;
             _view.PageRequested += ChangePage;
             _view.Render(false, InitialMessage);
         }
 
-        public async Awaitable RestoreAsync(int serverIndex)
+        public async Awaitable RestoreAsync()
         {
             if (_busy || _disposed) return;
             _busy = true;
             _view.Render(true, RestoringMessage);
             try
             {
-                bool restored = await _model.TryRestoreAsync(serverIndex);
+                bool restored = await _model.TryRestoreAsync(_model.StartupServerIndex);
                 if (_disposed || !_view) return;
                 _view.Render(false, InitialMessage);
                 if (restored) _loggedIn();
@@ -71,7 +71,11 @@ namespace WebRPG
                 _view.ClearPassword();
                 if (register && _model.RegistrationSucceeded) _view.ShowPage(false);
                 _view.Render(false, status);
-                if (_model.IsLoggedIn) _loggedIn();
+                if (_model.IsLoggedIn)
+                {
+                    _model.SaveLoginServerSelection();
+                    _loggedIn();
+                }
             }
             catch (Exception exception)
             {

@@ -11,6 +11,7 @@ namespace WebRPG.Tests
     // 驗證啟動恢復登入、失效與網路失敗，以及可編輯的記住登入選項。
     public sealed class AccountRememberedClientTests
     {
+        private const string LastLoginServerPreference = "WebRPG.Account.LastLoginServer";
         private const string SessionJson =
             "{\"accessToken\":\"restored-token\",\"accountId\":\"account-1\",\"username\":\"玩家\"," +
             "\"expiresAt\":\"2099-01-01T00:00:00Z\"}";
@@ -168,67 +169,73 @@ namespace WebRPG.Tests
         }
 
         [UnityTest]
-        public IEnumerator LoginCheckboxSendsRememberMeThroughPresenter()
+        public IEnumerator RememberedLoginRestoresFromTheLastLoginServer()
         {
             using AccountHttpTestServer server = new AccountHttpTestServer();
-            using AccountModel model = new AccountModel(
-                AccountClientConfigurationHelper.Create(server.SocketUrl), true);
+            LobbyClientConfiguration configuration = AccountClientConfigurationHelper.Create(server.SocketUrl);
+            string previousServerId = PlayerPrefs.HasKey(LastLoginServerPreference)
+                ? PlayerPrefs.GetString(LastLoginServerPreference)
+                : null;
             GameObject instance = UnityEngine.Object.Instantiate(
                 AssetDatabase.LoadAssetAtPath<GameObject>("Assets/WebRPG/Prefabs/AccountCanvas.prefab"));
             try
             {
                 AccountView view = instance.GetComponent<AccountView>();
+                PlayerPrefs.DeleteKey(LastLoginServerPreference);
+                using AccountModel model = new AccountModel(configuration, true);
                 typeof(AccountView)
                     .GetMethod(
                     "Awake", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
                     .Invoke(view, null);
                 bool loggedIn = false;
-                using AccountPresenter presenter = new AccountPresenter(model, view, () => loggedIn = true);
-                Transform login = instance.transform.Find("LoginPage");
-                login.Find("Server").GetComponent<TMPro.TMP_Dropdown>().value = 1;
-                login.Find("Email").GetComponent<TMPro.TMP_InputField>().text = "player@example.invalid";
-                login.Find("Password").GetComponent<TMPro.TMP_InputField>().text = "long-enough-password";
-                login.Find("RememberMe").GetComponent<UnityEngine.UI.Toggle>().isOn = true;
-                Task response = server.RespondAsync(200, SessionJson);
-                login.Find("Login").GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
-                Assert.That(login.Find("RememberMe").GetComponent<UnityEngine.UI.Toggle>().interactable, Is.False);
-                while (!response.IsCompleted) yield return null;
-                response.GetAwaiter().GetResult();
-                while (!login.Find("Login").GetComponent<UnityEngine.UI.Button>().interactable) yield return null;
-                Assert.That(loggedIn, Is.True);
-                Assert.That(Newtonsoft.Json.Linq.JObject.Parse(server.LastBody).Value<bool>("rememberMe"), Is.True);
-                Assert.That(server.LastRequestHeader, Is.EqualTo("1"));
-                Assert.That(login.Find("Password").GetComponent<TMPro.TMP_InputField>().text, Is.Empty);
-            }
-            finally { UnityEngine.Object.DestroyImmediate(instance); }
-        }
+                using (AccountPresenter presenter = new AccountPresenter(model, view, () => loggedIn = true))
+                {
+                    Transform login = instance.transform.Find("LoginPage");
+                    TMPro.TMP_Dropdown serverDropdown = login.Find("Server").GetComponent<TMPro.TMP_Dropdown>();
+                    Assert.That(serverDropdown.value, Is.Zero);
+                    serverDropdown.value = 1;
+                    login.Find("Email").GetComponent<TMPro.TMP_InputField>().text = "player@example.invalid";
+                    login.Find("Password").GetComponent<TMPro.TMP_InputField>().text = "long-enough-password";
+                    login.Find("RememberMe").GetComponent<UnityEngine.UI.Toggle>().isOn = true;
+                    Task loginResponse = server.RespondAsync(200, SessionJson);
+                    login.Find("Login").GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
+                    Assert.That(login.Find("RememberMe").GetComponent<UnityEngine.UI.Toggle>().interactable, Is.False);
+                    while (!loginResponse.IsCompleted) yield return null;
+                    loginResponse.GetAwaiter().GetResult();
+                    while (!login.Find("Login").GetComponent<UnityEngine.UI.Button>().interactable) yield return null;
+                    Assert.That(loggedIn, Is.True);
+                    Assert.That(Newtonsoft.Json.Linq.JObject.Parse(server.LastBody).Value<bool>("rememberMe"), Is.True);
+                    Assert.That(server.LastRequestHeader, Is.EqualTo("1"));
+                    Assert.That(login.Find("Password").GetComponent<TMPro.TMP_InputField>().text, Is.Empty);
+                }
 
-        [UnityTest]
-        public IEnumerator StartupRestorationBlocksInputAndOpensAuthenticatedMenu()
-        {
-            using AccountHttpTestServer server = new AccountHttpTestServer();
-            LobbyClientConfiguration configuration = AccountClientConfigurationHelper.Create(server.SocketUrl);
-            using AccountModel model = new AccountModel(configuration, true);
-            GameObject instance = UnityEngine.Object.Instantiate(
-                AssetDatabase.LoadAssetAtPath<GameObject>("Assets/WebRPG/Prefabs/AccountCanvas.prefab"));
-            try
-            {
-                AccountView view = instance.GetComponent<AccountView>();
-                bool loggedIn = false;
-                using AccountPresenter presenter = new AccountPresenter(model, view, () => loggedIn = true);
+                using AccountModel restartedModel = new AccountModel(configuration, true);
+                loggedIn = false;
+                using AccountPresenter restartedPresenter = new AccountPresenter(restartedModel, view,
+                    () => loggedIn = true);
+                Assert.That(instance.transform.Find("LoginPage/Server").GetComponent<TMPro.TMP_Dropdown>().value,
+                    Is.EqualTo(1));
                 Task response = server.RespondAsync(200, SessionJson);
-                Awaitable.Awaiter restore = presenter.RestoreAsync(1).GetAwaiter();
+                Awaitable.Awaiter restore = restartedPresenter.RestoreAsync().GetAwaiter();
                 Assert.That(
                     instance.transform.Find("LoginPage/Login").GetComponent<UnityEngine.UI.Button>().interactable,
                     Is.False);
                 while (!restore.IsCompleted) yield return null;
                 restore.GetResult();
+                Assert.That(loggedIn, Is.True);
                 while (!response.IsCompleted) yield return null;
                 response.GetAwaiter().GetResult();
-                Assert.That(loggedIn, Is.True);
-                Assert.That(model.IsLoggedIn, Is.True);
+                Assert.That(restartedModel.IsLoggedIn, Is.True);
+                Assert.That(restartedModel.ServerIndex, Is.EqualTo(1));
+                Assert.That(server.LastPath, Is.EqualTo("/api/accounts/refresh"));
             }
-            finally { UnityEngine.Object.DestroyImmediate(instance); }
+            finally
+            {
+                if (previousServerId == null) PlayerPrefs.DeleteKey(LastLoginServerPreference);
+                else PlayerPrefs.SetString(LastLoginServerPreference, previousServerId);
+                PlayerPrefs.Save();
+                UnityEngine.Object.DestroyImmediate(instance);
+            }
         }
 
         [UnityTest]

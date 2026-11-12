@@ -18,6 +18,7 @@ namespace WebRPG
         private const string RegisterPath = "register";
         private const string LogoutPath = "logout";
         private const string RefreshPath = "refresh";
+        private const string LastLoginServerPreference = "WebRPG.Account.LastLoginServer";
         private const string RememberMeProperty = "rememberMe";
         private const string RequestHeader = "X-WebRPG-Request";
         private const string RequestHeaderValue = "1";
@@ -48,6 +49,7 @@ namespace WebRPG
         private bool _disposed;
         public string[] ServerNames { get; }
         public int DefaultServerIndex { get; }
+        internal int StartupServerIndex { get; }
         public int ServerIndex { get; private set; }
         public string AccessToken { get; private set; } = string.Empty;
         public string AccountId { get; private set; } = string.Empty;
@@ -64,6 +66,9 @@ namespace WebRPG
             _servers = configuration.GetAvailableServers(includeEditorServers);
             ServerNames = _servers.Select(server => server.Name).ToArray();
             DefaultServerIndex = Array.FindIndex(_servers, server => server.Id == configuration.DefaultServerId);
+            string lastServerId = PlayerPrefs.GetString(LastLoginServerPreference);
+            int lastServerIndex = Array.FindIndex(_servers, server => server.Id == lastServerId);
+            StartupServerIndex = lastServerIndex >= 0 ? lastServerIndex : DefaultServerIndex;
         }
 
         public async Awaitable<string> SubmitAsync(
@@ -92,6 +97,13 @@ namespace WebRPG
             ApplySession(serverIndex, response);
             CanRefreshSession = rememberMe;
             return string.Empty;
+        }
+
+        internal void SaveLoginServerSelection()
+        {
+            if (_servers.Length <= 1) return;
+            PlayerPrefs.SetString(LastLoginServerPreference, _servers[ServerIndex].Id);
+            PlayerPrefs.Save();
         }
 
         public async Awaitable<bool> TryRestoreAsync(int serverIndex)

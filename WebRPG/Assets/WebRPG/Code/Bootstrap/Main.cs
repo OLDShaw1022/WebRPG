@@ -87,7 +87,7 @@ namespace WebRPG
             _mainMenuView.ShopRequested += OpenShop;
             _accountView = Instantiate(_accountViewPrefab);
             _accountPresenter = new AccountPresenter(_accountModel, _accountView, ShowAuthenticatedMenu);
-            _accountPresenter.RestoreAsync(_accountModel.DefaultServerIndex).Forget();
+            _accountPresenter.RestoreAsync().Forget();
         }
 
         private void Update()
