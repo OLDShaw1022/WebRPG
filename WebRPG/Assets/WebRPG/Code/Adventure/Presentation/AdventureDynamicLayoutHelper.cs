@@ -101,7 +101,8 @@ namespace WebRPG
                 int row = index / columns;
                 int rowCount = Mathf.Min(columns, count - row * columns);
                 float groupWidth = rowCount * width + (rowCount - 1) * _settings.CharacterSpacing;
-                float x = left + (available - groupWidth) / 2 + width / 2 + (index % columns) * (width + _settings.CharacterSpacing);
+            float x = left + (available - groupWidth) / 2 + width / 2
+                + (index % columns) * (width + _settings.CharacterSpacing);
                 float y = ((rows - 1) / 2f - row) * (height + _settings.CharacterSpacing);
                 RectTransform rect = actors[index].Hit.Rect;
                 rect.anchorMin = rect.anchorMax = new Vector2(.5f, .5f);
@@ -160,12 +161,15 @@ namespace WebRPG
             }
             AdventureMapRowScreenModel[] rows = _screen.MapRows;
             float width = Mathf.Max(1, _mapScroll.Viewport.rect.width);
-            float height = Math.Max(0, rows.Length - 1) * _settings.MapRowHeight + _settings.MapNodeHeight + 2 * _settings.MapPadding;
+            float height = Math.Max(
+                0, rows.Length - 1) * _settings.MapRowHeight + _settings.MapNodeHeight + 2 * _settings.MapPadding;
             _mapScroll.Content.anchorMin = new Vector2(0, 1);
             _mapScroll.Content.anchorMax = new Vector2(1, 1);
             _mapScroll.Content.pivot = new Vector2(0, 1);
             _mapScroll.Content.sizeDelta = new Vector2(0, height);
-            float nodeWidth = Mathf.Clamp(width / MapNodeWidthDivisor - MapNodeWidthSpacing, _settings.MapNodeMinimumWidth, _settings.MapNodeMaximumWidth);
+            float nodeWidth = Mathf.Clamp(
+                width / MapNodeWidthDivisor - MapNodeWidthSpacing, _settings.MapNodeMinimumWidth,
+                _settings.MapNodeMaximumWidth);
             int connection = 0;
             for (int row = 0; row < rows.Length; row++)
             {
@@ -196,7 +200,9 @@ namespace WebRPG
                         edge.Rect.gameObject.SetActive(true);
                         edge.Image.color = rows[row].Nodes[index].IsChosen && rows[row + 1].Nodes[next].IsChosen
                             ? _foreground : _controlHighlight;
-                        Vector2 from = new Vector2(rect.anchoredPosition.x, _settings.MapPadding + row * _settings.MapRowHeight + _settings.MapNodeHeight);
+                        Vector2 from = new Vector2(
+                            rect.anchoredPosition.x,
+                            _settings.MapPadding + row * _settings.MapRowHeight + _settings.MapNodeHeight);
                         Vector2 to = new Vector2(width * (next + 1) / (rows[row + 1].Nodes.Length + 1),
                             _settings.MapPadding + (row + 1) * _settings.MapRowHeight);
                         Vector2 delta = to - from;

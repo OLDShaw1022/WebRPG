@@ -45,7 +45,8 @@ public sealed class LobbyHub
                     {
                         using JsonDocument document = JsonDocument.Parse(json);
                         if (document.RootElement.TryGetProperty("AccessToken", out JsonElement property) &&
-                            property.ValueKind == JsonValueKind.String) accessToken = property.GetString() ?? string.Empty;
+                            property.ValueKind == JsonValueKind.String) accessToken = property.GetString()
+                                ?? string.Empty;
                     }
                     identity = await authenticate(accessToken);
                     if (identity is null)
@@ -135,7 +136,8 @@ public sealed class LobbyHub
             {
                 using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(_options.SendTimeoutSeconds));
                 try { await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Disconnected", timeout.Token); }
-                catch (Exception exception) when (exception is WebSocketException or OperationCanceledException) { socket.Abort(); }
+                catch (Exception exception) when (
+                    exception is WebSocketException or OperationCanceledException) { socket.Abort(); }
             }
         }
     }

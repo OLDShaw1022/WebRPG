@@ -9,6 +9,7 @@ namespace WebRPG
         public int Gold { get; set; }
         public int Healing { get; set; }
         public int HealthCost { get; set; }
-        public bool IsBattle => Type == AdventureNodeType.Battle || Type == AdventureNodeType.Elite || Type == AdventureNodeType.Boss;
+        public bool IsBattle => Type == AdventureNodeType.Battle || Type == AdventureNodeType.Elite
+            || Type == AdventureNodeType.Boss;
     }
 }

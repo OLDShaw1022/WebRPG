@@ -27,7 +27,9 @@ public sealed class RememberedBrowserTests
           try {
             if (new URL(location.href).searchParams.get('stage') === 'login') {
               const response = await fetch('/api/accounts/login', {
-                method:'POST', headers, body:JSON.stringify({email:EMAIL,password:'long-enough-password',rememberMe:true})
+                method:'POST',
+                headers,
+                body:JSON.stringify({email:EMAIL,password:'long-enough-password',rememberMe:true})
               });
               if (!response.ok) throw new Error('login status '+response.status);
               if (document.cookie.includes('__Secure-WebRPGRemember')) throw new Error('Cookie exposed to JavaScript');
@@ -38,7 +40,10 @@ public sealed class RememberedBrowserTests
               const session = await response.json();
               if (!session.accessToken) throw new Error('missing session');
               if (document.cookie.includes('__Secure-WebRPGRemember')) throw new Error('Cookie exposed to JavaScript');
-              const logout = await fetch('/api/accounts/logout', {method:'POST',headers:{...headers,Authorization:'Bearer '+session.accessToken}});
+              const logout = await fetch('/api/accounts/logout', {
+                method:'POST',
+                headers:{...headers,Authorization:'Bearer '+session.accessToken}
+              });
               if (logout.status !== 204) throw new Error('logout status '+logout.status);
               const afterLogout = await fetch('/api/accounts/refresh', {method:'POST',headers});
               if (afterLogout.status !== 401) throw new Error('logout did not revoke cookie');
@@ -75,7 +80,8 @@ public sealed class RememberedBrowserTests
         application.MapGet("/api/accounts/browser-test", () => Microsoft.AspNetCore.Http.Results.Content(
             BrowserPage.Replace("EMAIL", System.Text.Json.JsonSerializer.Serialize(email)), "text/html"));
         await application.StartAsync();
-        string address = application.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses.Single();
+        string address = application.Services.GetRequiredService<IServer>()
+            .Features.Get<IServerAddressesFeature>()!.Addresses.Single();
         UriBuilder page = new(address) { Host = "localhost", Path = "/api/accounts/browser-test" };
         string profile = Path.Combine(Path.GetTempPath(), "WebRPGRememberBrowser-" + Guid.NewGuid().ToString("N"));
         page.Query = "stage=login";

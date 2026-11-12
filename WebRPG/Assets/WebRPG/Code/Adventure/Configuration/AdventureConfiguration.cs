@@ -70,17 +70,20 @@ namespace WebRPG
             Require(MaximumMapChoices >= 1 && MaximumMapChoices <= 3, InvalidMapChoiceLimitMessage);
             Require(Skills != null && Skills.Length > 0 && Skills.All(skill => skill != null), MissingSkillsMessage);
             Require(Relics != null && Relics.Length > 0 && Relics.All(relic => relic != null), MissingRelicsMessage);
-            Require(Enemies != null && Enemies.Length > 0 && Enemies.All(enemy => enemy != null), MissingEnemiesMessage);
+            Require(
+                Enemies != null && Enemies.Length > 0 && Enemies.All(enemy => enemy != null), MissingEnemiesMessage);
             Require(EnemyGroups != null && EnemyGroups.Length > 0 && EnemyGroups.All(group => group != null),
                 MissingEnemyGroupsMessage);
-            Require(Floors != null && Floors.Length == 3 && Floors.All(floor => floor != null), RequiredFloorCountMessage);
+            Require(
+                Floors != null && Floors.Length == 3 && Floors.All(floor => floor != null), RequiredFloorCountMessage);
             RequireUnique(Skills.Select(skill => skill.Id));
             RequireUnique(Relics.Select(relic => relic.Id));
             RequireUnique(Enemies.Select(enemy => enemy.Id));
             RequireUnique(EnemyGroups.Select(group => group.Id));
             foreach (SkillDefinition skill in Skills)
             {
-                Require(!string.IsNullOrWhiteSpace(skill.Name) && IsPositive(skill.Cooldown) && skill.Cooldown >= SimulationStep && skill.MaximumLevel > 0,
+                Require(!string.IsNullOrWhiteSpace(skill.Name) && IsPositive(skill.Cooldown)
+                    && skill.Cooldown >= SimulationStep && skill.MaximumLevel > 0,
                     InvalidSkillMessagePrefix + skill.Id);
                 Require(IsPositive(skill.CastTime) && skill.CastTime >= SimulationStep, InvalidCastTimeMessage);
                 ValidateEffects(skill.Effects, false);
@@ -98,7 +101,8 @@ namespace WebRPG
             foreach (EnemyDefinition enemy in Enemies)
             {
                 Require(!string.IsNullOrWhiteSpace(enemy.Name) && enemy.Health > 0 && enemy.Damage > 0 &&
-                    IsPositive(enemy.CastTime) && enemy.CastTime >= SimulationStep, InvalidEnemyMessagePrefix + enemy.Id);
+                    IsPositive(enemy.CastTime) && enemy.CastTime >= SimulationStep,
+                        InvalidEnemyMessagePrefix + enemy.Id);
                 if (enemy.SpecialSkill != null)
                 {
                     EnemySkillDefinition special = enemy.SpecialSkill;
@@ -113,7 +117,8 @@ namespace WebRPG
             foreach (EnemyGroupDefinition group in EnemyGroups)
             {
                 Require(group.EnemyIds != null && group.EnemyIds.Length >= 1 && group.EnemyIds.Length <= 4 &&
-                    group.EnemyIds.All(id => Enemies.Any(enemy => enemy.Id == id)), InvalidEnemyGroupMessagePrefix + group.Id);
+                    group.EnemyIds.All(id => Enemies.Any(enemy => enemy.Id == id)),
+                        InvalidEnemyGroupMessagePrefix + group.Id);
             }
 
             foreach (FloorDefinition floor in Floors)
@@ -155,11 +160,13 @@ namespace WebRPG
 
         private static void ValidateEffects(EffectDefinition[] effects, bool passive)
         {
-            Require(effects != null && effects.Length > 0 && effects.All(effect => effect != null), MissingEffectsMessage);
+            Require(
+                effects != null && effects.Length > 0 && effects.All(effect => effect != null), MissingEffectsMessage);
             foreach (EffectDefinition effect in effects)
             {
                 Require(effect.Amount > 0 && effect.PerLevel >= 0 &&
-                    (passive ? effect.Type == AdventureEffectType.MaximumHealth || effect.Type == AdventureEffectType.DamageBonus
+                    (passive ? effect.Type == AdventureEffectType.MaximumHealth ||
+                               effect.Type == AdventureEffectType.DamageBonus
                         : effect.Type == AdventureEffectType.Damage || effect.Type == AdventureEffectType.Heal),
                     InvalidEffectModuleMessage);
             }

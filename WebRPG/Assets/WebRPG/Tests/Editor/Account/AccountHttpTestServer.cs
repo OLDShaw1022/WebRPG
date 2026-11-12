@@ -36,7 +36,8 @@ namespace WebRPG.Tests
             LastRequestHeader = context.Request.Headers["X-WebRPG-Request"];
             LastCookie = context.Request.Headers["Cookie"];
             if (setCookie != null) context.Response.Headers.Add("Set-Cookie", setCookie);
-            using (System.IO.StreamReader reader = new System.IO.StreamReader(context.Request.InputStream, Encoding.UTF8))
+            using (System.IO.StreamReader reader = new System.IO.StreamReader(
+                context.Request.InputStream, Encoding.UTF8))
                 LastBody = await reader.ReadToEndAsync();
             context.Response.StatusCode = status;
             context.Response.ContentType = "application/json";

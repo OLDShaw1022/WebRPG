@@ -113,7 +113,8 @@ namespace WebRPG
                 AddCard(card => card.Bind(offer, selected => OfferRequested?.Invoke(selected)));
             foreach (ShopTopUpOffer offer in topUps ?? Array.Empty<ShopTopUpOffer>())
                 AddCard(card => card.Bind(string.Format(CrystalFormat, offer.Crystals),
-                    string.Format(PriceFormat, offer.Currency, offer.Amount), () => TopUpOfferRequested?.Invoke(offer)));
+                    string.Format(PriceFormat, offer.Currency, offer.Amount),
+                        () => TopUpOfferRequested?.Invoke(offer)));
             foreach (ShopTopUpOrder order in orders ?? Array.Empty<ShopTopUpOrder>())
                 AddCard(card => card.Bind(string.Format(ReceiptFormat, order.CreatedAt.ToLocalTime()),
                     DescribeStatus(order.Status), () => TopUpOrderRequested?.Invoke(order)));

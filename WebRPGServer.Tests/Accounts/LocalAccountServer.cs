@@ -23,7 +23,8 @@ internal sealed class LocalAccountServer : IAsyncDisposable
         Address = new Uri($"http://127.0.0.1:{port}/");
     }
 
-    public static async Task<LocalAccountServer> StartAsync(LocalAccountDatabase database, params string[] configurationArguments)
+    public static async Task<LocalAccountServer> StartAsync(
+        LocalAccountDatabase database, params string[] configurationArguments)
     {
         TcpListener reservation = new(IPAddress.Loopback, 0);
         reservation.Start();
@@ -45,7 +46,8 @@ internal sealed class LocalAccountServer : IAsyncDisposable
             while (true)
             {
                 if (server._process.HasExited)
-                    throw new InvalidOperationException($"Local account server exited: {await server._output}\n{await server._errors}");
+                    throw new InvalidOperationException(
+                        $"Local account server exited: {await server._output}\n{await server._errors}");
                 try
                 {
                     using TcpClient probe = new();

@@ -5,7 +5,8 @@ namespace WebRPGServer;
 // 以交易管理可跨瀏覽器重啟的登入憑證及其關聯工作階段。
 public sealed partial class PostgresAccountStore
 {
-    public async Task<RememberedAccountSession> RememberAsync(AccountSession session, CancellationToken cancellationToken)
+    public async Task<RememberedAccountSession> RememberAsync(
+        AccountSession session, CancellationToken cancellationToken)
     {
         string token = AccountTokenHelper.Create();
         Guid family = Guid.NewGuid();
@@ -23,7 +24,9 @@ public sealed partial class PostgresAccountStore
             insert.Parameters.AddWithValue(expires);
             await insert.ExecuteNonQueryAsync(cancellationToken);
         }
-        await using (NpgsqlCommand attach = new("UPDATE game_account_sessions SET remembered_session_id = $1 WHERE token_hash = $2;", connection, transaction))
+        await using (NpgsqlCommand attach = new(
+            "UPDATE game_account_sessions SET remembered_session_id = $1 WHERE token_hash = $2;", connection,
+            transaction))
         {
             attach.Parameters.AddWithValue(family);
             attach.Parameters.AddWithValue(AccountTokenHelper.Hash(session.AccessToken));
@@ -59,12 +62,14 @@ public sealed partial class PostgresAccountStore
             refreshExpires = reader.GetFieldValue<DateTimeOffset>(2);
         }
         string username;
-        await using (NpgsqlCommand account = new("SELECT username FROM game_accounts WHERE account_id = $1;", connection, transaction))
+        await using (NpgsqlCommand account = new(
+            "SELECT username FROM game_accounts WHERE account_id = $1;", connection, transaction))
         {
             account.Parameters.AddWithValue(accountId);
             username = (string)(await account.ExecuteScalarAsync(cancellationToken))!;
         }
-        await using (NpgsqlCommand remove = new("DELETE FROM game_account_sessions WHERE remembered_session_id = $1;", connection, transaction))
+        await using (NpgsqlCommand remove = new(
+            "DELETE FROM game_account_sessions WHERE remembered_session_id = $1;", connection, transaction))
         {
             remove.Parameters.AddWithValue(family);
             await remove.ExecuteNonQueryAsync(cancellationToken);
@@ -84,13 +89,15 @@ public sealed partial class PostgresAccountStore
             await insert.ExecuteNonQueryAsync(cancellationToken);
         }
         await transaction.CommitAsync(cancellationToken);
-        return new RememberedAccountSession(new AccountSession(accessToken, accountId.ToString("N"), username, expires), rotatedToken, refreshExpires);
+        return new RememberedAccountSession(
+            new AccountSession(accessToken, accountId.ToString("N"), username, expires), rotatedToken, refreshExpires);
     }
 
     public async Task RevokeRememberedAsync(string? token, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(token) || token.Length > AccountTokenHelper.MaximumTokenLength) return;
-        await using NpgsqlCommand command = _dataSource.CreateCommand("DELETE FROM game_account_remembered_sessions WHERE token_hash = $1;");
+        await using NpgsqlCommand command = _dataSource.CreateCommand(
+            "DELETE FROM game_account_remembered_sessions WHERE token_hash = $1;");
         command.Parameters.AddWithValue(AccountTokenHelper.Hash(token));
         await command.ExecuteNonQueryAsync(cancellationToken);
     }

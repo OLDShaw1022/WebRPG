@@ -38,11 +38,14 @@ internal static class TopUpReversal
             ), recorded AS (
                 INSERT INTO game_wallet_entries(account_id, source, reference_id, currency, delta)
                     SELECT $1, 'top-up-reversal', $2, movement.currency, movement.delta
-                    FROM updated CROSS JOIN LATERAL (VALUES ('gold', -updated.gold), ('crystals', updated.crystals)) movement(currency, delta)
+                    FROM updated
+                    CROSS JOIN LATERAL (VALUES ('gold', -updated.gold), ('crystals', updated.crystals))
+                        movement(currency, delta)
                     WHERE movement.delta <> 0
             )
             UPDATE game_shop_top_up_allocations a SET reversed = TRUE
-                FROM reversed_shop_exchanges e WHERE a.account_id = $1 AND a.request_id = e.request_id AND NOT a.reversed;
+                FROM reversed_shop_exchanges e
+                WHERE a.account_id = $1 AND a.request_id = e.request_id AND NOT a.reversed;
             """, connection, transaction);
         command.Parameters.AddWithValue(order.AccountId);
         command.Parameters.AddWithValue(order.OrderId);

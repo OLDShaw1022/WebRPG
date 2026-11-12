@@ -12,8 +12,10 @@ namespace WebRPG
         private const uint GenericCredential = 1;
         private const uint PersistOnThisComputer = 2;
         private const int CredentialNotFound = 1168;
-        private const string WriteFailedMessage = "Could not save the WebRPG remembered login in Windows Credential Manager.";
-        private const string DeleteFailedMessage = "Could not clear the WebRPG remembered login in Windows Credential Manager.";
+        private const string WriteFailedMessage =
+            "Could not save the WebRPG remembered login in Windows Credential Manager.";
+        private const string DeleteFailedMessage =
+            "Could not clear the WebRPG remembered login in Windows Credential Manager.";
 
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
         private struct Credential

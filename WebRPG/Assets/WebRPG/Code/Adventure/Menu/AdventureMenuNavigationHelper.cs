@@ -7,7 +7,8 @@ namespace WebRPG
     {
         public static void Link(params UnityEngine.UI.Button[] buttons)
         {
-            UnityEngine.UI.Button[] active = buttons.Where(button => button.gameObject.activeInHierarchy && button.IsInteractable()).ToArray();
+            UnityEngine.UI.Button[] active = buttons.Where(
+                button => button.gameObject.activeInHierarchy && button.IsInteractable()).ToArray();
             for (int index = 0; index < active.Length; index++)
             {
                 UnityEngine.UI.Navigation navigation = new UnityEngine.UI.Navigation

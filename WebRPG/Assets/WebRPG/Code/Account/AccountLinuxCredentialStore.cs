@@ -15,7 +15,8 @@ namespace WebRPG
         private const string Store = "store --label=\"WebRPG remembered login\"";
         private const string Clear = "clear";
         private const string KeyArgument = " webrpg-account ";
-        private const string UnavailableMessage = "WebRPG could not access Linux Secret Service. Check that secret-tool and a desktop keyring are available.";
+        private const string UnavailableMessage = "WebRPG could not access Linux Secret Service. Check that " +
+            "secret-tool and a desktop keyring are available.";
         private const int TimeoutMilliseconds = 10000;
 
         internal static string Read(string key) => Run(Lookup, key, null);
@@ -61,7 +62,8 @@ namespace WebRPG
 
                 return process.ExitCode == 0 ? output.Result.TrimEnd('\r', '\n') : string.Empty;
             }
-            catch (Exception exception) when (exception is Win32Exception || exception is IOException || exception is AggregateException)
+            catch (Exception exception) when (
+                exception is Win32Exception || exception is IOException || exception is AggregateException)
             {
                 UnityEngine.Debug.LogWarning(UnavailableMessage);
                 return string.Empty;

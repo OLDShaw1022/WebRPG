@@ -29,12 +29,14 @@ namespace WebRPG.Tests
                         }).ToArray()
                     }
                 };
-                using (LobbyPresenter presenter = new LobbyPresenter(model, instance.GetComponent<LobbyView>(), () => { }))
+                using (LobbyPresenter presenter = new LobbyPresenter(
+                    model, instance.GetComponent<LobbyView>(), () => { }))
                 {
                     Assert.That(instance.transform.Find("Lobby/BrowsePage").gameObject.activeSelf, Is.False);
                     Assert.That(instance.transform.Find("Lobby/RoomPage").gameObject.activeSelf, Is.True);
                     Canvas.ForceUpdateCanvases();
-                    TextMeshProUGUI members = instance.transform.Find("Lobby/RoomPage/Members").GetComponent<TextMeshProUGUI>();
+                    TextMeshProUGUI members = instance.transform.Find("Lobby/RoomPage/Members")
+                        .GetComponent<TextMeshProUGUI>();
                     members.ForceMeshUpdate(true, true);
                     Assert.That(members.isTextOverflowing, Is.False, "四名成員與最長房名必須完整顯示");
                 }
@@ -52,11 +54,14 @@ namespace WebRPG.Tests
             SerializedObject serialized = new SerializedObject(view);
             foreach (string field in new[] { "_username", "_roomName", "_roomId",
                 "_createButton", "_joinButton", "_refreshButton", "_leaveButton", "_readyButton",
-                "_backButton", "_status", "_members", "_rooms", "_publicToggle", "_browsePage", "_roomPage", "_roomChat" })
+                "_backButton", "_status", "_members", "_rooms", "_publicToggle", "_browsePage", "_roomPage",
+                    "_roomChat" })
                 Assert.That(serialized.FindProperty(field).objectReferenceValue, Is.Not.Null, field);
 
-            MainMenuView menu = AssetDatabase.LoadAssetAtPath<MainMenuView>("Assets/WebRPG/Prefabs/MainMenuCanvas.prefab");
-            Assert.That(new SerializedObject(menu).FindProperty("_multiplayerButton").objectReferenceValue, Is.Not.Null);
+            MainMenuView menu = AssetDatabase.LoadAssetAtPath<MainMenuView>(
+                "Assets/WebRPG/Prefabs/MainMenuCanvas.prefab");
+            Assert.That(
+                new SerializedObject(menu).FindProperty("_multiplayerButton").objectReferenceValue, Is.Not.Null);
         }
     }
 }

@@ -10,7 +10,8 @@ namespace WebRPG
     public sealed class Main : MonoBehaviour
     {
         private const string MissingMainMenuPrefabMessage = "Main requires a MainMenuView prefab reference.";
-        private const string MissingAdventureReferencesMessage = "Main requires adventure prefab and configuration references.";
+        private const string MissingAdventureReferencesMessage =
+            "Main requires adventure prefab and configuration references.";
         private const string AdventureStartFailureMessage = "無法開始冒險，請檢查遊戲設定後重試。";
         private const string LobbyStartFailureMessage = "無法開啟房間大廳，請檢查設定後重試。";
         private const string MissingLobbyPrefabMessage = "Main requires a LobbyView prefab reference.";
@@ -167,7 +168,8 @@ namespace WebRPG
                 }
                 _adventurePresenter = new AdventurePresenter(model, _adventureView, _multiplayerAdventureSession);
                 _adventureMenuPresenter = new AdventureMenuPresenter(new AdventureMenuModel(!multiplayer),
-                    _adventureView.Menu, multiplayer ? _ => { } : _adventurePresenter.SetPaused, _adventureView.RequestAbandon,
+                    _adventureView.Menu, multiplayer ? _ => { } : _adventurePresenter.SetPaused,
+                        _adventureView.RequestAbandon,
                     _adventureView.RequestStart, ReturnToMainMenu);
                 _adventureView.MenuRequested += _adventureMenuPresenter.Open;
                 return true;
@@ -212,7 +214,8 @@ namespace WebRPG
                 _adventureView = null;
             }
             _mainMenuPresenter?.Dispose();
-            _mainMenuPresenter = new MainMenuPresenter(new MainMenuModel(), _mainMenuView, StartAdventure, QuitGame, OpenLobby);
+            _mainMenuPresenter = new MainMenuPresenter(
+                new MainMenuModel(), _mainMenuView, StartAdventure, QuitGame, OpenLobby);
             _mainMenuView.ShowMessage(string.Empty);
             _mainMenuView.gameObject.SetActive(true);
         }
@@ -329,7 +332,8 @@ namespace WebRPG
             _shopPresenter.Reset();
             _accountModel.ClearSession();
             _mainMenuPresenter?.Dispose();
-            _mainMenuPresenter = new MainMenuPresenter(new MainMenuModel(), _mainMenuView, StartAdventure, QuitGame, OpenLobby);
+            _mainMenuPresenter = new MainMenuPresenter(
+                new MainMenuModel(), _mainMenuView, StartAdventure, QuitGame, OpenLobby);
             _mainMenuView.gameObject.SetActive(false);
             _accountView.gameObject.SetActive(true);
             _accountView.ClearPassword();

@@ -54,7 +54,8 @@ namespace WebRPG
         }
 
         private void Create(string name, bool isPublic) =>
-            _model.SendAsync(new LobbyPacket { Type = LobbyPacketType.CreateRoom, RoomName = name, IsPublic = isPublic }).Forget();
+            _model.SendAsync(
+                new LobbyPacket { Type = LobbyPacketType.CreateRoom, RoomName = name, IsPublic = isPublic }).Forget();
         private void Join(string roomId) =>
             _model.SendAsync(new LobbyPacket { Type = LobbyPacketType.JoinRoom, RoomId = roomId?.Trim() }).Forget();
         private void List() => _model.SendAsync(new LobbyPacket { Type = LobbyPacketType.ListRooms }).Forget();
@@ -67,7 +68,8 @@ namespace WebRPG
                 _model.SendAdventureAsync(new AdventurePacket { Type = AdventurePacketType.Start }).Forget();
                 return;
             }
-            bool ready = _model.Room?.Members.Any(member => member.PlayerId == _model.PlayerId && member.IsReady) ?? false;
+            bool ready = _model.Room?.Members.Any(member => member.PlayerId == _model.PlayerId && member.IsReady)
+                ?? false;
             _model.SendAsync(new LobbyPacket { Type = LobbyPacketType.SetReady, IsReady = !ready }).Forget();
         }
         private void Back() => _back();
@@ -76,7 +78,8 @@ namespace WebRPG
         {
             LobbyRoomSnapshot room = _model.Room;
             bool ready = room?.Members.Any(member => member.PlayerId == _model.PlayerId && member.IsReady) ?? false;
-            bool canStart = room != null && room.LeaderId == _model.PlayerId && room.Members.All(member => member.IsReady);
+            bool canStart = room != null && room.LeaderId == _model.PlayerId
+                && room.Members.All(member => member.IsReady);
             string members = room == null ? NoRoomMessage : string.Format(RoomFormat, room.Name, room.Id,
                 room.IsPublic ? PublicLabel : PrivateLabel,
                 string.Join(NewLine, room.Members.Select(member => string.Format(MemberFormat,
@@ -86,7 +89,8 @@ namespace WebRPG
             {
                 Connected = _model.IsConnected, Busy = _model.IsBusy, InRoom = room != null,
                 Status = _model.Status, Members = members,
-                ReadyLabel = canStart ? StartAdventureLabel : ready ? CancelReadyLabel : SetReadyLabel, Rooms = _model.Rooms
+                ReadyLabel = canStart ? StartAdventureLabel : ready ? CancelReadyLabel : SetReadyLabel,
+                    Rooms = _model.Rooms
             });
         }
     }

@@ -30,6 +30,7 @@ public sealed class ShopTopUpCatalog
     internal static bool IsValid(ShopTopUpOffer offer) =>
         !string.IsNullOrWhiteSpace(offer.Id) && offer.Id.Length <= ShopCatalog.MaximumOfferIdLength &&
         offer.Currency is not null && SupportedCurrencies.Contains(offer.Currency) && offer.Amount > 0 &&
-        decimal.Round(offer.Amount, WholeCurrencies.Contains(offer.Currency) ? 0 : DecimalCurrencyScale) == offer.Amount &&
+        decimal.Round(
+            offer.Amount, WholeCurrencies.Contains(offer.Currency) ? 0 : DecimalCurrencyScale) == offer.Amount &&
         offer.Crystals > 0;
 }

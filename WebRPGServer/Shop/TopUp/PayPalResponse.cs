@@ -10,12 +10,14 @@ internal static class PayPalResponse
         element.ValueKind == JsonValueKind.Object && element.TryGetProperty(name, out JsonElement value) &&
         value.ValueKind == JsonValueKind.String ? value.GetString() : null;
 
-    internal static bool IsId(string? value) => value is { Length: > 0 and <= 64 } && value.All(char.IsAsciiLetterOrDigit);
+    internal static bool IsId(string? value) => value is { Length: > 0 and <= 64 }
+        && value.All(char.IsAsciiLetterOrDigit);
 
     internal static bool MatchesAmount(JsonElement parent, ShopTopUpOffer offer) =>
         parent.TryGetProperty("amount", out JsonElement amount) &&
         Text(amount, "currency_code") == offer.Currency &&
-        decimal.TryParse(Text(amount, "value"), NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out decimal total) &&
+        decimal.TryParse(
+            Text(amount, "value"), NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out decimal total) &&
         total == offer.Amount;
 
     internal static bool TryMatchOrder(JsonElement root, ShopTopUpOrder order, out JsonElement unit)

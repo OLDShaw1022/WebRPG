@@ -32,7 +32,8 @@ public sealed class LobbyWebSocketTests
         using LobbyClient fourth = await LobbyClient.ConnectAsync(address, "Fourth", token);
         using LobbyClient fifth = await LobbyClient.ConnectAsync(address, "Fifth", token);
         Check(host.PlayerId != second.PlayerId, "Server must assign unique player IDs.");
-        JsonObject created = await host.RequestAsync("CreateRoom", new() { ["RoomName"] = "測試房間", ["IsPublic"] = true }, token);
+        JsonObject created = await host.RequestAsync("CreateRoom", new() { ["RoomName"] = "測試房間", ["IsPublic"] = true },
+            token);
         string roomId = created["Room"]!["Id"]!.GetValue<string>();
         Check(created["Room"]!["Members"]!.AsArray().Count == 1, "Creator must join the room.");
         JsonObject list = await second.RequestAsync("ListRooms", new(), token);
@@ -43,11 +44,13 @@ public sealed class LobbyWebSocketTests
         await fourth.RequestAsync("JoinRoom", new() { ["RoomId"] = roomId }, token);
         await fifth.RequestAsync("JoinRoom", new() { ["RoomId"] = roomId }, token, "Error");
         JsonObject ready = await second.RequestAsync("SetReady", new() { ["IsReady"] = true }, token);
-        Check(ready["Room"]!["Members"]!.AsArray().Single(m => m!["PlayerId"]!.GetValue<string>() == second.PlayerId)!["IsReady"]!.GetValue<bool>(), "Ready must be stored per player.");
+        Check(ready["Room"]!["Members"]!.AsArray().Single(m => m!["PlayerId"]!
+            .GetValue<string>() == second.PlayerId)!["IsReady"]!.GetValue<bool>(), "Ready must be stored per player.");
         JsonObject afterLeave = await host.RequestAsync("LeaveRoom", new(), token);
         Check(afterLeave["Room"] is null, "Leaving must clear the sender's room.");
         JsonObject newHost = await second.RequestAsync("ListRooms", new(), token);
-        Check(newHost["Room"]!["LeaderId"]!.GetValue<string>() == second.PlayerId, "Oldest remaining member becomes leader.");
+        Check(newHost["Room"]!["LeaderId"]!.GetValue<string>() == second.PlayerId,
+            "Oldest remaining member becomes leader.");
         await fifth.RequestAsync("JoinRoom", new() { ["RoomId"] = roomId }, token);
         fifth.Abort();
         JsonObject cleaned;
@@ -57,7 +60,8 @@ public sealed class LobbyWebSocketTests
             if (cleaned["Room"]!["Members"]!.AsArray().Count == 3) break;
             await Task.Delay(30, token);
         } while (true);
-        Check(cleaned["Room"]!["Members"]!.AsArray().All(m => m!["PlayerId"]!.GetValue<string>() != fifth.PlayerId), "Disconnected member must be removed.");
+        Check(cleaned["Room"]!["Members"]!.AsArray().All(m => m!["PlayerId"]!.GetValue<string>() != fifth.PlayerId),
+            "Disconnected member must be removed.");
         await second.RequestAsync("LeaveRoom", new(), token);
         await third.RequestAsync("LeaveRoom", new(), token);
         await fourth.RequestAsync("LeaveRoom", new(), token);

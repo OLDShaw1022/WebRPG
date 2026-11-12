@@ -8,8 +8,10 @@ internal sealed class PayPalTopUpService(PayPalCheckout checkout, PayPalSettings
     internal async Task<ShopTopUpOrder?> CreateAsync(Guid accountId, ShopTopUpRequest request, ShopTopUpOffer? offer,
         CancellationToken cancellationToken)
     {
-        ShopTopUpOrder? order = await store.ReserveAsync(accountId, request, offer, settings.Sandbox, cancellationToken);
-        if (order is null || order.Offer != request.Offer || order.Sandbox != settings.Sandbox || order.ApprovalUrl is not null)
+        ShopTopUpOrder? order = await store.ReserveAsync(
+            accountId, request, offer, settings.Sandbox, cancellationToken);
+        if (order is null || order.Offer != request.Offer || order.Sandbox != settings.Sandbox
+            || order.ApprovalUrl is not null)
             return order;
         (string id, string url) = await checkout.CreateAsync(order, cancellationToken);
         return await store.AttachAsync(order, id, url, cancellationToken) ??
@@ -38,7 +40,8 @@ internal sealed class PayPalTopUpService(PayPalCheckout checkout, PayPalSettings
         }
 
         if (unit.TryGetProperty("payments", out JsonElement payments) && payments.ValueKind == JsonValueKind.Object &&
-            payments.TryGetProperty("captures", out JsonElement captures) && captures.ValueKind == JsonValueKind.Array &&
+            payments.TryGetProperty("captures", out JsonElement captures)
+                && captures.ValueKind == JsonValueKind.Array &&
             captures.GetArrayLength() == 1)
         {
             JsonElement payment = captures[0];
@@ -66,14 +69,17 @@ internal sealed class PayPalTopUpService(PayPalCheckout checkout, PayPalSettings
             await store.UpdatePaymentAsync(order, ShopTopUpStatus.Canceled, null, cancellationToken);
     }
 
-    internal async Task<bool> NotifyAsync(IHeaderDictionary headers, JsonElement notification, CancellationToken cancellationToken)
+    internal async Task<bool> NotifyAsync(
+        IHeaderDictionary headers, JsonElement notification, CancellationToken cancellationToken)
     {
         if (!await checkout.VerifyAsync(headers, notification, cancellationToken)) return false;
         string? type = PayPalResponse.Text(notification, "event_type");
         if (type is not ("CHECKOUT.ORDER.APPROVED" or "CHECKOUT.PAYMENT-APPROVAL.REVERSED" or
             "PAYMENT.CAPTURE.COMPLETED" or "PAYMENT.CAPTURE.PENDING" or
-            "PAYMENT.CAPTURE.DENIED" or "PAYMENT.CAPTURE.DECLINED" or "PAYMENT.CAPTURE.REFUNDED" or "PAYMENT.CAPTURE.REVERSED") ||
-            !notification.TryGetProperty("resource", out JsonElement resource) || resource.ValueKind != JsonValueKind.Object)
+            "PAYMENT.CAPTURE.DENIED" or "PAYMENT.CAPTURE.DECLINED" or
+            "PAYMENT.CAPTURE.REFUNDED" or "PAYMENT.CAPTURE.REVERSED") ||
+            !notification.TryGetProperty("resource", out JsonElement resource)
+                || resource.ValueKind != JsonValueKind.Object)
             return true;
 
         bool approval = type == "CHECKOUT.ORDER.APPROVED";
@@ -81,7 +87,8 @@ internal sealed class PayPalTopUpService(PayPalCheckout checkout, PayPalSettings
         string? externalId = approval || approvalReversed
             ? PayPalWebhookLinks.OrderId(resource) ?? PayPalResponse.Text(resource, "id")
             : PayPalWebhookLinks.OrderId(resource);
-        string? captureId = approval ? null : PayPalWebhookLinks.CaptureId(resource, type == "PAYMENT.CAPTURE.REFUNDED");
+        string? captureId = approval ? null
+            : PayPalWebhookLinks.CaptureId(resource, type == "PAYMENT.CAPTURE.REFUNDED");
         ShopTopUpOrder? order = PayPalResponse.IsId(externalId)
             ? await store.FindPaymentAsync(externalId!, settings.Sandbox, false, cancellationToken) : null;
         if (order is null && PayPalResponse.IsId(captureId))

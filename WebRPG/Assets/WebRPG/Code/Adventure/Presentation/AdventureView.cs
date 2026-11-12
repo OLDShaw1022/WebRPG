@@ -269,7 +269,8 @@ namespace WebRPG
             control.Id = character.Id;
             control.Name.text = character.Name;
             control.Badge.text = character.IsDefeated ? (control.IsPlayer ? PlayerDefeatedText : EnemyDefeatedText)
-                : control.IsPlayer ? (character.IsLocalPlayer ? LocalPlayerBadgeText : TeammateBadgeText) : EnemyBadgeText;
+                : control.IsPlayer ? (character.IsLocalPlayer ? LocalPlayerBadgeText : TeammateBadgeText)
+                    : EnemyBadgeText;
             if (character.IsLocked)
             {
                 control.Badge.text = LockedBadgeText;
@@ -307,14 +308,17 @@ namespace WebRPG
             {
                 return;
             }
-            AdventureActorViewReferences source = AdventureUiHelper.FindActor(_players, _enemies, projectile.SourceCharacterId);
-            AdventureActorViewReferences target = AdventureUiHelper.FindActor(_players, _enemies, projectile.TargetCharacterId);
+            AdventureActorViewReferences source = AdventureUiHelper.FindActor(
+                _players, _enemies, projectile.SourceCharacterId);
+            AdventureActorViewReferences target = AdventureUiHelper.FindActor(
+                _players, _enemies, projectile.TargetCharacterId);
             if (source == null || target == null)
             {
                 _projectile.gameObject.SetActive(false);
                 return;
             }
-            _projectile.position = Vector3.Lerp(source.Badge.rectTransform.position, target.Badge.rectTransform.position,
+            _projectile.position = Vector3.Lerp(
+                source.Badge.rectTransform.position, target.Badge.rectTransform.position,
                 Mathf.Clamp01(projectile.Progress));
             _projectileLabel.text = projectile.Name;
         }

@@ -62,7 +62,8 @@ namespace WebRPG
             _confirmation.gameObject.SetActive(screen == AdventureMenuScreen.ConfirmReturn);
             if (screen == AdventureMenuScreen.Menu)
             {
-                AdventureMenuNavigationHelper.Link(_resume.Button, _abandon.Button, _openSettings.Button, _return.Button, _restart.Button);
+                AdventureMenuNavigationHelper.Link(
+                    _resume.Button, _abandon.Button, _openSettings.Button, _return.Button, _restart.Button);
                 _resume.Button.Select();
             }
             else if (screen == AdventureMenuScreen.Settings)

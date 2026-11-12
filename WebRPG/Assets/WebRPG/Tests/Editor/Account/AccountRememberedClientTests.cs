@@ -11,13 +11,16 @@ namespace WebRPG.Tests
     // 驗證啟動恢復登入、失效與網路失敗，以及可編輯的記住登入選項。
     public sealed class AccountRememberedClientTests
     {
-        private const string SessionJson = "{\"accessToken\":\"restored-token\",\"accountId\":\"account-1\",\"username\":\"玩家\",\"expiresAt\":\"2099-01-01T00:00:00Z\"}";
+        private const string SessionJson =
+            "{\"accessToken\":\"restored-token\",\"accountId\":\"account-1\",\"username\":\"玩家\"," +
+            "\"expiresAt\":\"2099-01-01T00:00:00Z\"}";
 
         [Test]
         public void RememberMeToggleIsBoundAndOptIn()
         {
             GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/WebRPG/Prefabs/AccountCanvas.prefab");
-            SerializedProperty field = new SerializedObject(prefab.GetComponent<AccountView>()).FindProperty("_rememberMe");
+            SerializedProperty field = new SerializedObject(prefab.GetComponent<AccountView>())
+                .FindProperty("_rememberMe");
             Assert.That(field, Is.Not.Null, "A serialized remember-me toggle is required");
             Assert.That(field.objectReferenceValue, Is.Not.Null);
             UnityEngine.UI.Toggle toggle = (UnityEngine.UI.Toggle)field.objectReferenceValue;
@@ -29,7 +32,8 @@ namespace WebRPG.Tests
         public IEnumerator RefreshRestoresIdentityWithoutPassword()
         {
             using AccountHttpTestServer server = new AccountHttpTestServer();
-            using AccountModel model = new AccountModel(AccountClientConfigurationHelper.Create(server.SocketUrl), true);
+            using AccountModel model = new AccountModel(
+                AccountClientConfigurationHelper.Create(server.SocketUrl), true);
             Task response = server.RespondAsync(200, SessionJson);
             Awaitable<bool>.Awaiter restore = model.TryRestoreAsync(1).GetAwaiter();
             while (!restore.IsCompleted) yield return null;
@@ -110,12 +114,17 @@ namespace WebRPG.Tests
         public IEnumerator LoginCheckboxSendsRememberMeThroughPresenter()
         {
             using AccountHttpTestServer server = new AccountHttpTestServer();
-            using AccountModel model = new AccountModel(AccountClientConfigurationHelper.Create(server.SocketUrl), true);
-            GameObject instance = UnityEngine.Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>("Assets/WebRPG/Prefabs/AccountCanvas.prefab"));
+            using AccountModel model = new AccountModel(
+                AccountClientConfigurationHelper.Create(server.SocketUrl), true);
+            GameObject instance = UnityEngine.Object.Instantiate(
+                AssetDatabase.LoadAssetAtPath<GameObject>("Assets/WebRPG/Prefabs/AccountCanvas.prefab"));
             try
             {
                 AccountView view = instance.GetComponent<AccountView>();
-                typeof(AccountView).GetMethod("Awake", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).Invoke(view, null);
+                typeof(AccountView)
+                    .GetMethod(
+                    "Awake", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                    .Invoke(view, null);
                 bool loggedIn = false;
                 using AccountPresenter presenter = new AccountPresenter(model, view, () => loggedIn = true);
                 Transform login = instance.transform.Find("LoginPage");
@@ -143,7 +152,8 @@ namespace WebRPG.Tests
             using AccountHttpTestServer server = new AccountHttpTestServer();
             LobbyClientConfiguration configuration = AccountClientConfigurationHelper.Create(server.SocketUrl);
             using AccountModel model = new AccountModel(configuration, true);
-            GameObject instance = UnityEngine.Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>("Assets/WebRPG/Prefabs/AccountCanvas.prefab"));
+            GameObject instance = UnityEngine.Object.Instantiate(
+                AssetDatabase.LoadAssetAtPath<GameObject>("Assets/WebRPG/Prefabs/AccountCanvas.prefab"));
             try
             {
                 AccountView view = instance.GetComponent<AccountView>();
@@ -151,7 +161,9 @@ namespace WebRPG.Tests
                 using AccountPresenter presenter = new AccountPresenter(model, view, () => loggedIn = true);
                 Task response = server.RespondAsync(200, SessionJson);
                 Awaitable.Awaiter restore = presenter.RestoreAsync(1).GetAwaiter();
-                Assert.That(instance.transform.Find("LoginPage/Login").GetComponent<UnityEngine.UI.Button>().interactable, Is.False);
+                Assert.That(
+                    instance.transform.Find("LoginPage/Login").GetComponent<UnityEngine.UI.Button>().interactable,
+                    Is.False);
                 while (!restore.IsCompleted) yield return null;
                 restore.GetResult();
                 while (!response.IsCompleted) yield return null;
@@ -166,7 +178,8 @@ namespace WebRPG.Tests
         public IEnumerator MissingOrExpiredCookieReturnsToLogin()
         {
             using AccountHttpTestServer server = new AccountHttpTestServer();
-            using AccountModel model = new AccountModel(AccountClientConfigurationHelper.Create(server.SocketUrl), true);
+            using AccountModel model = new AccountModel(
+                AccountClientConfigurationHelper.Create(server.SocketUrl), true);
             Task response = server.RespondAsync(401, string.Empty);
             Awaitable<bool>.Awaiter restore = model.TryRestoreAsync(1).GetAwaiter();
             while (!restore.IsCompleted) yield return null;
@@ -180,7 +193,8 @@ namespace WebRPG.Tests
         public IEnumerator UnavailableRefreshServiceDoesNotCreateSession()
         {
             using AccountHttpTestServer server = new AccountHttpTestServer();
-            using AccountModel model = new AccountModel(AccountClientConfigurationHelper.Create(server.SocketUrl), true);
+            using AccountModel model = new AccountModel(
+                AccountClientConfigurationHelper.Create(server.SocketUrl), true);
             Task response = server.RespondAsync(503, "{}");
             Awaitable<bool>.Awaiter restore = model.TryRestoreAsync(1).GetAwaiter();
             while (!restore.IsCompleted) yield return null;

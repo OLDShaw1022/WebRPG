@@ -11,7 +11,8 @@ internal sealed class LobbySendSession : IAsyncDisposable
     private const int MaximumPendingPackets = 128;
     private readonly WebSocket _socket;
     private readonly int _timeoutSeconds;
-    private readonly Channel<byte[]> _packets = Channel.CreateBounded<byte[]>(new BoundedChannelOptions(MaximumPendingPackets)
+    private readonly Channel<byte[]> _packets = Channel.CreateBounded<byte[]>(
+        new BoundedChannelOptions(MaximumPendingPackets)
     {
         SingleReader = true,
         SingleWriter = true,

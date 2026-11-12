@@ -12,7 +12,8 @@ namespace WebRPG
         public int TargetPlayerIndex => _instance.TargetPlayerIndex;
         public AdventureProjectileState Projectile => _instance.Projectile;
 
-        public AdventurePartyBattleModel(AdventureConfiguration configuration, AdventureBattleModel[] players, Random targetRandom)
+        public AdventurePartyBattleModel(AdventureConfiguration configuration, AdventureBattleModel[] players,
+            Random targetRandom)
         {
             if (configuration == null) throw new ArgumentNullException(nameof(configuration));
             if (players == null || players.Length == 0 || players.Any(player => player == null) ||
@@ -20,7 +21,8 @@ namespace WebRPG
                 throw new ArgumentException(nameof(players));
             if (targetRandom == null) throw new ArgumentNullException(nameof(targetRandom));
             EnemyDefinition[] enemies = players[0].Enemies.Select(enemy =>
-                MultiplayerEnemyScalingHelper.Scale(enemy.Definition, configuration.Multiplayer, players.Length)).ToArray();
+                MultiplayerEnemyScalingHelper.Scale(enemy.Definition, configuration.Multiplayer, players.Length))
+                    .ToArray();
             _instance = new AdventureBattleInstanceModel(configuration, players, enemies,
                 players.Max(player => player.ProjectileSequence), targetRandom);
             foreach (AdventureBattleModel player in players) player.JoinParty(_instance);

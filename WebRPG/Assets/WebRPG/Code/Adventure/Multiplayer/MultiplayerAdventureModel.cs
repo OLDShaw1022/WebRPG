@@ -17,7 +17,8 @@ namespace WebRPG
 
         public MultiplayerAdventureModel(AdventureConfiguration configuration, int seed, string[] playerIds)
         {
-            if (playerIds == null || playerIds.Length < 1 || playerIds.Length > WebRPGShared.LobbyPacketLimits.MaximumPlayers ||
+            if (playerIds == null || playerIds.Length < 1
+                || playerIds.Length > WebRPGShared.LobbyPacketLimits.MaximumPlayers ||
                 playerIds.Distinct().Count() != playerIds.Length)
                 throw new ArgumentException(nameof(playerIds));
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
@@ -35,7 +36,8 @@ namespace WebRPG
             if (!CanVote || index < 0 || index >= Players[0].AvailableNodes.Count) return;
             foreach (AdventureModel player in Players) player.SelectNode(index);
             if (Players.All(player => player.Phase == AdventurePhase.Battle))
-                _battle = new AdventurePartyBattleModel(_configuration, Players.Select(player => player.Battle).ToArray(), _targetRandom);
+                _battle = new AdventurePartyBattleModel(
+                    _configuration, Players.Select(player => player.Battle).ToArray(), _targetRandom);
         }
 
         public void Tick(float seconds)
@@ -43,7 +45,8 @@ namespace WebRPG
             if (_battle == null || !Players.Any(player => player.Phase == AdventurePhase.Battle)) return;
             _battle.Tick(seconds);
             foreach (AdventureModel player in Players) player.SynchronizePartyBattle();
-            if (_battle.Outcome == AdventureBattleOutcome.Defeated || _battle.Outcome == AdventureBattleOutcome.TimedOut)
+            if (_battle.Outcome == AdventureBattleOutcome.Defeated
+                || _battle.Outcome == AdventureBattleOutcome.TimedOut)
                 Fail();
         }
 

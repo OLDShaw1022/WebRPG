@@ -18,7 +18,8 @@ namespace WebRPG
             BindClick(actor.Hit, () => focus(actor.Id));
         }
 
-        public static void SetGauge(AdventureGaugeViewReferences control, AdventureGaugeScreenModel model, bool includeTitle)
+        public static void SetGauge(
+            AdventureGaugeViewReferences control, AdventureGaugeScreenModel model, bool includeTitle)
         {
             float amount = float.IsNaN(model.FillAmount) ? 0 : Mathf.Clamp01(model.FillAmount);
             control.Fill.gameObject.SetActive(amount > 0);
@@ -74,7 +75,8 @@ namespace WebRPG
             }
         }
 
-        public static void SetEnabled(AdventureButtonViewReferences control, bool enabled, Color foreground, Color secondary)
+        public static void SetEnabled(
+            AdventureButtonViewReferences control, bool enabled, Color foreground, Color secondary)
         {
             control.Button.interactable = enabled;
             control.Label.color = enabled ? foreground : secondary;

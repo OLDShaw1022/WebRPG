@@ -14,7 +14,8 @@ namespace WebRPG.Tests
         {
             System.Reflection.PropertyInfo property = typeof(AdventureScreenModel).GetProperty("PlayerHealth");
             Assert.That(property, Is.Not.Null, "Structured health gauges have not been implemented.");
-            AdventureConfiguration configuration = JsonConvert.DeserializeObject<AdventureConfiguration>(File.ReadAllText(
+            AdventureConfiguration configuration = JsonConvert.DeserializeObject<AdventureConfiguration>(
+                File.ReadAllText(
                 Path.Combine(Application.dataPath, "WebRPG/Data/AdventurePrototype.json")));
             AdventureModel model = new AdventureModel(configuration, 20);
             GaugeCaptureView view = new GaugeCaptureView();

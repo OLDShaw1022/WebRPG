@@ -59,7 +59,8 @@ namespace WebRPG
         {
         }
 
-        public AdventureModel(AdventureConfiguration configuration, int seed, bool isolateRandomStreams, int personalSeed = 0)
+        public AdventureModel(
+            AdventureConfiguration configuration, int seed, bool isolateRandomStreams, int personalSeed = 0)
         {
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             configuration.Validate();
@@ -69,8 +70,12 @@ namespace WebRPG
             Random sharedRandom = new Random(seed);
             _mapRandom = isolateRandomStreams ? new Random(seed) : sharedRandom;
             _encounterRandom = isolateRandomStreams ? new Random(unchecked(seed ^ 0x2A53B4C1)) : sharedRandom;
-            _relicRandom = isolateRandomStreams ? new Random(unchecked(seed ^ RelicRandomSeedSalt ^ personalSeed * PersonalRandomSeedMultiplier)) : sharedRandom;
-            _skillRandom = isolateRandomStreams ? new Random(unchecked(seed ^ SkillRandomSeedSalt ^ personalSeed * PersonalRandomSeedMultiplier)) : sharedRandom;
+            _relicRandom = isolateRandomStreams
+                ? new Random(unchecked(seed ^ RelicRandomSeedSalt ^ personalSeed * PersonalRandomSeedMultiplier))
+                : sharedRandom;
+            _skillRandom = isolateRandomStreams
+                ? new Random(unchecked(seed ^ SkillRandomSeedSalt ^ personalSeed * PersonalRandomSeedMultiplier))
+                : sharedRandom;
             _readOnlySkills = _skills.AsReadOnly();
             _readOnlyRewards = _rewards.AsReadOnly();
             _readOnlyRelics = _relics.AsReadOnly();
@@ -179,7 +184,8 @@ namespace WebRPG
             string groupId = CurrentNode.EnemyGroupPool[_encounterRandom.Next(CurrentNode.EnemyGroupPool.Length)];
             CurrentEnemyGroup = _configuration.EnemyGroups.First(group => group.Id == groupId);
             _battle = new AdventureBattleModel(_configuration, Skills,
-                CurrentEnemyGroup.EnemyIds.Select(identifier => _configuration.Enemies.First(enemy => enemy.Id == identifier)),
+                CurrentEnemyGroup.EnemyIds.Select(
+                    identifier => _configuration.Enemies.First(enemy => enemy.Id == identifier)),
                 Health, MaximumHealth, _damageBonus, _projectileSequence);
             _battle.MessageRecorded += Record;
             Phase = AdventurePhase.Battle;
@@ -358,7 +364,8 @@ namespace WebRPG
         private void WinBattle()
         {
             if (_partyMode && Health == 0)
-                Health = Math.Max(1, (int)Math.Ceiling(MaximumHealth * _configuration.Multiplayer.RevivalHealthFraction));
+                Health = Math.Max(
+                    1, (int)Math.Ceiling(MaximumHealth * _configuration.Multiplayer.RevivalHealthFraction));
             ResetCooldowns();
             Gold += CurrentNode.Gold;
             Record(BattleVictoryMessagePrefix + CurrentNode.Gold + GoldRewardMessageSuffix);
@@ -366,7 +373,8 @@ namespace WebRPG
             List<SkillDefinition> pool = _configuration.Skills.Where(definition =>
             {
                 AdventureSkillState owned = _skills.FirstOrDefault(skill => skill.Definition.Id == definition.Id);
-                return owned != null ? owned.Level < definition.MaximumLevel : _skills.Count < _configuration.SkillSlots;
+                return owned != null ? owned.Level < definition.MaximumLevel
+                    : _skills.Count < _configuration.SkillSlots;
             }).ToList();
             while (_rewards.Count < _configuration.RewardChoices && pool.Count > 0)
             {

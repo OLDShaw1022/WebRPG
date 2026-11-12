@@ -41,7 +41,8 @@ namespace WebRPG
             }).ToArray();
             _localIndex = Array.FindIndex(_members, member => member.PlayerId == lobby.PlayerId);
             if (_localIndex < 0) throw new ArgumentException(nameof(lobby));
-            Party = new MultiplayerAdventureModel(configuration, seed, _members.Select(member => member.PlayerId).ToArray());
+            Party = new MultiplayerAdventureModel(
+                configuration, seed, _members.Select(member => member.PlayerId).ToArray());
             _timeout = configuration.Multiplayer.NetworkTimeoutSeconds;
             _lobby.AdventureReceived += HandleAdventure;
             _lobby.Changed += HandleLobbyChanged;
@@ -66,7 +67,8 @@ namespace WebRPG
 
         public void Tick(float seconds)
         {
-            if (_disposed || _failed || IsComplete || float.IsNaN(seconds) || float.IsInfinity(seconds) || seconds <= 0) return;
+            if (_disposed || _failed || IsComplete || float.IsNaN(seconds) || float.IsInfinity(seconds)
+                || seconds <= 0) return;
             if (!_lobby.IsConnected || _lobby.Room == null) { Fail(); return; }
             _silenceTime += seconds;
             if (_silenceTime >= _timeout)
@@ -86,7 +88,8 @@ namespace WebRPG
         public void SendCommand(string action, int index = 0)
         {
             if (_disposed || _failed) return;
-            if (action == AdventureCommand.Vote && (!CanVote || index < 0 || index >= LocalModel.AvailableNodes.Count)) return;
+            if (action == AdventureCommand.Vote
+                && (!CanVote || index < 0 || index >= LocalModel.AvailableNodes.Count)) return;
             _lobby.SendAdventureAsync(new AdventurePacket
             {
                 Type = AdventurePacketType.Command, Command = action, Turn = Turn,
@@ -114,7 +117,8 @@ namespace WebRPG
         {
             if (_disposed || _failed || IsComplete) return;
             if (!_lobby.IsConnected || _lobby.Room == null || _lobby.Room.Id != _roomId ||
-                !_members.Select(member => member.PlayerId).SequenceEqual(_lobby.Room.Members.Select(member => member.PlayerId)))
+                !_members.Select(member => member.PlayerId)
+                    .SequenceEqual(_lobby.Room.Members.Select(member => member.PlayerId)))
                 Fail();
         }
 
@@ -189,7 +193,11 @@ namespace WebRPG
                     BattleSpeed = index;
                     break;
                 case AdventureCommand.Tick:
-                    if (packet.PlayerId != _lobby.Room?.LeaderId || index < 1 || index > MaximumStepsPerPacket) { Fail(); return; }
+            if (packet.PlayerId != _lobby.Room?.LeaderId || index < 1 || index > MaximumStepsPerPacket)
+            {
+                Fail();
+                return;
+            }
                     for (int step = 0; step < index * BattleSpeed; step++) Party.Tick(NetworkStep);
                     break;
                 case AdventureCommand.Abandon:

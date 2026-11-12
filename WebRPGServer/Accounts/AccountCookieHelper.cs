@@ -22,7 +22,8 @@ public static class AccountCookieHelper
             origin == context.Request.Scheme + "://" + context.Request.Host;
     }
 
-    public static bool HasRequestHeader(HttpContext context) => context.Request.Headers[RequestHeader] == RequestHeaderValue;
+    public static bool HasRequestHeader(
+        HttpContext context) => context.Request.Headers[RequestHeader] == RequestHeaderValue;
     public static string? Read(HttpContext context) => context.Request.Cookies[CookieName];
 
     public static void Write(HttpContext context, RememberedAccountSession session) =>

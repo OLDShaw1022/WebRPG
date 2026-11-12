@@ -84,7 +84,8 @@ public sealed partial class PostgresAccountStore
         string token = AccountTokenHelper.Create();
         DateTimeOffset expires = DateTimeOffset.UtcNow.AddHours(AccountTokenHelper.SessionLifetimeHours);
         await using (NpgsqlCommand cleanup = _dataSource.CreateCommand(
-            "DELETE FROM game_account_remembered_sessions WHERE expires_at <= CURRENT_TIMESTAMP; DELETE FROM game_account_sessions WHERE expires_at <= CURRENT_TIMESTAMP;"))
+            "DELETE FROM game_account_remembered_sessions WHERE expires_at <= CURRENT_TIMESTAMP; DELETE FROM " +
+                "game_account_sessions WHERE expires_at <= CURRENT_TIMESTAMP;"))
         {
             await cleanup.ExecuteNonQueryAsync(cancellationToken);
         }

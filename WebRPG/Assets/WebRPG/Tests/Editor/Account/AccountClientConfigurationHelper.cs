@@ -8,7 +8,8 @@ namespace WebRPG.Tests
             DefaultServerId = "production", RequestTimeoutSeconds = 10,
             Servers = new[]
             {
-                new LobbyServerConfiguration { Id = "production", Name = "Production", Url = "wss://example.invalid/ws" },
+                new LobbyServerConfiguration { Id = "production", Name = "Production",
+                    Url = "wss://example.invalid/ws" },
                 new LobbyServerConfiguration { Id = "test", Name = "Local", Url = socketUrl, EditorOnly = true }
             }
         };

@@ -46,7 +46,8 @@ internal sealed class ControlledLobbySocket : WebSocket
         if (Interlocked.Increment(ref _sending) != 1) ConcurrentSendDetected = true;
         try
         {
-            using CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _aborted.Token);
+            using CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(
+                cancellationToken, _aborted.Token);
             if (_sendRelease != null)
             {
                 _sendStarted.TrySetResult();
@@ -57,9 +58,11 @@ internal sealed class ControlledLobbySocket : WebSocket
         finally { Interlocked.Decrement(ref _sending); }
     }
 
-    public override async Task<WebSocketReceiveResult> ReceiveAsync(ArraySegment<byte> buffer, CancellationToken cancellationToken)
+    public override async Task<WebSocketReceiveResult> ReceiveAsync(
+        ArraySegment<byte> buffer, CancellationToken cancellationToken)
     {
-        using CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _aborted.Token);
+        using CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(
+            cancellationToken, _aborted.Token);
         try
         {
             byte[] message = await _incoming.Reader.ReadAsync(linked.Token);
@@ -78,13 +81,15 @@ internal sealed class ControlledLobbySocket : WebSocket
         _aborted.Cancel();
     }
 
-    public override Task CloseAsync(WebSocketCloseStatus closeStatus, string? statusDescription, CancellationToken cancellationToken)
+    public override Task CloseAsync(
+        WebSocketCloseStatus closeStatus, string? statusDescription, CancellationToken cancellationToken)
     {
         _state = WebSocketState.Closed;
         return Task.CompletedTask;
     }
 
-    public override Task CloseOutputAsync(WebSocketCloseStatus closeStatus, string? statusDescription, CancellationToken cancellationToken) =>
+    public override Task CloseOutputAsync(
+        WebSocketCloseStatus closeStatus, string? statusDescription, CancellationToken cancellationToken) =>
         CloseAsync(closeStatus, statusDescription, cancellationToken);
 
     public override void Dispose()

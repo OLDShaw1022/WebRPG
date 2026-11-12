@@ -30,7 +30,8 @@ namespace WebRPG
                 BasicAttack = AdventureBattleScreenHelper.BasicAttackGauge(player.BasicAttackDamage,
                     player.Configuration.BasicAttack.CastTime, player.PlayerAction, fighting),
                 Skills = player.Skills.Select((skill, index) =>
-                    AdventureBattleScreenHelper.SkillGauge(skill, fighting, player.PlayerAction, index, false)).ToArray()
+                    AdventureBattleScreenHelper.SkillGauge(skill, fighting, player.PlayerAction, index, false))
+                        .ToArray()
             };
         }
     }

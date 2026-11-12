@@ -9,7 +9,8 @@ internal static class PayPalWebhookLinks
         RelatedId(resource, "order_id") ?? LinkId(resource, "/v2/checkout/orders/");
 
     internal static string? CaptureId(JsonElement resource, bool refund) =>
-        RelatedId(resource, "capture_id") ?? (refund ? LinkId(resource, "/v2/payments/captures/") : PayPalResponse.Text(resource, "id"));
+        RelatedId(resource, "capture_id")
+            ?? (refund ? LinkId(resource, "/v2/payments/captures/") : PayPalResponse.Text(resource, "id"));
 
     private static string? RelatedId(JsonElement resource, string name) =>
         resource.TryGetProperty("supplementary_data", out JsonElement data) && data.ValueKind == JsonValueKind.Object &&
@@ -17,7 +18,8 @@ internal static class PayPalWebhookLinks
 
     private static string? LinkId(JsonElement resource, string prefix)
     {
-        if (!resource.TryGetProperty("links", out JsonElement links) || links.ValueKind != JsonValueKind.Array) return null;
+        if (!resource.TryGetProperty("links", out JsonElement links)
+            || links.ValueKind != JsonValueKind.Array) return null;
         foreach (JsonElement link in links.EnumerateArray())
         {
             if (PayPalResponse.Text(link, "rel") != "up" ||

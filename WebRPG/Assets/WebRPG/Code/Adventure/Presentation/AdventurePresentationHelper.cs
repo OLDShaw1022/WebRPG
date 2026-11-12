@@ -45,7 +45,8 @@ namespace WebRPG
             }
             AdventureProjectileScreenModel projectile = screen.Projectile;
             projectile.Progress = Sample(ProjectileKey, projectile.Progress,
-                projectile.SourceCharacterId + Separator + projectile.TargetCharacterId + Separator + projectile.Name, seconds);
+                projectile.SourceCharacterId + Separator + projectile.TargetCharacterId + Separator + projectile.Name,
+                    seconds);
         }
 
         private void SmoothAction(AdventureCharacterScreenModel character, float seconds)
@@ -65,9 +66,11 @@ namespace WebRPG
 
         private float Sample(string key, float target, string identity, float seconds)
         {
-            if (!_progress.TryGetValue(key, out ProgressState state) || state.Identity != identity || target < state.Target)
+            if (!_progress.TryGetValue(key, out ProgressState state) || state.Identity != identity
+                || target < state.Target)
             {
-                _progress[key] = new ProgressState { Identity = identity, Start = target, Target = target, Value = target };
+                _progress[key] = new ProgressState { Identity = identity, Start = target, Target = target,
+                    Value = target };
                 return target;
             }
             if (target != state.Target)

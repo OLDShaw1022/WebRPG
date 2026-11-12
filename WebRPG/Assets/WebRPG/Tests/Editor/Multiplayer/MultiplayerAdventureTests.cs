@@ -35,7 +35,8 @@ namespace WebRPG.Tests
             party.Tick(30);
             Assert.That(party.Players[0].Phase, Is.EqualTo(AdventurePhase.SkillReward));
             Assert.That(party.Players[0].Health, Is.EqualTo(
-                (int)System.Math.Ceiling(configuration.StartingHealth * configuration.Multiplayer.RevivalHealthFraction)));
+                (int)System.Math.Ceiling(
+                    configuration.StartingHealth * configuration.Multiplayer.RevivalHealthFraction)));
         }
 
         [Test]
@@ -48,7 +49,8 @@ namespace WebRPG.Tests
                 player.Battle.ReceivePartyDamage(configuration.StartingHealth);
             party.Tick(configuration.SimulationStep);
             Assert.That(party.Players.All(player => player.Phase == AdventurePhase.Failed), Is.True);
-            MultiplayerAdventureModel disconnected = new MultiplayerAdventureModel(configuration, 4, new[] { "a", "b" });
+            MultiplayerAdventureModel disconnected = new MultiplayerAdventureModel(
+                configuration, 4, new[] { "a", "b" });
             disconnected.Fail();
             Assert.That(disconnected.Players.All(player => player.Phase == AdventurePhase.Failed), Is.True);
         }
@@ -58,7 +60,8 @@ namespace WebRPG.Tests
         {
             AdventureConfiguration configuration = AdventureModelScenarioHelper.WinningConfiguration();
             int health = configuration.Enemies[0].Health;
-            MultiplayerAdventureModel party = new MultiplayerAdventureModel(configuration, 4, new[] { "a", "b", "c", "d" });
+            MultiplayerAdventureModel party = new MultiplayerAdventureModel(
+                configuration, 4, new[] { "a", "b", "c", "d" });
             party.SelectNode(0);
             Assert.That(configuration.Enemies[0].Health, Is.EqualTo(health));
             Assert.That(party.Players[0].Enemies[0].Definition.Health, Is.EqualTo(health * 4));
@@ -111,8 +114,10 @@ namespace WebRPG.Tests
             AdventureConfiguration configuration = AdventureModelScenarioHelper.WinningConfiguration();
             configuration.BasicAttack.Damage = 100000;
             configuration.StartingHealth = 100000;
-            MultiplayerAdventureModel party = new MultiplayerAdventureModel(configuration, 19, new[] { "a", "b", "c", "d" });
-            for (int action = 0; action < 1000 && !party.Players.All(player => player.Phase == AdventurePhase.Complete); action++)
+            MultiplayerAdventureModel party = new MultiplayerAdventureModel(
+                configuration, 19, new[] { "a", "b", "c", "d" });
+            for (int action = 0; action < 1000
+                && !party.Players.All(player => player.Phase == AdventurePhase.Complete); action++)
             {
                 if (party.CanVote) party.SelectNode(0);
                 party.Tick(30);
@@ -140,12 +145,14 @@ namespace WebRPG.Tests
                 enemy.SpecialSkill = null;
             }
             AdventureModelScenarioHelper.SetSingleEnemy(configuration);
-            MultiplayerAdventureModel party = new MultiplayerAdventureModel(configuration, 29, new[] { "a", "b", "c", "d" });
+            MultiplayerAdventureModel party = new MultiplayerAdventureModel(
+                configuration, 29, new[] { "a", "b", "c", "d" });
             party.SelectNode(0);
             party.Players[0].Battle.ReceivePartyDamage(configuration.StartingHealth);
             party.Tick(8);
             Assert.That(party.Players[0].Health, Is.Zero);
-            Assert.That(party.Players.Skip(1).Count(player => player.Health < configuration.StartingHealth), Is.GreaterThan(1));
+            Assert.That(
+                party.Players.Skip(1).Count(player => player.Health < configuration.StartingHealth), Is.GreaterThan(1));
         }
     }
 }

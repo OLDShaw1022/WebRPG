@@ -101,7 +101,8 @@ namespace WebRPG
                 SituationText = Situation();
                 ChoiceLabels = Choices();
             }
-            if (phaseChanged || _health != _model.Health || _maximumHealth != _model.MaximumHealth || _gold != _model.Gold)
+            if (phaseChanged || _health != _model.Health || _maximumHealth != _model.MaximumHealth
+                || _gold != _model.Gold)
             {
                 SummaryText = LocalPlayerName + TitleSeparator + HealthValuePrefix + _model.Health +
                     CountSeparator + _model.MaximumHealth + SummaryGoldPrefix + _model.Gold +
@@ -120,7 +121,8 @@ namespace WebRPG
                     Id = relic.Id,
                     Title = relic.Name,
                     Description = string.Join(EffectListSeparator, relic.Effects.Select(effect =>
-                        (effect.Type == AdventureEffectType.MaximumHealth ? MaximumHealthBonusPrefix : DamageBonusPrefix) + effect.Amount))
+                        (effect.Type == AdventureEffectType.MaximumHealth ? MaximumHealthBonusPrefix
+                            : DamageBonusPrefix) + effect.Amount))
                 }).ToArray();
                 _relicCount = _model.Relics.Count;
             }
@@ -173,7 +175,8 @@ namespace WebRPG
                     CanSelect = _model.Phase == AdventurePhase.Map && row == _model.RowIndex,
                     IsChosen = row < path.Count && path[row] == index,
                     StateText = row < path.Count ? (path[row] == index ? ChosenNodeText : SkippedNodeText)
-                        : row == _model.RowIndex && _model.Phase == AdventurePhase.Map ? SelectableNodeText : UnreachedNodeText,
+                        : row == _model.RowIndex && _model.Phase == AdventurePhase.Map ? SelectableNodeText
+                            : UnreachedNodeText,
                     ChoiceIndex = index
                 }).ToArray()
             }).ToArray();
@@ -189,7 +192,8 @@ namespace WebRPG
             if (_model.Phase == AdventurePhase.Complete || _model.Phase == AdventurePhase.Failed)
             {
                 return ResultGoldPrefix + _model.Gold + ResultGoldSuffix +
-                    ResultSkillsPrefix + _model.Skills.Count + ResultRelicsSeparator + _model.Relics.Count + ResultCountSuffix +
+                    ResultSkillsPrefix + _model.Skills.Count + ResultRelicsSeparator + _model.Relics.Count +
+                        ResultCountSuffix +
                     ResultPersistenceNotice;
             }
 
@@ -208,14 +212,19 @@ namespace WebRPG
             switch (_model.Phase)
             {
                 case AdventurePhase.Map:
-                    return _model.AvailableNodes.Select(node => node.Name + TitleSeparator + NodeLabel(node.Type)).ToArray();
+                    return _model.AvailableNodes.Select(node => node.Name + TitleSeparator + NodeLabel(node.Type))
+                        .ToArray();
                 case AdventurePhase.SkillReward:
                     return _model.Rewards.Select(definition =>
                     {
-                        AdventureSkillState owned = _model.Skills.FirstOrDefault(skill => skill.Definition.Id == definition.Id);
+                        AdventureSkillState owned = _model.Skills.FirstOrDefault(
+                            skill => skill.Definition.Id == definition.Id);
                         int level = owned == null ? 1 : owned.Level + 1;
-                        return (owned == null ? AcquireSkillPrefix : UpgradeSkillPrefix) + definition.Name + SkillLevelSeparator + level + TitleSeparator +
-                            definition.Cooldown.ToString(SecondsFormat) + RewardCooldownSuffix + string.Join(EffectListSeparator, definition.Effects.Select(effect =>
+                        return (
+                            owned == null ? AcquireSkillPrefix
+                            : UpgradeSkillPrefix) + definition.Name + SkillLevelSeparator + level + TitleSeparator +
+                            definition.Cooldown.ToString(SecondsFormat) + RewardCooldownSuffix + string.Join(
+                                EffectListSeparator, definition.Effects.Select(effect =>
                                 (effect.Type == AdventureEffectType.Damage ? DamageEffectPrefix : HealingEffectPrefix) +
                                 (effect.Amount + effect.PerLevel * (level - 1))));
                     }).ToArray();
@@ -228,7 +237,9 @@ namespace WebRPG
 
                     return node.Type == AdventureNodeType.Camp
                         ? new[] { CampRestChoicePrefix + node.Healing + HealthSuffix, LeaveNodeChoiceText }
-                        : new[] { EventSacrificeChoicePrefix + node.HealthCost + EventGoldRewardSeparator + node.Gold + GoldSuffix,
+                        : new[] {
+                            EventSacrificeChoicePrefix + node.HealthCost + EventGoldRewardSeparator + node.Gold +
+                            GoldSuffix,
                             EventRecoveryChoicePrefix + node.Healing + HealthSuffix };
                 default:
                     return Array.Empty<string>();

@@ -41,7 +41,8 @@ public sealed class PostgresShopStore(NpgsqlDataSource source)
 
     public async Task<ShopBalance> GetBalanceAsync(Guid accountId, CancellationToken cancellationToken)
     {
-        await using NpgsqlCommand command = source.CreateCommand("SELECT gold, crystals FROM game_wallets WHERE account_id = $1;");
+        await using NpgsqlCommand command = source.CreateCommand(
+            "SELECT gold, crystals FROM game_wallets WHERE account_id = $1;");
         command.Parameters.AddWithValue(accountId);
         await using NpgsqlDataReader reader = await command.ExecuteReaderAsync(cancellationToken);
         return await reader.ReadAsync(cancellationToken)
@@ -87,7 +88,8 @@ public sealed class PostgresShopStore(NpgsqlDataSource source)
             await using NpgsqlDataReader reader = await previous.ExecuteReaderAsync(cancellationToken);
             if (await reader.ReadAsync(cancellationToken))
             {
-                ShopOffer original = new(reader.GetString(0), reader.GetInt64(1), reader.GetInt64(2), reader.GetInt64(3));
+                ShopOffer original = new(
+                    reader.GetString(0), reader.GetInt64(1), reader.GetInt64(2), reader.GetInt64(3));
                 if (original != confirmed)
                     return new ShopExchangeResult(ShopExchangeStatus.RequestConflict, balance, offer);
                 return JsonSerializer.Deserialize<ShopExchangeResult>(reader.GetString(4))!;
@@ -116,12 +118,14 @@ public sealed class PostgresShopStore(NpgsqlDataSource source)
                 UPDATE game_wallets SET gold = $6, crystals = $7, gold_debt = gold_debt - $12
                 WHERE account_id = $1 AND $8 RETURNING account_id
             ), receipt AS (
-                INSERT INTO game_shop_exchanges (account_id, request_id, offer_id, crystal_cost, gold_amount, result, gold_cost)
+                INSERT INTO game_shop_exchanges
+                    (account_id, request_id, offer_id, crystal_cost, gold_amount, result, gold_cost)
                 VALUES ($1, $2, $3, $4, $5, CAST($9 AS JSONB), $10)
             )
             INSERT INTO game_wallet_entries (account_id, source, reference_id, currency, delta)
             SELECT account_id, 'exchange', $2, movement.currency, movement.delta
-            FROM updated_wallet CROSS JOIN (VALUES ('crystals', -CAST($4 AS BIGINT)), ('gold', $11)) AS movement(currency, delta)
+            FROM updated_wallet
+            CROSS JOIN (VALUES ('crystals', -CAST($4 AS BIGINT)), ('gold', $11)) AS movement(currency, delta)
             WHERE movement.delta <> 0
             UNION ALL
             SELECT account_id, 'gold-debt-repayment', $2, 'gold', -CAST($12 AS BIGINT)

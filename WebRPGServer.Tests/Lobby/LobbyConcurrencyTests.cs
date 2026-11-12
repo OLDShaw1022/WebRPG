@@ -38,11 +38,14 @@ public sealed class LobbyConcurrencyTests
             using CancellationTokenSource progress = new(TimeSpan.FromSeconds(2));
             LobbyPacket joined = await fast.ReadAsync(progress.Token);
             while (joined.RequestId != "join") joined = await fast.ReadAsync(progress.Token);
-            await fast.RequestAsync(new LobbyPacket { Type = LobbyPacketType.SetReady, IsReady = true }, progress.Token);
-            await fast.RequestAsync(new LobbyPacket { Type = LobbyPacketType.SetReady, IsReady = false }, progress.Token);
+            await fast.RequestAsync(
+                new LobbyPacket { Type = LobbyPacketType.SetReady, IsReady = true }, progress.Token);
+            await fast.RequestAsync(
+                new LobbyPacket { Type = LobbyPacketType.SetReady, IsReady = false }, progress.Token);
             fast.Abort();
             await fastConnection.WaitAsync(progress.Token);
-            LobbyPacket state = await observer.RequestAsync(new LobbyPacket { Type = LobbyPacketType.ListRooms }, progress.Token);
+            LobbyPacket state = await observer.RequestAsync(
+                new LobbyPacket { Type = LobbyPacketType.ListRooms }, progress.Token);
             if (state.Rooms.Single(room => room.Id == roomId).MemberCount != 1)
                 Assert.Fail("Disconnect cleanup was blocked by a slow recipient.");
 

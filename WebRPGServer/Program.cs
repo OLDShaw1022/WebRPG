@@ -28,7 +28,8 @@ public static class Program
         builder.Services.AddSingleton(new ShopTopUpCatalog(builder.Configuration));
         PayPalSettings payPal = new(builder.Configuration);
         if (payPal.Enabled && !payPal.Configured)
-            throw new InvalidOperationException("Enabled PayPal checkout requires server credentials and HTTPS callback URLs.");
+            throw new InvalidOperationException(
+                "Enabled PayPal checkout requires server credentials and HTTPS callback URLs.");
         builder.Services.AddSingleton(payPal);
         builder.Services.AddHttpClient<PayPalCheckout>(client => client.BaseAddress = new Uri(payPal.Sandbox
             ? "https://api-m.sandbox.paypal.com/" : "https://api-m.paypal.com/"));
@@ -45,7 +46,8 @@ public static class Program
 
         if (!string.IsNullOrWhiteSpace(connectionString))
         {
-            await application.Services.GetRequiredService<PostgresAccountStore>().InitializeAsync(CancellationToken.None);
+            await application.Services.GetRequiredService<PostgresAccountStore>()
+                .InitializeAsync(CancellationToken.None);
             await application.Services.GetRequiredService<PostgresShopStore>().InitializeAsync(CancellationToken.None);
         }
 

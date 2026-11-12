@@ -23,7 +23,8 @@ public static class ShopEndpoints
                 balance,
                 offers = catalog.Offers,
                 topUpOffers = payPal.Enabled && payPal.Configured ? topUps.Offers : Array.Empty<ShopTopUpOffer>(),
-                topUpOrders = await topUpStore.ListAsync(Guid.Parse(identity.AccountId), payPal.Sandbox, context.RequestAborted)
+                topUpOrders = await topUpStore.ListAsync(
+                    Guid.Parse(identity.AccountId), payPal.Sandbox, context.RequestAborted)
             });
         });
 

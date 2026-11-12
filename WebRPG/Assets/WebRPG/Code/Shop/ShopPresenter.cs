@@ -352,7 +352,8 @@ namespace WebRPG
                 };
             }
 
-            bool modalOpen = _selectedOffer != null || _selectedTopUp != null || _selectedOrder != null || _notice.Length > 0;
+            bool modalOpen = _selectedOffer != null || _selectedTopUp != null || _selectedOrder != null
+                || _notice.Length > 0;
             _view.Render(balanceText, _snapshot, _page, status, !_busy && !modalOpen);
 
             if (_selectedOrder != null)

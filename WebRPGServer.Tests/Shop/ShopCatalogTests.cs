@@ -23,6 +23,7 @@ public sealed class ShopCatalogTests
         Assert.That(purchase, Is.EqualTo(new ShopOffer("empty-item", 0, 0, GoldCost: 100)));
 
         ShopTopUpCatalog topUps = new(configuration);
-        Assert.That(topUps.Find("crystals-100-twd-1"), Is.EqualTo(new ShopTopUpOffer("crystals-100-twd-1", "TWD", 1m, 100)));
+        Assert.That(
+            topUps.Find("crystals-100-twd-1"), Is.EqualTo(new ShopTopUpOffer("crystals-100-twd-1", "TWD", 1m, 100)));
     }
 }

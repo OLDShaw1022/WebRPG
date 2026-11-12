@@ -3,17 +3,32 @@ import vm from 'node:vm';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-const source = readFileSync(new URL('../../WebRPG/Assets/Plugins/WebRPGAccountCredentials.jslib', import.meta.url), 'utf8');
+const source = readFileSync(
+    new URL('../../WebRPG/Assets/Plugins/WebRPGAccountCredentials.jslib', import.meta.url),
+    'utf8'
+);
 const endpoint = 'https://ws.oldshaw-webrpg.com/api/accounts/refresh';
 
 function setup() {
     const calls = [];
     const library = {};
     const module = {
-        fetchWithProgress(resource, init) { calls.push({ type: 'fetch', resource, init, receiver: this }); return Promise.resolve('response'); },
-        cachedFetch(resource, init) { calls.push({ type: 'cache', resource, init, receiver: this }); return Promise.resolve('response'); }
+        fetchWithProgress(resource, init) {
+            calls.push({ type: 'fetch', resource, init, receiver: this });
+            return Promise.resolve('response');
+        },
+        cachedFetch(resource, init) {
+            calls.push({ type: 'cache', resource, init, receiver: this });
+            return Promise.resolve('response');
+        }
     };
-    const context = vm.createContext({ URL, Set, Object, Module: module, LibraryManager: { library }, UTF8ToString: value => value,
+    const context = vm.createContext({
+        URL,
+        Set,
+        Object,
+        Module: module,
+        LibraryManager: { library },
+        UTF8ToString: value => value,
         mergeInto: (target, values) => Object.assign(target, values) });
     vm.runInContext(source, context);
     context.WebRPGAccountCredentials = library.$WebRPGAccountCredentials;

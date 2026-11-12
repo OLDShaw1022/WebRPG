@@ -19,7 +19,8 @@ public static class AccountEndpoints
             options.AddPolicy(RatePolicy, context => RateLimitPartition.GetFixedWindowLimiter(
                 context.Connection.RemoteIpAddress?.ToString() ?? "unknown", _ => new FixedWindowRateLimiterOptions
                 {
-                    PermitLimit = AuthRequestsPerMinute, Window = TimeSpan.FromMinutes(RateWindowMinutes), QueueLimit = 0
+                    PermitLimit = AuthRequestsPerMinute, Window = TimeSpan.FromMinutes(RateWindowMinutes),
+                        QueueLimit = 0
                 }));
         });
     }
@@ -43,7 +44,8 @@ public static class AccountEndpoints
                     context.Response.StatusCode = StatusCodes.Status413PayloadTooLarge;
                     return;
                 }
-                if (!context.Request.IsHttps && context.Connection.RemoteIpAddress is { } remote && !System.Net.IPAddress.IsLoopback(remote))
+                if (!context.Request.IsHttps && context.Connection.RemoteIpAddress is { } remote
+                    && !System.Net.IPAddress.IsLoopback(remote))
                 {
                     context.Response.StatusCode = StatusCodes.Status400BadRequest;
                     return;
@@ -85,9 +87,11 @@ public static class AccountEndpoints
         });
         group.MapPost("/refresh", async (HttpContext context) =>
         {
-            if (!AccountCookieHelper.HasRequestHeader(context)) return Results.StatusCode(StatusCodes.Status403Forbidden);
+            if (!AccountCookieHelper.HasRequestHeader(context)) return Results.StatusCode(
+                StatusCodes.Status403Forbidden);
             PostgresAccountStore store = context.RequestServices.GetRequiredService<PostgresAccountStore>();
-            RememberedAccountSession? session = await store.RefreshAsync(AccountCookieHelper.Read(context), context.RequestAborted);
+            RememberedAccountSession? session = await store.RefreshAsync(
+                AccountCookieHelper.Read(context), context.RequestAborted);
             if (session is null)
             {
                 AccountCookieHelper.Clear(context);
@@ -114,6 +118,7 @@ public static class AccountEndpoints
     private static string ReadToken(HttpContext context)
     {
         string header = context.Request.Headers.Authorization.ToString();
-        return header.StartsWith(BearerPrefix, StringComparison.OrdinalIgnoreCase) ? header[BearerPrefix.Length..] : string.Empty;
+        return header.StartsWith(BearerPrefix, StringComparison.OrdinalIgnoreCase) ? header[BearerPrefix.Length..]
+            : string.Empty;
     }
 }

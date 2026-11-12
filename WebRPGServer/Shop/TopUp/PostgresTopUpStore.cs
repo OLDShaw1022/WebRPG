@@ -14,7 +14,8 @@ internal sealed class PostgresTopUpStore(NpgsqlDataSource source)
     internal async Task InitializeAsync(CancellationToken cancellationToken)
     {
         await using NpgsqlCommand command = source.CreateCommand("""
-            ALTER TABLE game_wallets ADD COLUMN IF NOT EXISTS gold_debt NUMERIC NOT NULL DEFAULT 0 CHECK (gold_debt >= 0);
+            ALTER TABLE game_wallets ADD COLUMN IF NOT EXISTS gold_debt NUMERIC NOT NULL DEFAULT 0
+                CHECK (gold_debt >= 0);
             CREATE TABLE IF NOT EXISTS game_shop_top_ups (
                 order_id UUID PRIMARY KEY,
                 account_id UUID NOT NULL REFERENCES game_accounts(account_id) ON DELETE CASCADE,
@@ -43,9 +44,11 @@ internal sealed class PostgresTopUpStore(NpgsqlDataSource source)
                 crystals BIGINT NOT NULL CHECK (crystals > 0),
                 reversed BOOLEAN NOT NULL DEFAULT FALSE,
                 PRIMARY KEY (account_id, request_id, order_id),
-                FOREIGN KEY (account_id, request_id) REFERENCES game_shop_exchanges(account_id, request_id) ON DELETE CASCADE
+                FOREIGN KEY (account_id, request_id)
+                    REFERENCES game_shop_exchanges(account_id, request_id) ON DELETE CASCADE
             );
-            CREATE INDEX IF NOT EXISTS game_shop_top_up_allocations_order ON game_shop_top_up_allocations(order_id) WHERE NOT reversed;
+            CREATE INDEX IF NOT EXISTS game_shop_top_up_allocations_order
+                ON game_shop_top_up_allocations(order_id) WHERE NOT reversed;
             """);
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
@@ -100,7 +103,8 @@ internal sealed class PostgresTopUpStore(NpgsqlDataSource source)
         return await ReadFirstAsync(query, cancellationToken);
     }
 
-    internal async Task<IReadOnlyList<ShopTopUpReceipt>> ListAsync(Guid accountId, bool sandbox, CancellationToken cancellationToken)
+    internal async Task<IReadOnlyList<ShopTopUpReceipt>> ListAsync(
+        Guid accountId, bool sandbox, CancellationToken cancellationToken)
     {
         await using NpgsqlCommand query = source.CreateCommand($"""
             SELECT {OrderColumns} FROM game_shop_top_ups WHERE account_id = $1 AND sandbox = $2
@@ -140,7 +144,8 @@ internal sealed class PostgresTopUpStore(NpgsqlDataSource source)
             initialize.Parameters.AddWithValue(order.AccountId);
             await initialize.ExecuteNonQueryAsync(cancellationToken);
         }
-        await using (NpgsqlCommand wallet = new("SELECT 1 FROM game_wallets WHERE account_id = $1 FOR UPDATE;", connection, transaction))
+        await using (NpgsqlCommand wallet = new(
+            "SELECT 1 FROM game_wallets WHERE account_id = $1 FOR UPDATE;", connection, transaction))
         {
             wallet.Parameters.AddWithValue(order.AccountId);
             await wallet.ExecuteScalarAsync(cancellationToken);
@@ -192,14 +197,17 @@ internal sealed class PostgresTopUpStore(NpgsqlDataSource source)
             """, connection, transaction);
         update.Parameters.AddWithValue(order.OrderId);
         update.Parameters.AddWithValue((int)status);
-        update.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlTypes.NpgsqlDbType.Text, Value = (object?)captureId ?? DBNull.Value });
+        update.Parameters.Add(
+            new NpgsqlParameter { NpgsqlDbType = NpgsqlTypes.NpgsqlDbType.Text, Value = (object?)captureId
+            ?? DBNull.Value });
         update.Parameters.AddWithValue(grant);
         update.Parameters.AddWithValue(status == ShopTopUpStatus.Reversed);
         await update.ExecuteNonQueryAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
     }
 
-    private static async Task<ShopTopUpOrder?> ReadFirstAsync(NpgsqlCommand command, CancellationToken cancellationToken)
+    private static async Task<ShopTopUpOrder?> ReadFirstAsync(
+        NpgsqlCommand command, CancellationToken cancellationToken)
     {
         await using NpgsqlDataReader reader = await command.ExecuteReaderAsync(cancellationToken);
         return await reader.ReadAsync(cancellationToken) ? ReadOrder(reader) : null;

@@ -30,7 +30,8 @@ namespace WebRPG
             uint accountLength, byte[] account, uint passwordLength, byte[] password, IntPtr item);
 
         [DllImport(Security)]
-        private static extern int SecKeychainItemModifyAttributesAndData(IntPtr item, IntPtr attributes, uint length, byte[] password);
+        private static extern int SecKeychainItemModifyAttributesAndData(
+            IntPtr item, IntPtr attributes, uint length, byte[] password);
 
         [DllImport(Security)]
         private static extern int SecKeychainItemDelete(IntPtr item);
@@ -44,7 +45,8 @@ namespace WebRPG
         internal static string Read(string key)
         {
             byte[] account = Encoding.UTF8.GetBytes(key);
-            int status = SecKeychainFindGenericPassword(IntPtr.Zero, (uint)Service.Length, Service, (uint)account.Length,
+            int status = SecKeychainFindGenericPassword(
+                IntPtr.Zero, (uint)Service.Length, Service, (uint)account.Length,
                 account, out uint length, out IntPtr data, IntPtr.Zero);
             if (status != Success || data == IntPtr.Zero) return string.Empty;
 

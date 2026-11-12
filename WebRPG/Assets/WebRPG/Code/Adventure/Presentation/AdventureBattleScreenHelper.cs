@@ -26,7 +26,8 @@ namespace WebRPG
         private const string HealingFormat = "自身回復 {0} 點生命";
         private const string EffectSeparator = "、";
         private const string NewLine = "\n";
-        private const string IntentFormat = "----------------\n特殊技能預告\n再完成 {0} 次普攻且冷卻結束後施放「{1}」\n{2}\n施放 {3:0.0} 秒 · 冷卻剩餘 {4:0.0} 秒";
+        private const string IntentFormat =
+            "----------------\n特殊技能預告\n再完成 {0} 次普攻且冷卻結束後施放「{1}」\n{2}\n施放 {3:0.0} 秒 · 冷卻剩餘 {4:0.0} 秒";
         private const string CastingSpecialFormat = "----------------\n特殊技能施放中\n「{0}」完成後，再經過 {1} 次普攻且冷卻結束後使用。";
         private const string NoSpecialText = "----------------\n沒有特殊技能。";
 

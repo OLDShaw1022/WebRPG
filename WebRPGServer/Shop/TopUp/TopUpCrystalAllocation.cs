@@ -23,7 +23,8 @@ internal static class TopUpCrystalAllocation
                     SELECT $1, $2, order_id, used FROM allocation WHERE used > 0
                 RETURNING order_id, crystals
             )
-            UPDATE game_shop_top_ups t SET remaining = t.remaining - r.crystals FROM recorded r WHERE t.order_id = r.order_id;
+            UPDATE game_shop_top_ups t SET remaining = t.remaining - r.crystals
+            FROM recorded r WHERE t.order_id = r.order_id;
             """, connection, transaction);
         command.Parameters.AddWithValue(accountId);
         command.Parameters.AddWithValue(requestId);

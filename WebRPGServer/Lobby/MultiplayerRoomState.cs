@@ -23,7 +23,8 @@ public sealed class MultiplayerRoomState
     public AdventurePacket Execute(string playerId, LobbyRoomSnapshot room, AdventurePacket request)
     {
         if (Failed) throw new ArgumentException("本輪冒險已結束。");
-        if (request.Type != AdventurePacketType.Command || (request.Turn != Turn && request.Command != AdventureCommand.Tick))
+        if (request.Type != AdventurePacketType.Command
+            || (request.Turn != Turn && request.Command != AdventureCommand.Tick))
             throw new ArgumentException("操作類型或冒險回合已失效。");
         if (!AdventureCommandPayloadHelper.TryRead(request.Payload, out int index, out int amount) || amount != 0)
             throw new ArgumentException("冒險操作格式錯誤。");
@@ -52,7 +53,8 @@ public sealed class MultiplayerRoomState
             case AdventureCommand.Tick:
                 if (room.LeaderId != playerId || index < 1 || index > MaximumStepsPerPacket)
                     throw new ArgumentException("只有隊長可推進模擬時間。");
-                if (_ticks + index > (DateTime.UtcNow - _startedAt).TotalSeconds * SimulationStepsPerSecond + AllowedSimulationLeadSteps)
+                if (_ticks + index > (
+                    DateTime.UtcNow - _startedAt).TotalSeconds * SimulationStepsPerSecond + AllowedSimulationLeadSteps)
                     throw new ArgumentException("模擬時間推進過快。");
                 _ticks += index;
                 break;

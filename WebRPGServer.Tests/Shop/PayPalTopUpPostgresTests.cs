@@ -44,7 +44,8 @@ public sealed class PayPalTopUpPostgresTests
         await wallet.InitializeAsync(TestCancellation);
         string email = $"paypal-{Guid.NewGuid():N}@example.invalid";
         await accounts.RegisterAsync(new(email, "long-enough-password", "測試玩家"), TestCancellation);
-        Guid accountId = Guid.Parse((await accounts.LoginAsync(new(email, "long-enough-password"), TestCancellation))!.AccountId);
+        Guid accountId = Guid.Parse(
+            (await accounts.LoginAsync(new(email, "long-enough-password"), TestCancellation))!.AccountId);
 
         ShopTopUpOffer offer = new("starter", "USD", 5m, 100);
         ShopTopUpRequest firstRequest = new(Guid.NewGuid(), offer);
@@ -57,7 +58,9 @@ public sealed class PayPalTopUpPostgresTests
         using HttpClient client = new(remote) { BaseAddress = new Uri("https://api-m.sandbox.paypal.com/") };
         PayPalTopUpService service = new(new PayPalCheckout(client, settings), settings, store);
         ShopTopUpOrder first = (await service.CreateAsync(accountId, firstRequest, offer, TestCancellation))!;
-        Assert.That(await service.CreateAsync(accountId, firstRequest, offer with { Amount = 6m }, TestCancellation), Is.EqualTo(first));
+        Assert.That(
+            await service.CreateAsync(accountId, firstRequest, offer with { Amount = 6m }, TestCancellation),
+            Is.EqualTo(first));
         Assert.That(remote.CreateCount, Is.EqualTo(1));
         Assert.That(await store.ListAsync(Guid.NewGuid(), true, TestCancellation), Is.Empty);
         Assert.That(await store.ListAsync(accountId, false, TestCancellation), Is.Empty);
@@ -77,10 +80,12 @@ public sealed class PayPalTopUpPostgresTests
             NotifyAsync(service, first, "PAYMENT.CAPTURE.COMPLETED")), Is.All.True);
         Assert.That(await wallet.GetBalanceAsync(accountId, TestCancellation), Is.EqualTo(new ShopBalance(0, 100)));
 
-        ShopTopUpOrder second = (await service.CreateAsync(accountId, new(Guid.NewGuid(), offer), offer, TestCancellation))!;
+        ShopTopUpOrder second = (
+            await service.CreateAsync(accountId, new(Guid.NewGuid(), offer), offer, TestCancellation))!;
         await service.ReconcileAsync(second, true, false, null, TestCancellation);
         ShopOffer exchange = new("exchange", 120, 100);
-        ShopExchangeRequest exchangeRequest = new(Guid.NewGuid(), exchange.Id, exchange.CrystalCost, exchange.GoldAmount);
+        ShopExchangeRequest exchangeRequest = new(
+            Guid.NewGuid(), exchange.Id, exchange.CrystalCost, exchange.GoldAmount);
         Assert.That((await wallet.ExchangeAsync(accountId, exchangeRequest, exchange, TestCancellation)).Balance,
             Is.EqualTo(new ShopBalance(100, 80)));
         ShopOffer spend = new("spend", 0, 0, GoldCost: 80);
@@ -88,13 +93,17 @@ public sealed class PayPalTopUpPostgresTests
 
         remote.CaptureStatus = "PARTIALLY_REFUNDED";
         Assert.That(await NotifyAsync(service, first, "PAYMENT.CAPTURE.REFUNDED"), Is.True);
-        Assert.That((await store.FindAsync(first.OrderId, true, TestCancellation))!.Status, Is.EqualTo(ShopTopUpStatus.PartiallyRefunded));
+        Assert.That(
+            (await store.FindAsync(first.OrderId, true, TestCancellation))!.Status,
+            Is.EqualTo(ShopTopUpStatus.PartiallyRefunded));
         Assert.That(await wallet.GetBalanceAsync(accountId, TestCancellation), Is.EqualTo(new ShopBalance(20, 80)));
 
         remote.CaptureStatus = "REFUNDED";
         await Task.WhenAll(NotifyAsync(service, first, "PAYMENT.CAPTURE.REFUNDED"),
             NotifyAsync(service, first, "PAYMENT.CAPTURE.REFUNDED"));
-        Assert.That((await store.FindAsync(first.OrderId, true, TestCancellation))!.Status, Is.EqualTo(ShopTopUpStatus.Reversed));
+        Assert.That(
+            (await store.FindAsync(first.OrderId, true, TestCancellation))!.Status,
+            Is.EqualTo(ShopTopUpStatus.Reversed));
         Assert.That(await wallet.GetBalanceAsync(accountId, TestCancellation), Is.EqualTo(new ShopBalance(0, 100)));
 
         ShopOffer reward = new("reward", 0, 100);
@@ -122,7 +131,14 @@ public sealed class PayPalTopUpPostgresTests
             {
                 id = "CAPTURE" + order.PayPalOrderId,
                 supplementary_data = new { related_ids = new { order_id = order.PayPalOrderId } },
-                links = new[] { new { rel = "up", href = $"https://api-m.sandbox.paypal.com/v2/payments/captures/CAPTURE{order.PayPalOrderId}" } }
+                links = new[]
+                {
+                    new
+                    {
+                        rel = "up",
+                        href = $"https://api-m.sandbox.paypal.com/v2/payments/captures/CAPTURE{order.PayPalOrderId}"
+                    }
+                }
             }
         });
         return await service.NotifyAsync(headers, notification, TestCancellation);
@@ -138,7 +154,8 @@ public sealed class PayPalTopUpPostgresTests
         internal string Amount { get; set; } = "5.00";
         internal string CaptureStatus { get; set; } = "COMPLETED";
 
-        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        protected override async Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request, CancellationToken cancellationToken)
         {
             string path = request.RequestUri!.AbsolutePath;
             if (path == "/v1/oauth2/token") return Json(new { access_token = "mock-token" });
@@ -149,7 +166,8 @@ public sealed class PayPalTopUpPostgresTests
             {
                 string body = await request.Content!.ReadAsStringAsync(cancellationToken);
                 using JsonDocument document = JsonDocument.Parse(body);
-                string key = document.RootElement.GetProperty("purchase_units")[0].GetProperty("custom_id").GetString()!;
+                string key = document.RootElement.GetProperty("purchase_units")[0].GetProperty("custom_id")
+                    .GetString()!;
                 Assert.That(request.Headers.GetValues("PayPal-Request-Id").Single(), Is.EqualTo(key));
                 string paypalOrder = "ORDER" + ++CreateCount;
                 _orders.Add(paypalOrder, key);
@@ -172,7 +190,9 @@ public sealed class PayPalTopUpPostgresTests
                 purchase_units = new[] { new
                 {
                     custom_id = _orders[orderId], amount,
-                    payments = captured ? new { captures = new[] { new { id = "CAPTURE" + orderId, status = CaptureStatus, amount } } } : null
+                    payments = captured
+                        ? new { captures = new[] { new { id = "CAPTURE" + orderId, status = CaptureStatus, amount } } }
+                        : null
                 } }
             });
         }

@@ -94,7 +94,8 @@ namespace WebRPG.Tests
                     Members = new[] { new LobbyMemberSnapshot { PlayerId = "self" } }
                 }
             };
-            using (MultiplayerAdventureSession session = new MultiplayerAdventureSession(lobby, 1, AdventureModelScenarioHelper.WinningConfiguration()))
+            using (MultiplayerAdventureSession session = new MultiplayerAdventureSession(
+                lobby, 1, AdventureModelScenarioHelper.WinningConfiguration()))
             {
                 lobby.Emit(new AdventurePacket
                 {

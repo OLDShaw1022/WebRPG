@@ -36,7 +36,9 @@ internal sealed class LocalAccountDatabase : IAsyncDisposable
         int port = ((IPEndPoint)reservation.LocalEndpoint).Port;
         reservation.Stop();
         LocalAccountDatabase database = new(binaryDirectory, Path.Combine(directory, "data"), port);
-        await database.RunAsync("initdb.exe", "-D", database.DataDirectory, "-U", "webrpg_test", "-A", "trust", "--no-locale", "-E", "UTF8");
+        await database.RunAsync(
+            "initdb.exe", "-D", database.DataDirectory, "-U", "webrpg_test", "-A", "trust", "--no-locale", "-E",
+            "UTF8");
         try
         {
             await database.StartProcessAsync();
@@ -57,7 +59,9 @@ internal sealed class LocalAccountDatabase : IAsyncDisposable
 
     private async Task StartProcessAsync()
     {
-        await RunAsync("pg_ctl.exe", "-D", DataDirectory, "-l", Path.Combine(Path.GetDirectoryName(DataDirectory)!, "postgres.log"),
+        await RunAsync(
+            "pg_ctl.exe", "-D", DataDirectory, "-l",
+            Path.Combine(Path.GetDirectoryName(DataDirectory)!, "postgres.log"),
             "-o", $"-h 127.0.0.1 -p {Port}", "-w", "start");
     }
 
@@ -75,7 +79,8 @@ internal sealed class LocalAccountDatabase : IAsyncDisposable
         Task<string> errors = captureOutput ? process.StandardError.ReadToEndAsync() : Task.FromResult(string.Empty);
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(StartupTimeoutSeconds));
         await process.WaitForExitAsync(timeout.Token);
-        if (process.ExitCode != 0) throw new InvalidOperationException($"{executable} failed: {await output}\n{await errors}");
+        if (process.ExitCode != 0) throw new InvalidOperationException(
+            $"{executable} failed: {await output}\n{await errors}");
         await Task.WhenAll(output, errors);
     }
 

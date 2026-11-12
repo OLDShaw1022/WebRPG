@@ -11,23 +11,28 @@ namespace WebRPG.Tests
     // 驗證正式伺服器設定與不需輸入網址的選單。
     public sealed class LobbyServerSelectionTests
     {
-        private const string ConfigurationJson = "{\"DefaultServerId\":\"aws-ec2\",\"Servers\":[{\"Id\":\"aws-ec2\",\"Name\":\"AWS EC2\",\"Url\":\"wss://ws.oldshaw-webrpg.com/ws?channel=lobby\"}],\"RequestTimeoutSeconds\":10}";
+        private const string ConfigurationJson =
+            "{\"DefaultServerId\":\"aws-ec2\",\"Servers\":[{\"Id\":\"aws-ec2\",\"Name\":\"AWS EC2\"," +
+            "\"Url\":\"wss://ws.oldshaw-webrpg.com/ws?channel=lobby\"}],\"RequestTimeoutSeconds\":10}";
 
         [Test]
         public void ServerCatalogConfigurationIsAccepted()
         {
-            LobbyClientConfiguration configuration = JsonConvert.DeserializeObject<LobbyClientConfiguration>(ConfigurationJson);
+            LobbyClientConfiguration configuration = JsonConvert.DeserializeObject<LobbyClientConfiguration>(
+                ConfigurationJson);
             Assert.DoesNotThrow(configuration.Validate);
         }
 
         [Test]
         public void PlayerBuildHidesEditorServersAndRejectsInsecureProduction()
         {
-            LobbyClientConfiguration configuration = JsonConvert.DeserializeObject<LobbyClientConfiguration>(ConfigurationJson);
+            LobbyClientConfiguration configuration = JsonConvert.DeserializeObject<LobbyClientConfiguration>(
+                ConfigurationJson);
             configuration.Servers = new[]
             {
                 configuration.Servers[0],
-                new LobbyServerConfiguration { Id = "local", Name = "本機測試", Url = "ws://localhost:8080/ws?channel=lobby", EditorOnly = true }
+                new LobbyServerConfiguration { Id = "local", Name = "本機測試",
+                    Url = "ws://localhost:8080/ws?channel=lobby", EditorOnly = true }
             };
             LobbyServerConfiguration[] playerServers = configuration.GetAvailableServers(false);
             Assert.That(playerServers.Length, Is.EqualTo(1));
@@ -42,14 +47,18 @@ namespace WebRPG.Tests
         [TestCase(null)]
         public void UnrelatedErrorKeepsLobbyRequestPending(string requestId)
         {
-            LobbyModel model = new LobbyModel(JsonConvert.DeserializeObject<LobbyClientConfiguration>(ConfigurationJson));
-            typeof(LobbyModel).GetField("_pendingId", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(model, "lobby");
+            LobbyModel model = new LobbyModel(
+                JsonConvert.DeserializeObject<LobbyClientConfiguration>(ConfigurationJson));
+            typeof(LobbyModel).GetField("_pendingId", BindingFlags.Instance | BindingFlags.NonPublic)
+                .SetValue(model, "lobby");
             typeof(LobbyModel).GetProperty(nameof(LobbyModel.IsBusy)).SetValue(model, true);
             string status = model.Status;
             int changes = 0;
             model.Changed += () => changes++;
             typeof(LobbyModel).GetMethod("HandlePacket", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(model,
-                new object[] { JsonConvert.SerializeObject(new LobbyPacket { Type = LobbyPacketType.Error, RequestId = requestId, Error = "rejected" }) });
+                new object[] {
+                    JsonConvert.SerializeObject(
+                    new LobbyPacket { Type = LobbyPacketType.Error, RequestId = requestId, Error = "rejected" }) });
             Assert.That(model.IsBusy, Is.True);
             Assert.That(model.Status, Is.EqualTo(status));
             Assert.That(changes, Is.Zero);
@@ -58,11 +67,15 @@ namespace WebRPG.Tests
         [Test]
         public void MatchingErrorCompletesLobbyRequest()
         {
-            LobbyModel model = new LobbyModel(JsonConvert.DeserializeObject<LobbyClientConfiguration>(ConfigurationJson));
-            typeof(LobbyModel).GetField("_pendingId", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(model, "lobby");
+            LobbyModel model = new LobbyModel(
+                JsonConvert.DeserializeObject<LobbyClientConfiguration>(ConfigurationJson));
+            typeof(LobbyModel).GetField("_pendingId", BindingFlags.Instance | BindingFlags.NonPublic)
+                .SetValue(model, "lobby");
             typeof(LobbyModel).GetProperty(nameof(LobbyModel.IsBusy)).SetValue(model, true);
             typeof(LobbyModel).GetMethod("HandlePacket", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(model,
-                new object[] { JsonConvert.SerializeObject(new LobbyPacket { Type = LobbyPacketType.Error, RequestId = "lobby", Error = "rejected" }) });
+                new object[] {
+                    JsonConvert.SerializeObject(
+                    new LobbyPacket { Type = LobbyPacketType.Error, RequestId = "lobby", Error = "rejected" }) });
             Assert.That(model.IsBusy, Is.False);
             Assert.That(model.Status, Is.EqualTo("rejected"));
         }
@@ -71,7 +84,8 @@ namespace WebRPG.Tests
         [TestCase("peer", 1)]
         public void AdventureReplyOnlyCompletesSendingPlayersRequest(string playerId, int remaining)
         {
-            LobbyModel model = new LobbyModel(JsonConvert.DeserializeObject<LobbyClientConfiguration>(ConfigurationJson));
+            LobbyModel model = new LobbyModel(
+                JsonConvert.DeserializeObject<LobbyClientConfiguration>(ConfigurationJson));
             typeof(LobbyModel).GetProperty(nameof(LobbyModel.PlayerId)).SetValue(model, "self");
             var requests = (Dictionary<string, string>)typeof(LobbyModel)
                 .GetField("_adventureRequests", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(model);
@@ -94,8 +108,10 @@ namespace WebRPG.Tests
         [Test]
         public void AdventureErrorIsRoutedOnceWithoutCompletingLobbyRequest()
         {
-            LobbyModel model = new LobbyModel(JsonConvert.DeserializeObject<LobbyClientConfiguration>(ConfigurationJson));
-            typeof(LobbyModel).GetField("_pendingId", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(model, "lobby");
+            LobbyModel model = new LobbyModel(
+                JsonConvert.DeserializeObject<LobbyClientConfiguration>(ConfigurationJson));
+            typeof(LobbyModel).GetField("_pendingId", BindingFlags.Instance | BindingFlags.NonPublic)
+                .SetValue(model, "lobby");
             typeof(LobbyModel).GetProperty(nameof(LobbyModel.IsBusy)).SetValue(model, true);
             var requests = (Dictionary<string, string>)typeof(LobbyModel)
                 .GetField("_adventureRequests", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(model);

@@ -34,7 +34,8 @@ internal static class LobbySocketHelper
         {
             await socket.SendAsync(bytes, WebSocketMessageType.Text, true, timeout.Token);
         }
-        catch (Exception exception) when (exception is WebSocketException or OperationCanceledException or ObjectDisposedException)
+        catch (Exception exception) when (
+            exception is WebSocketException or OperationCanceledException or ObjectDisposedException)
         {
             socket.Abort();
         }

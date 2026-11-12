@@ -62,7 +62,8 @@ namespace WebRPG
         public LobbyRoomSnapshot Room { get; private set; }
         public LobbyRoomSummary[] Rooms { get; private set; } = Array.Empty<LobbyRoomSummary>();
 
-        public LobbyModel(LobbyClientConfiguration configuration, bool includeEditorServers = false, AccountModel account = null)
+        public LobbyModel(
+            LobbyClientConfiguration configuration, bool includeEditorServers = false, AccountModel account = null)
         {
             configuration.Validate();
             _account = account;

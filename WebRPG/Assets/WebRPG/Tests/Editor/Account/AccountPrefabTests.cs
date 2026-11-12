@@ -16,15 +16,21 @@ namespace WebRPG.Tests
                 DefaultServerId = "production", RequestTimeoutSeconds = 10,
                 Servers = new[]
                 {
-                    new LobbyServerConfiguration { Id = "production", Name = "Production", Url = "wss://example.com/ws" },
-                    new LobbyServerConfiguration { Id = "local", Name = "Local", Url = server.SocketUrl, EditorOnly = true }
+                    new LobbyServerConfiguration { Id = "production", Name = "Production",
+                        Url = "wss://example.com/ws" },
+                    new LobbyServerConfiguration { Id = "local", Name = "Local", Url = server.SocketUrl,
+                        EditorOnly = true }
                 }
             }, true);
-            GameObject instance = Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>("Assets/WebRPG/Prefabs/AccountCanvas.prefab"));
+            GameObject instance = Object.Instantiate(
+                AssetDatabase.LoadAssetAtPath<GameObject>("Assets/WebRPG/Prefabs/AccountCanvas.prefab"));
             try
             {
                 AccountView view = instance.GetComponent<AccountView>();
-                typeof(AccountView).GetMethod("Awake", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).Invoke(view, null);
+                typeof(AccountView)
+                    .GetMethod(
+                    "Awake", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                    .Invoke(view, null);
                 bool loggedIn = false;
                 using AccountPresenter presenter = new AccountPresenter(model, view, () => loggedIn = true);
                 Transform login = instance.transform.Find("LoginPage");
@@ -43,10 +49,12 @@ namespace WebRPG.Tests
                 registration.Find("Register").GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
                 while (!response.IsCompleted) yield return null;
                 response.GetAwaiter().GetResult();
-                while (!registration.Find("Register").GetComponent<UnityEngine.UI.Button>().interactable) yield return null;
+                while (!registration.Find("Register")
+                    .GetComponent<UnityEngine.UI.Button>().interactable) yield return null;
                 Assert.That(login.gameObject.activeSelf, Is.True);
                 Assert.That(registration.gameObject.activeSelf, Is.False);
-                Assert.That(login.Find("Email").GetComponent<TMPro.TMP_InputField>().text, Is.EqualTo("player@example.com"));
+                Assert.That(
+                    login.Find("Email").GetComponent<TMPro.TMP_InputField>().text, Is.EqualTo("player@example.com"));
                 Assert.That(login.Find("Status").GetComponent<TMPro.TextMeshProUGUI>().text, Does.Contain("註冊成功"));
                 Assert.That(loggedIn, Is.False);
                 Assert.That(model.IsLoggedIn, Is.False);
@@ -59,7 +67,9 @@ namespace WebRPG.Tests
         {
             GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/WebRPG/Prefabs/AccountCanvas.prefab");
             SerializedObject serialized = new SerializedObject(prefab.GetComponent<AccountView>());
-            foreach (string field in new[] { "_loginPage", "_registrationPage", "_registrationEmail", "_registrationPassword", "_registrationServer", "_registrationStatus", "_openRegistration", "_backToLogin" })
+            foreach (string field in new[] { "_loginPage", "_registrationPage", "_registrationEmail",
+                "_registrationPassword", "_registrationServer", "_registrationStatus", "_openRegistration",
+                "_backToLogin" })
             {
                 SerializedProperty property = serialized.FindProperty(field);
                 Assert.That(property, Is.Not.Null, field);
@@ -91,18 +101,23 @@ namespace WebRPG.Tests
                 view.ShowPage(true);
                 Assert.That(login.gameObject.activeSelf, Is.False);
                 Assert.That(registration.gameObject.activeSelf, Is.True);
-                Assert.That(registration.Find("Email").GetComponent<TMPro.TMP_InputField>().text, Is.EqualTo("player@example.com"));
+                Assert.That(
+                    registration.Find("Email").GetComponent<TMPro.TMP_InputField>().text,
+                    Is.EqualTo("player@example.com"));
                 Assert.That(registration.Find("Server").GetComponent<TMPro.TMP_Dropdown>().value, Is.EqualTo(1));
                 Assert.That(login.Find("Password").GetComponent<TMPro.TMP_InputField>().text, Is.Empty);
                 registration.Find("Password").GetComponent<TMPro.TMP_InputField>().text = "new-password";
                 view.Render(true, "Pending");
-                Assert.That(registration.Find("BackToLogin").GetComponent<UnityEngine.UI.Button>().interactable, Is.False);
+                Assert.That(
+                    registration.Find("BackToLogin").GetComponent<UnityEngine.UI.Button>().interactable, Is.False);
                 Assert.That(registration.Find("Register").GetComponent<UnityEngine.UI.Button>().interactable, Is.False);
                 registration.Find("Email").GetComponent<TMPro.TMP_InputField>().text = "registered@example.com";
                 view.ShowPage(false);
                 Assert.That(login.gameObject.activeSelf, Is.True);
                 Assert.That(registration.gameObject.activeSelf, Is.False);
-                Assert.That(login.Find("Email").GetComponent<TMPro.TMP_InputField>().text, Is.EqualTo("registered@example.com"));
+                Assert.That(
+                    login.Find("Email").GetComponent<TMPro.TMP_InputField>().text,
+                    Is.EqualTo("registered@example.com"));
                 Assert.That(registration.Find("Password").GetComponent<TMPro.TMP_InputField>().text, Is.Empty);
             }
             finally { Object.DestroyImmediate(instance); }
@@ -116,7 +131,8 @@ namespace WebRPG.Tests
             Component view = prefab.GetComponent("AccountView");
             Assert.That(view, Is.Not.Null);
             SerializedObject serialized = new SerializedObject(view);
-            foreach (string field in new[] { "_email", "_password", "_username", "_login", "_register", "_status", "_server" })
+            foreach (string field in new[] { "_email", "_password", "_username", "_login", "_register", "_status",
+                "_server" })
                 Assert.That(serialized.FindProperty(field).objectReferenceValue, Is.Not.Null, field);
         }
     }

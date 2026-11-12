@@ -23,7 +23,8 @@ internal sealed class PayPalCheckout(HttpClient client, PayPalSettings settings)
                 custom_id = orderKey,
                 invoice_id = orderKey,
                 description = "WebRPG crystals",
-                amount = new { currency_code = order.Offer.Currency, value = order.Offer.Amount.ToString("0.##", CultureInfo.InvariantCulture) }
+                amount = new { currency_code = order.Offer.Currency,
+                    value = order.Offer.Amount.ToString("0.##", CultureInfo.InvariantCulture) }
             } },
             payment_source = new { paypal = new { experience_context = new
             {
@@ -33,7 +34,8 @@ internal sealed class PayPalCheckout(HttpClient client, PayPalSettings settings)
                 cancel_url = QueryHelpers.AddQueryString(returnUrl, "cancel", "true")
             } } }
         };
-        using JsonDocument result = await SendAsync(HttpMethod.Post, "v2/checkout/orders", body, orderKey, cancellationToken);
+        using JsonDocument result = await SendAsync(
+            HttpMethod.Post, "v2/checkout/orders", body, orderKey, cancellationToken);
         JsonElement root = result.RootElement;
         string? id = PayPalResponse.Text(root, "id");
         if (!PayPalResponse.IsId(id)) throw new HttpRequestException("PayPal did not return an order ID.");
@@ -72,7 +74,8 @@ internal sealed class PayPalCheckout(HttpClient client, PayPalSettings settings)
         throw new HttpRequestException("PayPal did not accept capture.");
     }
 
-    internal async Task<bool> VerifyAsync(IHeaderDictionary headers, JsonElement notification, CancellationToken cancellationToken)
+    internal async Task<bool> VerifyAsync(
+        IHeaderDictionary headers, JsonElement notification, CancellationToken cancellationToken)
     {
         string transmissionId = headers["PAYPAL-TRANSMISSION-ID"].ToString();
         string transmissionTime = headers["PAYPAL-TRANSMISSION-TIME"].ToString();
@@ -97,17 +100,20 @@ internal sealed class PayPalCheckout(HttpClient client, PayPalSettings settings)
     {
         using HttpRequestMessage tokenRequest = new(HttpMethod.Post, "v1/oauth2/token")
         {
-            Content = new FormUrlEncodedContent(new Dictionary<string, string> { ["grant_type"] = "client_credentials" })
+            Content = new FormUrlEncodedContent(
+                new Dictionary<string, string> { ["grant_type"] = "client_credentials" })
         };
         tokenRequest.Headers.Authorization = new("Basic",
             Convert.ToBase64String(Encoding.UTF8.GetBytes(settings.ClientId + ":" + settings.ClientSecret)));
         using HttpResponseMessage tokenResponse = await client.SendAsync(tokenRequest, cancellationToken);
         tokenResponse.EnsureSuccessStatusCode();
-        using JsonDocument token = await JsonDocument.ParseAsync(await tokenResponse.Content.ReadAsStreamAsync(cancellationToken),
+        using JsonDocument token = await JsonDocument.ParseAsync(
+            await tokenResponse.Content.ReadAsStreamAsync(cancellationToken),
             cancellationToken: cancellationToken);
 
         using HttpRequestMessage request = new(method, path);
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", PayPalResponse.Text(token.RootElement, "access_token"));
+        request.Headers.Authorization = new AuthenticationHeaderValue(
+            "Bearer", PayPalResponse.Text(token.RootElement, "access_token"));
         if (body is not null) request.Content = JsonContent.Create(body);
         if (requestId is not null) request.Headers.Add("PayPal-Request-Id", requestId);
         using HttpResponseMessage response = await client.SendAsync(request, cancellationToken);

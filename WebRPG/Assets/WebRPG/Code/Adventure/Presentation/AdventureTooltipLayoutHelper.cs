@@ -11,7 +11,8 @@ namespace WebRPG
         public static void PlaceAtPointer(RectTransform root, RectTransform panel, Vector2 screenPosition,
             Camera eventCamera, Vector2 preferredSize)
         {
-            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(root, screenPosition, eventCamera, out Vector2 point))
+            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                root, screenPosition, eventCamera, out Vector2 point))
             {
                 return;
             }

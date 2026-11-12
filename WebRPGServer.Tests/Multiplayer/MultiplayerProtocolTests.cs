@@ -16,7 +16,8 @@ public sealed class MultiplayerProtocolTests
         LobbyRegistry registry = new(new LobbyOptions());
         registry.Connect("a", "A");
         registry.Connect("b", "B");
-        registry.Execute("a", new LobbyPacket { Type = LobbyPacketType.CreateRoom, RoomName = "Party", IsPublic = true });
+        registry.Execute(
+            "a", new LobbyPacket { Type = LobbyPacketType.CreateRoom, RoomName = "Party", IsPublic = true });
         string room = registry.Snapshot("a").Room.Id;
         registry.Execute("b", new LobbyPacket { Type = LobbyPacketType.JoinRoom, RoomId = room });
         Reject(() => registry.ExecuteAdventure("b", new AdventurePacket { Type = AdventurePacketType.Start }));
@@ -27,7 +28,8 @@ public sealed class MultiplayerProtocolTests
         AdventurePacket vote = registry.ExecuteAdventure("a",
             new AdventurePacket { Type = AdventurePacketType.Command, Command = "vote", Payload = "1|0" });
         Check(vote.Command == "vote", "A vote must wait for all members.");
-        registry.ExecuteAdventure("a", new AdventurePacket { Type = AdventurePacketType.Command, Command = "vote", Payload = "0|0" });
+        registry.ExecuteAdventure(
+            "a", new AdventurePacket { Type = AdventurePacketType.Command, Command = "vote", Payload = "0|0" });
         AdventurePacket selected = registry.ExecuteAdventure("b",
             new AdventurePacket { Type = AdventurePacketType.Command, Command = "vote", Payload = "1|0" });
         Check(selected.Command == "node" && selected.Payload == "0|0", "Tie must use the leader's current vote.");

@@ -36,14 +36,17 @@ public sealed class AccountCrossOriginBrowserTests
         PLUGIN_SOURCE
         var WebRPGAccountCredentials = LibraryManager.library.$WebRPGAccountCredentials;
         var api = API_ORIGIN + '/api/accounts/';
-        for (var endpoint of ['login','refresh','logout']) LibraryManager.library.WebRPG_RegisterAccountRequest(api + endpoint);
+        for (var endpoint of ['login','refresh','logout'])
+          LibraryManager.library.WebRPG_RegisterAccountRequest(api + endpoint);
         (async () => {
           const result = document.getElementById('result');
           const headers = {'Content-Type':'application/json','X-WebRPG-Request':'1'};
           try {
             if (new URL(location.href).searchParams.get('stage') === 'login') {
               const response = await Module.fetchWithProgress(api+'login', {
-                method:'POST', headers, body:JSON.stringify({email:EMAIL,password:'long-enough-password',rememberMe:true})
+                method:'POST',
+                headers,
+                body:JSON.stringify({email:EMAIL,password:'long-enough-password',rememberMe:true})
               });
               if (!response.ok) throw new Error('login status '+response.status);
               result.textContent = 'cross-origin-cookie-saved';
@@ -54,7 +57,10 @@ public sealed class AccountCrossOriginBrowserTests
               if (!response.ok) throw new Error('restore status '+response.status);
               const session = await response.json();
               if (!session.accessToken) throw new Error('missing session');
-              const logout = await Module.fetchWithProgress(api+'logout', {method:'POST',headers:{...headers,Authorization:'Bearer '+session.accessToken}});
+              const logout = await Module.fetchWithProgress(api+'logout', {
+                method:'POST',
+                headers:{...headers,Authorization:'Bearer '+session.accessToken}
+              });
               if (logout.status !== 204) throw new Error('logout status '+logout.status);
               const afterLogout = await Module.cachedFetch(api+'refresh', {method:'POST',headers});
               if (afterLogout.status !== 401) throw new Error('cookie remained valid after logout');
@@ -84,11 +90,13 @@ public sealed class AccountCrossOriginBrowserTests
         names.AddDnsName(GameHost);
         names.AddDnsName(ApiHost);
         request.CertificateExtensions.Add(names.Build());
-        using X509Certificate2 generatedCertificate = request.CreateSelfSigned(DateTimeOffset.UtcNow.AddDays(-CertificateLifetimeDays),
+        using X509Certificate2 generatedCertificate = request.CreateSelfSigned(
+            DateTimeOffset.UtcNow.AddDays(-CertificateLifetimeDays),
             DateTimeOffset.UtcNow.AddDays(CertificateLifetimeDays));
         // Windows Schannel 不支援純記憶體私鑰；暫時載入使用者金鑰容器，不安裝憑證或信任根。
         byte[] certificateBytes = generatedCertificate.Export(X509ContentType.Pfx);
-        using X509Certificate2 certificate = X509CertificateLoader.LoadPkcs12(certificateBytes, null, X509KeyStorageFlags.UserKeySet);
+        using X509Certificate2 certificate = X509CertificateLoader.LoadPkcs12(
+            certificateBytes, null, X509KeyStorageFlags.UserKeySet);
         CryptographicOperations.ZeroMemory(certificateBytes);
         TcpListener reservation = new(IPAddress.Loopback, 0);
         reservation.Start();
@@ -97,7 +105,8 @@ public sealed class AccountCrossOriginBrowserTests
         string gameOrigin = $"https://{GameHost}:{port}";
         string apiOrigin = $"https://{ApiHost}:{port}";
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
-        builder.WebHost.ConfigureKestrel(options => options.Listen(IPAddress.Loopback, port, listener => listener.UseHttps(certificate)));
+        builder.WebHost.ConfigureKestrel(
+            options => options.Listen(IPAddress.Loopback, port, listener => listener.UseHttps(certificate)));
         builder.Configuration["Accounts:AllowedOrigins:0"] = gameOrigin;
         builder.Logging.ClearProviders();
         builder.Services.AddSingleton(source);
@@ -109,7 +118,8 @@ public sealed class AccountCrossOriginBrowserTests
         application.UseCors();
         application.UseRateLimiter();
         AccountEndpoints.Map(application);
-        string plugin = await File.ReadAllTextAsync(Path.GetFullPath(Path.Combine(TestContext.CurrentContext.TestDirectory, PluginRelativePath)));
+        string plugin = await File.ReadAllTextAsync(
+            Path.GetFullPath(Path.Combine(TestContext.CurrentContext.TestDirectory, PluginRelativePath)));
         string html = TestPage.Replace("PLUGIN_SOURCE", plugin)
             .Replace("API_ORIGIN", System.Text.Json.JsonSerializer.Serialize(apiOrigin))
             .Replace("EMAIL", System.Text.Json.JsonSerializer.Serialize(email));
@@ -123,7 +133,8 @@ public sealed class AccountCrossOriginBrowserTests
         Assert.That(login, Does.Contain("<output id=\"result\">cross-origin-cookie-saved</output>"));
         string restore = await RememberedBrowserHelper.RunAsync(browser!, profile,
             new Uri(gameOrigin + "/browser-test?stage=restore"), BrowserTimeoutSeconds, arguments);
-        Assert.That(restore, Does.Contain("<output id=\"result\">cross-origin-restored-after-restart-and-revoked</output>"));
+        Assert.That(
+            restore, Does.Contain("<output id=\"result\">cross-origin-restored-after-restart-and-revoked</output>"));
         await application.StopAsync();
     }
 }

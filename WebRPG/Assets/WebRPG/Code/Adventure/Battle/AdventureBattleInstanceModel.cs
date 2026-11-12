@@ -84,7 +84,8 @@ namespace WebRPG
             for (int index = 0; index < _players.Length; index++)
             {
                 AdventureBattleModel player = _players[index];
-                if (player.Health == 0 || player.PlayerAction == null || player.PlayerAction.RemainingCastTime > 0) continue;
+                if (player.Health == 0 || player.PlayerAction == null
+                    || player.PlayerAction.RemainingCastTime > 0) continue;
                 SourcePlayerIndex = index;
                 TargetPlayerIndex = index;
                 Projectile = player.LaunchPlayerAction(++ProjectileSequence);

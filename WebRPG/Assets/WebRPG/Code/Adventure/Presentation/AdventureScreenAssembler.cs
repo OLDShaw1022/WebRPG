@@ -67,7 +67,8 @@ namespace WebRPG
                     _model.PlayerAction, index, canUse);
             }).ToArray();
             AdventureGaugeScreenModel localHealth = HealthGauge(_model.Health, _model.MaximumHealth);
-            AdventureGaugeScreenModel localAttack = AdventureBattleScreenHelper.BasicAttackGauge(_model.BasicAttackDamage,
+            AdventureGaugeScreenModel localAttack = AdventureBattleScreenHelper.BasicAttackGauge(
+                _model.BasicAttackDamage,
                 _model.Configuration.BasicAttack.CastTime, _model.PlayerAction, fighting);
             AdventureCharacterScreenModel localPlayer = new AdventureCharacterScreenModel
             {
@@ -97,7 +98,8 @@ namespace WebRPG
                 }).ToArray() : Array.Empty<AdventureCharacterScreenModel>();
             bool showMap = mapOpen || _model.Phase == AdventurePhase.Map;
             _content.Refresh(showMap);
-            AdventureMapRowScreenModel[] mapRows = _network == null ? _content.Rows : showMap ? _content.Rows.Select(row => new AdventureMapRowScreenModel
+            AdventureMapRowScreenModel[] mapRows = _network == null ? _content.Rows : showMap
+                ? _content.Rows.Select(row => new AdventureMapRowScreenModel
             {
                 Status = row.Status,
                 Nodes = row.Nodes.Select(node => new AdventureMapNodeScreenModel
@@ -127,9 +129,11 @@ namespace WebRPG
                 BattleSpeed = _network?.BattleSpeed ?? _model.BattleSpeed,
                 Projectile = fighting && _model.Projectile != null ? new AdventureProjectileScreenModel
                 {
-                    SourceCharacterId = _model.Projectile.SourceEnemyIndex < 0 ? (_network?.ProjectileSourceId ?? localPlayer.Id)
+                    SourceCharacterId = _model.Projectile.SourceEnemyIndex < 0
+                        ? (_network?.ProjectileSourceId ?? localPlayer.Id)
                         : EnemyIdPrefix + _model.Projectile.SourceEnemyIndex,
-                    TargetCharacterId = _model.Projectile.TargetEnemyIndex < 0 ? (_network?.ProjectileTargetId ?? localPlayer.Id)
+                    TargetCharacterId = _model.Projectile.TargetEnemyIndex < 0
+                        ? (_network?.ProjectileTargetId ?? localPlayer.Id)
                         : EnemyIdPrefix + _model.Projectile.TargetEnemyIndex,
                     Name = _model.Projectile.Name,
                     Progress = 1 - _model.Projectile.RemainingTime / _model.Projectile.Duration
@@ -148,7 +152,8 @@ namespace WebRPG
                 InspectedCharacterName = localPlayer.Name,
                 InspectedSkills = new[] { localPlayer.BasicAttack }.Concat(slots).ToArray(),
                 Relics = _content.RelicIcons,
-                ShowResultActions = (_model.Phase == AdventurePhase.Complete && (_network == null || _network.IsComplete)) ||
+                ShowResultActions = (_model.Phase == AdventurePhase.Complete &&
+                                     (_network == null || _network.IsComplete)) ||
                     _model.Phase == AdventurePhase.Failed,
                 CanStart = ended && _network == null,
                 CanAbandon = !ended,

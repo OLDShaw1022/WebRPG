@@ -44,10 +44,13 @@ public sealed class AccountPostgresTests
         await store.InitializeAsync(CancellationToken.None);
         string email = $"store-{Guid.NewGuid():N}@example.invalid";
         await store.RegisterAsync(new(email, "long-enough-password", "同名玩家"), CancellationToken.None);
-        Assert.ThrowsAsync<ArgumentException>(() => store.RegisterAsync(new(email.ToUpperInvariant(), "long-enough-password", "另一名稱"), CancellationToken.None));
+        Assert.ThrowsAsync<ArgumentException>(
+            () => store.RegisterAsync(
+            new(email.ToUpperInvariant(), "long-enough-password", "另一名稱"), CancellationToken.None));
         Assert.That(await store.LoginAsync(new(email, "incorrect-password"), CancellationToken.None), Is.Null);
         AccountSession first = (await store.LoginAsync(new(email, "long-enough-password"), CancellationToken.None))!;
-        AccountSession second = (await store.LoginAsync(new(email.ToUpperInvariant(), "long-enough-password"), CancellationToken.None))!;
+        AccountSession second = (
+            await store.LoginAsync(new(email.ToUpperInvariant(), "long-enough-password"), CancellationToken.None))!;
         Assert.That(first.AccountId, Is.EqualTo(second.AccountId));
         Assert.That(first.AccessToken, Is.Not.EqualTo(second.AccessToken));
         await using NpgsqlCommand query = source.CreateCommand("""
@@ -65,7 +68,8 @@ public sealed class AccountPostgresTests
         await store.LogoutAsync(first.AccessToken, CancellationToken.None);
         Assert.That(await store.AuthenticateAsync(first.AccessToken, CancellationToken.None), Is.Null);
         Assert.That(await store.AuthenticateAsync(second.AccessToken, CancellationToken.None), Is.Not.Null);
-        await using NpgsqlCommand expire = source.CreateCommand("UPDATE game_account_sessions SET expires_at = CURRENT_TIMESTAMP WHERE account_id = $1;");
+        await using NpgsqlCommand expire = source.CreateCommand(
+            "UPDATE game_account_sessions SET expires_at = CURRENT_TIMESTAMP WHERE account_id = $1;");
         expire.Parameters.AddWithValue(Guid.Parse(first.AccountId));
         await expire.ExecuteNonQueryAsync();
         Assert.That(await store.AuthenticateAsync(second.AccessToken, CancellationToken.None), Is.Null);
@@ -80,20 +84,23 @@ public sealed class AccountPostgresTests
         await accounts.InitializeAsync(CancellationToken.None);
         string email = $"shop-{Guid.NewGuid():N}@example.invalid";
         await accounts.RegisterAsync(new(email, "long-enough-password", "商店測試"), CancellationToken.None);
-        AccountSession session = (await accounts.LoginAsync(new(email, "long-enough-password"), CancellationToken.None))!;
+        AccountSession session = (
+            await accounts.LoginAsync(new(email, "long-enough-password"), CancellationToken.None))!;
         Guid accountId = Guid.Parse(session.AccountId);
         ShopOffer offer = new("test", 10, 100);
         PostgresShopStore store = new(source);
         await store.InitializeAsync(CancellationToken.None);
         Assert.That(await store.GetBalanceAsync(accountId, CancellationToken.None), Is.EqualTo(new ShopBalance(0, 0)));
-        await using (NpgsqlCommand seed = source.CreateCommand("INSERT INTO game_wallets(account_id, crystals) VALUES ($1, 10);"))
+        await using (NpgsqlCommand seed = source.CreateCommand(
+            "INSERT INTO game_wallets(account_id, crystals) VALUES ($1, 10);"))
         {
             seed.Parameters.AddWithValue(accountId);
             await seed.ExecuteNonQueryAsync();
         }
 
         ShopExchangeRequest request = new(Guid.NewGuid(), offer.Id, offer.CrystalCost, offer.GoldAmount);
-        ShopExchangeResult stale = await store.ExchangeAsync(accountId, request, offer with { CrystalCost = 11 }, CancellationToken.None);
+        ShopExchangeResult stale = await store.ExchangeAsync(
+            accountId, request, offer with { CrystalCost = 11 }, CancellationToken.None);
         Assert.That(stale.Status, Is.EqualTo(ShopExchangeStatus.OfferChanged));
         Assert.That(await store.ExchangeAsync(accountId, request, offer, CancellationToken.None), Is.EqualTo(stale));
         Assert.That(await store.GetBalanceAsync(accountId, CancellationToken.None), Is.EqualTo(new ShopBalance(0, 10)));
@@ -108,8 +115,10 @@ public sealed class AccountPostgresTests
         int winner = Array.FindIndex(results, result => result.Status == ShopExchangeStatus.Exchanged);
         Assert.That(await store.ExchangeAsync(accountId, winner == 0 ? first : second, null, CancellationToken.None),
             Is.EqualTo(results[winner]));
-        Assert.That(await store.GetBalanceAsync(accountId, CancellationToken.None), Is.EqualTo(new ShopBalance(100, 0)));
-        await using NpgsqlCommand ledger = source.CreateCommand("SELECT COUNT(*) FROM game_wallet_entries WHERE account_id = $1;");
+        Assert.That(
+            await store.GetBalanceAsync(accountId, CancellationToken.None), Is.EqualTo(new ShopBalance(100, 0)));
+        await using NpgsqlCommand ledger = source.CreateCommand(
+            "SELECT COUNT(*) FROM game_wallet_entries WHERE account_id = $1;");
         ledger.Parameters.AddWithValue(accountId);
         Assert.That(await ledger.ExecuteScalarAsync(), Is.EqualTo(2L));
     }
@@ -133,7 +142,8 @@ public sealed class AccountPostgresTests
         using HttpResponseMessage catalog = await client.PostAsync("api/accounts/shop", null);
         catalog.EnsureSuccessStatusCode();
         JsonObject snapshot = (await catalog.Content.ReadFromJsonAsync<JsonObject>())!;
-        JsonNode offer = snapshot["offers"]!.AsArray().Single(entry => entry?["id"]?.GetValue<string>() == "free-gold")!;
+        JsonNode offer = snapshot["offers"]!.AsArray().Single(
+            entry => entry?["id"]?.GetValue<string>() == "free-gold")!;
         Assert.That(offer["crystalCost"]!.GetValue<long>(), Is.Zero);
         Assert.That(offer["goldAmount"]!.GetValue<long>(), Is.EqualTo(100L));
 
@@ -239,15 +249,21 @@ public sealed class AccountPostgresTests
             using HttpClient client = new() { BaseAddress = server.Address };
             using HttpResponseMessage anonymousShop = await client.PostAsync("api/accounts/shop", null);
             Assert.That(anonymousShop.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
-            using HttpResponseMessage registration = await client.PostAsJsonAsync("api/accounts/register", new AccountRegistration(email, "long-enough-password", "同名玩家"));
+            using HttpResponseMessage registration = await client.PostAsJsonAsync(
+                "api/accounts/register", new AccountRegistration(email, "long-enough-password", "同名玩家"));
             Assert.That(registration.StatusCode, Is.EqualTo(HttpStatusCode.OK));
-            using HttpResponseMessage duplicate = await client.PostAsJsonAsync("api/accounts/register", new AccountRegistration(email.ToUpperInvariant(), "long-enough-password", "同名玩家"));
+            using HttpResponseMessage duplicate = await client.PostAsJsonAsync(
+                "api/accounts/register",
+                new AccountRegistration(email.ToUpperInvariant(), "long-enough-password", "同名玩家"));
             Assert.That(duplicate.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
-            using HttpResponseMessage other = await client.PostAsJsonAsync("api/accounts/register", new AccountRegistration(otherEmail, "long-enough-password", "同名玩家"));
+            using HttpResponseMessage other = await client.PostAsJsonAsync(
+                "api/accounts/register", new AccountRegistration(otherEmail, "long-enough-password", "同名玩家"));
             Assert.That(other.StatusCode, Is.EqualTo(HttpStatusCode.OK));
-            using HttpResponseMessage wrong = await client.PostAsJsonAsync("api/accounts/login", new AccountLogin(email, "incorrect-password"));
+            using HttpResponseMessage wrong = await client.PostAsJsonAsync(
+                "api/accounts/login", new AccountLogin(email, "incorrect-password"));
             Assert.That(wrong.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
-            using HttpResponseMessage login = await client.PostAsJsonAsync("api/accounts/login", new AccountLogin(email, "long-enough-password"));
+            using HttpResponseMessage login = await client.PostAsJsonAsync(
+                "api/accounts/login", new AccountLogin(email, "long-enough-password"));
             login.EnsureSuccessStatusCode();
             JsonObject session = (await login.Content.ReadFromJsonAsync<JsonObject>())!;
             accountId = session["accountId"]!.GetValue<string>();
@@ -259,7 +275,8 @@ public sealed class AccountPostgresTests
             JsonObject shop = (await shopResponse.Content.ReadFromJsonAsync<JsonObject>())!;
             Assert.That(shop["balance"]!["crystals"]!.GetValue<long>(), Is.Zero);
             Assert.That(shop["offers"]![0]!["goldAmount"]!.GetValue<long>(), Is.EqualTo(100L));
-            using HttpResponseMessage otherLogin = await client.PostAsJsonAsync("api/accounts/login", new AccountLogin(otherEmail, "long-enough-password"));
+            using HttpResponseMessage otherLogin = await client.PostAsJsonAsync(
+                "api/accounts/login", new AccountLogin(otherEmail, "long-enough-password"));
             JsonObject otherSession = (await otherLogin.Content.ReadFromJsonAsync<JsonObject>())!;
             Assert.That(otherSession["accountId"]!.GetValue<string>(), Is.Not.EqualTo(accountId));
             Assert.That(otherSession["username"]!.GetValue<string>(), Is.EqualTo("同名玩家"));
@@ -267,22 +284,26 @@ public sealed class AccountPostgresTests
             using ClientWebSocket socket = new();
             UriBuilder websocket = new(server.Address) { Scheme = "ws", Path = "/ws", Query = "channel=lobby" };
             await socket.ConnectAsync(websocket.Uri, timeout.Token);
-            string hello = new JsonObject { ["Type"] = "Hello", ["Username"] = "Spoofed", ["AccessToken"] = accessToken }.ToJsonString();
+            string hello = new JsonObject { ["Type"] = "Hello", ["Username"] = "Spoofed",
+                ["AccessToken"] = accessToken }.ToJsonString();
             await socket.SendAsync(Encoding.UTF8.GetBytes(hello), WebSocketMessageType.Text, true, timeout.Token);
             byte[] buffer = new byte[WebSocketBufferBytes];
             WebSocketReceiveResult welcome = await socket.ReceiveAsync(buffer, timeout.Token);
-            Assert.That(JsonNode.Parse(buffer.AsSpan(0, welcome.Count))!["PlayerId"]!.GetValue<string>(), Is.EqualTo(accountId));
+            Assert.That(JsonNode.Parse(buffer.AsSpan(0, welcome.Count))!["PlayerId"]!.GetValue<string>(),
+                Is.EqualTo(accountId));
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
             using HttpResponseMessage logout = await client.PostAsync("api/accounts/logout", null);
             Assert.That(logout.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
-            await socket.SendAsync(Encoding.UTF8.GetBytes("{\"Type\":\"ListRooms\"}"), WebSocketMessageType.Text, true, timeout.Token);
+            await socket.SendAsync(
+                Encoding.UTF8.GetBytes("{\"Type\":\"ListRooms\"}"), WebSocketMessageType.Text, true, timeout.Token);
             WebSocketReceiveResult rejected = await socket.ReceiveAsync(buffer, timeout.Token);
             Assert.That(rejected.CloseStatus, Is.EqualTo(WebSocketCloseStatus.PolicyViolation));
         }
         await _database.RestartAsync();
         await using LocalAccountServer restarted = await LocalAccountServer.StartAsync(_database);
         using HttpClient restartedClient = new() { BaseAddress = restarted.Address };
-        using HttpResponseMessage relogin = await restartedClient.PostAsJsonAsync("api/accounts/login", new AccountLogin(email, "long-enough-password"));
+        using HttpResponseMessage relogin = await restartedClient.PostAsJsonAsync(
+            "api/accounts/login", new AccountLogin(email, "long-enough-password"));
         relogin.EnsureSuccessStatusCode();
         JsonObject persisted = (await relogin.Content.ReadFromJsonAsync<JsonObject>())!;
         Assert.That(persisted["accountId"]!.GetValue<string>(), Is.EqualTo(accountId));

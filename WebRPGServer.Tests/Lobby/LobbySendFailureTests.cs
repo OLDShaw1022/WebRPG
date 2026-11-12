@@ -24,7 +24,8 @@ public sealed class LobbySendFailureTests
         try
         {
             await slow.RequestAsync(new LobbyPacket { Type = LobbyPacketType.Hello, Username = "Slow" }, timeout.Token);
-            await observer.RequestAsync(new LobbyPacket { Type = LobbyPacketType.Hello, Username = "Observer" }, timeout.Token);
+            await observer.RequestAsync(
+                new LobbyPacket { Type = LobbyPacketType.Hello, Username = "Observer" }, timeout.Token);
             LobbyPacket created = await slow.RequestAsync(new LobbyPacket
             {
                 Type = LobbyPacketType.CreateRoom, RoomName = scenario, IsPublic = true
@@ -39,7 +40,8 @@ public sealed class LobbySendFailureTests
                     slow.Submit(new LobbyPacket { Type = LobbyPacketType.ListRooms });
             }
             await slowConnection.WaitAsync(TimeSpan.FromSeconds(scenario == "timeout" ? 3 : 2), timeout.Token);
-            LobbyPacket state = await observer.RequestAsync(new LobbyPacket { Type = LobbyPacketType.ListRooms }, timeout.Token);
+            LobbyPacket state = await observer.RequestAsync(
+                new LobbyPacket { Type = LobbyPacketType.ListRooms }, timeout.Token);
             if (state.Rooms.Any(room => room.Id == created.Room.Id))
                 Assert.Fail(scenario + " did not remove the disconnected room.");
             if (slow.ConcurrentSendDetected)

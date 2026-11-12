@@ -38,13 +38,20 @@ public sealed class RememberedLoginTests
         using HttpClient client = new(new HttpClientHandler { UseCookies = false }) { BaseAddress = server.Address };
         client.DefaultRequestHeaders.Add("X-WebRPG-Request", "1");
         string email = $"remember-{Guid.NewGuid():N}@example.invalid";
-        using HttpResponseMessage registration = await client.PostAsJsonAsync("api/accounts/register", new AccountRegistration(email, "long-enough-password", "玩家"));
+        using HttpResponseMessage registration = await client.PostAsJsonAsync(
+            "api/accounts/register", new AccountRegistration(email, "long-enough-password", "玩家"));
         registration.EnsureSuccessStatusCode();
-        using HttpResponseMessage login = await client.PostAsJsonAsync("api/accounts/login", new { email, password = "long-enough-password", rememberMe = true });
+        using HttpResponseMessage login = await client.PostAsJsonAsync(
+            "api/accounts/login", new { email, password = "long-enough-password", rememberMe = true });
         login.EnsureSuccessStatusCode();
-        Assert.That(login.Headers.TryGetValues("Set-Cookie", out var values), Is.True, "Remembered login must set an HttpOnly cookie");
+        Assert.That(
+            login.Headers.TryGetValues("Set-Cookie", out var values), Is.True,
+            "Remembered login must set an HttpOnly cookie");
         string header = values!.Single();
-        Assert.That(header.ToLowerInvariant(), Does.Contain("httponly").And.Contain("secure").And.Contain("samesite=strict").And.Contain("path=/api/accounts").And.Contain("expires="));
+        Assert.That(
+            header.ToLowerInvariant(),
+            Does.Contain("httponly").And.Contain("secure").And.Contain("samesite=strict").And.Contain(
+            "path=/api/accounts").And.Contain("expires="));
         Assert.That(header.ToLowerInvariant(), Does.Not.Contain("domain="));
         string cookie = header.Split(';')[0];
         JsonObject first = (await login.Content.ReadFromJsonAsync<JsonObject>())!;
@@ -54,23 +61,27 @@ public sealed class RememberedLoginTests
         refreshed.EnsureSuccessStatusCode();
         JsonObject second = (await refreshed.Content.ReadFromJsonAsync<JsonObject>())!;
         Assert.That(second["accountId"]!.GetValue<string>(), Is.EqualTo(first["accountId"]!.GetValue<string>()));
-        Assert.That(second["accessToken"]!.GetValue<string>(), Is.Not.EqualTo(first["accessToken"]!.GetValue<string>()));
+        Assert.That(second["accessToken"]!.GetValue<string>(), Is.Not.EqualTo(first["accessToken"]!
+            .GetValue<string>()));
         string rotated = refreshed.Headers.GetValues("Set-Cookie").Single().Split(';')[0];
         Assert.That(rotated, Is.Not.EqualTo(cookie));
         await using NpgsqlDataSource source = NpgsqlDataSource.Create(_database.ConnectionString);
         PostgresAccountStore store = new(source);
-        Assert.That(await store.AuthenticateAsync(first["accessToken"]!.GetValue<string>(), CancellationToken.None), Is.Null);
+        Assert.That(await store.AuthenticateAsync(first["accessToken"]!.GetValue<string>(), CancellationToken.None),
+            Is.Null);
         using HttpResponseMessage replay = await client.PostAsJsonAsync("api/accounts/refresh", new { });
         Assert.That(replay.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         client.DefaultRequestHeaders.Remove("Cookie");
         client.DefaultRequestHeaders.Add("Cookie", rotated);
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", second["accessToken"]!.GetValue<string>());
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", second["accessToken"]!
+            .GetValue<string>());
         using HttpResponseMessage logout = await client.PostAsJsonAsync("api/accounts/logout", new { });
         Assert.That(logout.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
         Assert.That(logout.Headers.GetValues("Set-Cookie").Single(), Does.Contain("expires=Thu, 01 Jan 1970"));
         using HttpResponseMessage afterLogout = await client.PostAsJsonAsync("api/accounts/refresh", new { });
         Assert.That(afterLogout.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
-        Assert.That(await store.AuthenticateAsync(second["accessToken"]!.GetValue<string>(), CancellationToken.None), Is.Null);
+        Assert.That(await store.AuthenticateAsync(second["accessToken"]!.GetValue<string>(), CancellationToken.None),
+            Is.Null);
     }
 
     [Test]
@@ -80,30 +91,36 @@ public sealed class RememberedLoginTests
         string accountId;
         await using (LocalAccountServer server = await LocalAccountServer.StartAsync(_database))
         {
-            using HttpClient client = new(new HttpClientHandler { UseCookies = false }) { BaseAddress = server.Address };
+            using HttpClient client = new(
+                new HttpClientHandler { UseCookies = false }) { BaseAddress = server.Address };
             string email = $"persist-{Guid.NewGuid():N}@example.invalid";
-            using HttpResponseMessage registration = await client.PostAsJsonAsync("api/accounts/register", new AccountRegistration(email, "long-enough-password", "玩家"));
+            using HttpResponseMessage registration = await client.PostAsJsonAsync(
+                "api/accounts/register", new AccountRegistration(email, "long-enough-password", "玩家"));
             registration.EnsureSuccessStatusCode();
-            using HttpResponseMessage login = await client.PostAsJsonAsync("api/accounts/login", new { email, password = "long-enough-password", rememberMe = true });
+            using HttpResponseMessage login = await client.PostAsJsonAsync(
+                "api/accounts/login", new { email, password = "long-enough-password", rememberMe = true });
             login.EnsureSuccessStatusCode();
             Assert.That(login.Headers.TryGetValues("Set-Cookie", out var values), Is.True);
             cookie = values!.Single().Split(';')[0];
             JsonObject session = (await login.Content.ReadFromJsonAsync<JsonObject>())!;
             accountId = session["accountId"]!.GetValue<string>();
             await using NpgsqlDataSource source = NpgsqlDataSource.Create(_database.ConnectionString);
-            await using NpgsqlCommand query = source.CreateCommand("SELECT token_hash FROM game_account_remembered_sessions WHERE account_id = $1;");
+            await using NpgsqlCommand query = source.CreateCommand(
+                "SELECT token_hash FROM game_account_remembered_sessions WHERE account_id = $1;");
             query.Parameters.AddWithValue(Guid.Parse(accountId));
             string stored = (string)(await query.ExecuteScalarAsync())!;
             Assert.That(stored, Is.Not.EqualTo(cookie.Split('=')[1]));
         }
         await _database.RestartAsync();
         await using LocalAccountServer restarted = await LocalAccountServer.StartAsync(_database);
-        using HttpClient restoredClient = new(new HttpClientHandler { UseCookies = false }) { BaseAddress = restarted.Address };
+        using HttpClient restoredClient = new(
+            new HttpClientHandler { UseCookies = false }) { BaseAddress = restarted.Address };
         restoredClient.DefaultRequestHeaders.Add("X-WebRPG-Request", "1");
         restoredClient.DefaultRequestHeaders.Add("Cookie", cookie);
         using HttpResponseMessage response = await restoredClient.PostAsJsonAsync("api/accounts/refresh", new { });
         response.EnsureSuccessStatusCode();
-        Assert.That((await response.Content.ReadFromJsonAsync<JsonObject>())!["accountId"]!.GetValue<string>(), Is.EqualTo(accountId));
+        Assert.That((await response.Content.ReadFromJsonAsync<JsonObject>())!["accountId"]!.GetValue<string>(),
+            Is.EqualTo(accountId));
     }
 
     [Test]
@@ -134,7 +151,8 @@ public sealed class RememberedLoginTests
             store.RefreshAsync(remembered.RefreshToken, CancellationToken.None));
         Assert.That(results.Count(value => value is not null), Is.EqualTo(1));
         RememberedAccountSession rotated = results.Single(value => value is not null)!;
-        Assert.That(rotated.RefreshExpiresAt, Is.EqualTo(remembered.RefreshExpiresAt).Within(TimeSpan.FromMilliseconds(1)));
+        Assert.That(
+            rotated.RefreshExpiresAt, Is.EqualTo(remembered.RefreshExpiresAt).Within(TimeSpan.FromMilliseconds(1)));
         await store.LogoutAsync(rotated.Session.AccessToken, CancellationToken.None);
         Assert.That(await store.RefreshAsync(rotated.RefreshToken, CancellationToken.None), Is.Null);
         Assert.That(await store.AuthenticateAsync(rotated.Session.AccessToken, CancellationToken.None), Is.Null);
@@ -150,7 +168,8 @@ public sealed class RememberedLoginTests
         await store.RegisterAsync(new(email, "long-enough-password", "玩家"), CancellationToken.None);
         AccountSession session = (await store.LoginAsync(new(email, "long-enough-password"), CancellationToken.None))!;
         RememberedAccountSession remembered = await store.RememberAsync(session, CancellationToken.None);
-        await using NpgsqlCommand expire = source.CreateCommand("UPDATE game_account_remembered_sessions SET expires_at = CURRENT_TIMESTAMP WHERE account_id = $1;");
+        await using NpgsqlCommand expire = source.CreateCommand(
+            "UPDATE game_account_remembered_sessions SET expires_at = CURRENT_TIMESTAMP WHERE account_id = $1;");
         expire.Parameters.AddWithValue(Guid.Parse(session.AccountId));
         await expire.ExecuteNonQueryAsync();
         Assert.That(await store.RefreshAsync(remembered.RefreshToken, CancellationToken.None), Is.Null);
@@ -166,13 +185,16 @@ public sealed class RememberedLoginTests
         using HttpClient client = new(new HttpClientHandler { UseCookies = false }) { BaseAddress = server.Address };
         client.DefaultRequestHeaders.Add("X-WebRPG-Request", "1");
         string email = $"replace-{Guid.NewGuid():N}@example.invalid";
-        using HttpResponseMessage registration = await client.PostAsJsonAsync("api/accounts/register", new AccountRegistration(email, "long-enough-password", "玩家"));
+        using HttpResponseMessage registration = await client.PostAsJsonAsync(
+            "api/accounts/register", new AccountRegistration(email, "long-enough-password", "玩家"));
         registration.EnsureSuccessStatusCode();
-        using HttpResponseMessage remembered = await client.PostAsJsonAsync("api/accounts/login", new { email, password = "long-enough-password", rememberMe = true });
+        using HttpResponseMessage remembered = await client.PostAsJsonAsync(
+            "api/accounts/login", new { email, password = "long-enough-password", rememberMe = true });
         remembered.EnsureSuccessStatusCode();
         string cookie = remembered.Headers.GetValues("Set-Cookie").Single().Split(';')[0];
         client.DefaultRequestHeaders.Add("Cookie", cookie);
-        using HttpResponseMessage ordinary = await client.PostAsJsonAsync("api/accounts/login", new AccountLogin(email, "long-enough-password"));
+        using HttpResponseMessage ordinary = await client.PostAsJsonAsync(
+            "api/accounts/login", new AccountLogin(email, "long-enough-password"));
         ordinary.EnsureSuccessStatusCode();
         Assert.That(ordinary.Headers.GetValues("Set-Cookie").Single(), Does.Contain("1970"));
         using HttpResponseMessage oldCookie = await client.PostAsJsonAsync("api/accounts/refresh", new { });
@@ -180,7 +202,9 @@ public sealed class RememberedLoginTests
         await using NpgsqlDataSource source = NpgsqlDataSource.Create(_database.ConnectionString);
         PostgresAccountStore store = new(source);
         JsonObject previousSession = (await remembered.Content.ReadFromJsonAsync<JsonObject>())!;
-        Assert.That(await store.AuthenticateAsync(previousSession["accessToken"]!.GetValue<string>(), CancellationToken.None), Is.Null);
+        Assert.That(
+            await store.AuthenticateAsync(previousSession["accessToken"]!.GetValue<string>(), CancellationToken.None),
+            Is.Null);
     }
 
     [TestCase("https://oldshaw-webrpg.com", true)]
@@ -195,9 +219,11 @@ public sealed class RememberedLoginTests
         request.Headers.Add("Access-Control-Request-Method", "POST");
         request.Headers.Add("Access-Control-Request-Headers", "content-type,x-webrpg-request,authorization");
         using HttpResponseMessage response = await client.SendAsync(request);
-        bool credentials = response.Headers.TryGetValues("Access-Control-Allow-Credentials", out var values) && values.Single() == "true";
+        bool credentials = response.Headers.TryGetValues("Access-Control-Allow-Credentials", out var values)
+            && values.Single() == "true";
         Assert.That(credentials, Is.EqualTo(allowed));
-        string? allowedOrigin = response.Headers.TryGetValues("Access-Control-Allow-Origin", out var origins) ? origins.Single() : null;
+        string? allowedOrigin = response.Headers.TryGetValues("Access-Control-Allow-Origin", out var origins)
+            ? origins.Single() : null;
         Assert.That(allowedOrigin, Is.EqualTo(allowed ? origin : null));
     }
 
@@ -207,10 +233,14 @@ public sealed class RememberedLoginTests
         await using LocalAccountServer server = await LocalAccountServer.StartAsync(_database);
         using HttpClient client = new() { BaseAddress = server.Address };
         string email = $"ordinary-{Guid.NewGuid():N}@example.invalid";
-        using HttpResponseMessage registration = await client.PostAsJsonAsync("api/accounts/register", new AccountRegistration(email, "long-enough-password", "玩家"));
+        using HttpResponseMessage registration = await client.PostAsJsonAsync(
+            "api/accounts/register", new AccountRegistration(email, "long-enough-password", "玩家"));
         registration.EnsureSuccessStatusCode();
-        using HttpResponseMessage login = await client.PostAsJsonAsync("api/accounts/login", new AccountLogin(email, "long-enough-password"));
+        using HttpResponseMessage login = await client.PostAsJsonAsync(
+            "api/accounts/login", new AccountLogin(email, "long-enough-password"));
         login.EnsureSuccessStatusCode();
-        Assert.That(login.Headers.TryGetValues("Set-Cookie", out var values) ? values.Any(value => value.Contains("expires=") && !value.Contains("1970")) : false, Is.False);
+        Assert.That(
+            login.Headers.TryGetValues("Set-Cookie", out var values)
+            ? values.Any(value => value.Contains("expires=") && !value.Contains("1970")) : false, Is.False);
     }
 }

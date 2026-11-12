@@ -17,7 +17,8 @@ internal static class ShopTopUpEndpoints
             AccountIdentity? identity = await accounts.AuthenticateAsync(readToken(context), context.RequestAborted);
             if (identity is null) return Results.Unauthorized();
             PayPalSettings settings = context.RequestServices.GetRequiredService<PayPalSettings>();
-            if (!settings.Enabled || !settings.Configured) return Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
+            if (!settings.Enabled || !settings.Configured) return Results.StatusCode(
+                StatusCodes.Status503ServiceUnavailable);
             if (request.RequestId == Guid.Empty || request.Offer is null || !ShopTopUpCatalog.IsValid(request.Offer))
                 return Results.BadRequest();
 
@@ -65,12 +66,14 @@ internal static class ShopTopUpEndpoints
         app.MapPost("/api/payments/paypal/webhook", async (HttpContext context, PayPalSettings settings) =>
         {
             PayPalTopUpService? service = context.RequestServices.GetService<PayPalTopUpService>();
-            if (!settings.Configured || service is null) return Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
+            if (!settings.Configured || service is null) return Results.StatusCode(
+                StatusCodes.Status503ServiceUnavailable);
             try
             {
                 using JsonDocument notification = await JsonDocument.ParseAsync(context.Request.Body,
                     cancellationToken: context.RequestAborted);
-                return await service.NotifyAsync(context.Request.Headers, notification.RootElement, context.RequestAborted)
+                return await service.NotifyAsync(
+                    context.Request.Headers, notification.RootElement, context.RequestAborted)
                     ? Results.Ok() : Results.BadRequest();
             }
             catch (JsonException)
@@ -106,7 +109,8 @@ internal static class ShopTopUpEndpoints
 
             string gameUrl = HtmlEncoder.Default.Encode(settings.GameUrl!);
             return Results.Content($"""
-                <!doctype html><html lang="zh-Hant"><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+                <!doctype html><html lang="zh-Hant"><meta charset="utf-8">
+                <meta name="viewport" content="width=device-width">
                 <title>WebRPG 儲值</title><main><h1>返回 WebRPG</h1><p>請回原本的遊戲視窗，重新整理商店查看訂單和水晶餘額。</p>
                 <a href="{gameUrl}">開啟 WebRPG 網頁版</a></main></html>
                 """, "text/html; charset=utf-8");

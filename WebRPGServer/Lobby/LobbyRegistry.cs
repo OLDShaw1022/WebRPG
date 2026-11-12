@@ -90,7 +90,8 @@ public sealed class LobbyRegistry
             return new AdventurePacket
             {
                 Type = AdventurePacketType.Start, RoomId = roomId, PlayerId = playerId,
-                Payload = Random.Shared.Next(1, int.MaxValue).ToString(System.Globalization.CultureInfo.InvariantCulture)
+                Payload = Random.Shared.Next(1, int.MaxValue)
+                    .ToString(System.Globalization.CultureInfo.InvariantCulture)
             };
         }
         if (!_adventures.TryGetValue(roomId, out MultiplayerRoomState? adventure))
@@ -107,7 +108,8 @@ public sealed class LobbyRegistry
 
     public string[] GetRoomPlayers(string playerId)
     {
-        return _memberships.TryGetValue(playerId, out string? roomId) && _rooms.TryGetValue(roomId, out LobbyRoomSnapshot? room)
+        return _memberships.TryGetValue(playerId, out string? roomId)
+            && _rooms.TryGetValue(roomId, out LobbyRoomSnapshot? room)
             ? room.Members.Select(member => member.PlayerId).ToArray()
             : Array.Empty<string>();
     }

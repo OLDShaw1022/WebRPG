@@ -22,16 +22,21 @@ internal sealed class RemoteAccountSession : IAsyncDisposable
         string email = Environment.GetEnvironmentVariable($"WEBRPG_TEST_{account}_EMAIL") ?? string.Empty;
         string password = Environment.GetEnvironmentVariable($"WEBRPG_TEST_{account}_PASSWORD") ?? string.Empty;
         if (string.IsNullOrWhiteSpace(email) || string.IsNullOrEmpty(password))
-            throw new InvalidOperationException($"Configure WEBRPG_TEST_{account}_EMAIL and WEBRPG_TEST_{account}_PASSWORD for a dedicated test account.");
+            throw new InvalidOperationException(
+                $"Configure WEBRPG_TEST_{account}_EMAIL and WEBRPG_TEST_{account}_PASSWORD " +
+                "for a dedicated test account.");
         if (address.Scheme != "wss")
             throw new InvalidOperationException("Remote account tests require WSS and HTTPS.");
-        UriBuilder api = new(address) { Scheme = "https", Path = "/api/accounts/", Query = string.Empty, Fragment = string.Empty };
+        UriBuilder api = new(
+            address) { Scheme = "https", Path = "/api/accounts/", Query = string.Empty, Fragment = string.Empty };
         HttpClient client = new(new HttpClientHandler { AllowAutoRedirect = false }) { BaseAddress = api.Uri };
         try
         {
             using HttpResponseMessage response = await client.PostAsJsonAsync("login", new { email, password }, token);
             if (!response.IsSuccessStatusCode)
-                throw new InvalidOperationException($"Remote test account {account} login failed: HTTP {(int)response.StatusCode}. Check account API proxy, database and test credentials.");
+                throw new InvalidOperationException(
+                    $"Remote test account {account} login failed: HTTP {(int)response.StatusCode}. " +
+                    "Check account API proxy, database and test credentials.");
             JsonObject? session = await response.Content.ReadFromJsonAsync<JsonObject>(token);
             string? accessToken = session?["accessToken"]?.GetValue<string>();
             if (string.IsNullOrWhiteSpace(accessToken))

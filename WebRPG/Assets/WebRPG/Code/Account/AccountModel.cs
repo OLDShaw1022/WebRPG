@@ -63,16 +63,24 @@ namespace WebRPG
             DefaultServerIndex = Array.FindIndex(_servers, server => server.Id == configuration.DefaultServerId);
         }
 
-        public async Awaitable<string> SubmitAsync(int serverIndex, string email, string password, string username, bool register, bool rememberMe = false)
+        public async Awaitable<string> SubmitAsync(
+            int serverIndex,
+            string email,
+            string password,
+            string username,
+            bool register,
+            bool rememberMe = false)
         {
             RegistrationSucceeded = false;
             if (string.IsNullOrWhiteSpace(email) || string.IsNullOrEmpty(password)) return MissingCredentialsMessage;
             if (register && (string.IsNullOrWhiteSpace(username) || username.Trim().Length > MaximumUsernameLength ||
-                password.Length < MinimumPasswordLength || password.Length > MaximumPasswordLength)) return RegistrationFieldsMessage;
+                password.Length < MinimumPasswordLength ||
+                password.Length > MaximumPasswordLength)) return RegistrationFieldsMessage;
             JObject payload = new JObject { [EmailProperty] = email.Trim(), [PasswordProperty] = password };
             if (register) payload[UsernameProperty] = username.Trim();
             else payload[RememberMeProperty] = rememberMe;
-            string response = await SendAsync(serverIndex, register ? RegisterPath : LoginPath, payload.ToString(Formatting.None), false);
+            string response = await SendAsync(
+                serverIndex, register ? RegisterPath : LoginPath, payload.ToString(Formatting.None), false);
             if (register)
             {
                 RegistrationSucceeded = true;
@@ -93,7 +101,9 @@ namespace WebRPG
         private void ApplySession(int serverIndex, string response)
         {
             AccountResponseModel session = JsonConvert.DeserializeObject<AccountResponseModel>(response);
-            if (session == null || string.IsNullOrEmpty(session.AccessToken) || string.IsNullOrEmpty(session.AccountId) ||
+            if (session == null ||
+                string.IsNullOrEmpty(session.AccessToken) ||
+                string.IsNullOrEmpty(session.AccountId) ||
                 string.IsNullOrEmpty(session.Username) || session.ExpiresAt <= DateTimeOffset.UtcNow)
                 throw new InvalidOperationException(InvalidResponseMessage);
             ServerIndex = serverIndex;
@@ -120,7 +130,12 @@ namespace WebRPG
         internal Awaitable<string> SendAuthenticatedAsync(string path, string body) =>
             SendAsync(ServerIndex, path, body, true);
 
-        private async Awaitable<string> SendAsync(int serverIndex, string path, string body, bool authenticated, bool allowUnauthorized = false)
+        private async Awaitable<string> SendAsync(
+            int serverIndex,
+            string path,
+            string body,
+            bool authenticated,
+            bool allowUnauthorized = false)
         {
             if (_disposed || _request != null || serverIndex < 0 || serverIndex >= _servers.Length)
                 throw new InvalidOperationException(RequestFailedMessage);
@@ -155,7 +170,10 @@ namespace WebRPG
                 {
                     string message = request.responseCode == UnauthorizedStatus ? LoginFailedMessage :
                         request.responseCode == RateLimitStatus ? RateLimitMessage : RequestFailedMessage;
-                    try { message = JObject.Parse(request.downloadHandler.text).Value<string>(ErrorProperty) ?? message; }
+                    try
+                    {
+                        message = JObject.Parse(request.downloadHandler.text).Value<string>(ErrorProperty) ?? message;
+                    }
                     catch (JsonException) { }
                     throw new InvalidOperationException(message);
                 }

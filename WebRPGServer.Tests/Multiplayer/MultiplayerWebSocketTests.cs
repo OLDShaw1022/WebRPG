@@ -37,16 +37,19 @@ public sealed class MultiplayerWebSocketTests
         await host.SendRawAsync("""{"Type":"Adventure","Adventure":{"Type":"AdventureStart"}}""", token);
         JsonObject hostStart = await host.ReadTypeAsync("Adventure", token);
         JsonObject memberStart = await second.ReadTypeAsync("Adventure", token);
-        if (hostStart["Adventure"]!["Payload"]!.GetValue<string>() != memberStart["Adventure"]!["Payload"]!.GetValue<string>())
+        if (hostStart["Adventure"]!["Payload"]!.GetValue<string>() !=
+            memberStart["Adventure"]!["Payload"]!.GetValue<string>())
             Assert.Fail("All clients must receive the same seed.");
         await outsider.RequestAsync("JoinRoom", new() { ["RoomId"] = roomId }, token, "Error");
-        await host.SendRawAsync("""{"Type":"Adventure","Adventure":{"Type":"AdventureCommand","Command":"vote","Payload":"1|0"}}""", token);
+        await host.SendRawAsync(
+            """{"Type":"Adventure","Adventure":{"Type":"AdventureCommand","Command":"vote","Payload":"1|0"}}""", token);
         JsonObject voteHost = await host.ReadTypeAsync("Adventure", token);
         JsonObject voteMember = await second.ReadTypeAsync("Adventure", token);
         if (voteHost["Adventure"]!["Command"]!.GetValue<string>() != "vote" ||
             voteMember["Adventure"]!["Sequence"]!.GetValue<long>() != 1)
             Assert.Fail("Votes must be broadcast in order.");
-        await second.SendRawAsync("""{"Type":"Adventure","Adventure":{"Type":"AdventureCommand","Command":"vote","Payload":"0|0"}}""", token);
+        await second.SendRawAsync(
+            """{"Type":"Adventure","Adventure":{"Type":"AdventureCommand","Command":"vote","Payload":"0|0"}}""", token);
         JsonObject nodeHost = await host.ReadTypeAsync("Adventure", token);
         JsonObject nodeMember = await second.ReadTypeAsync("Adventure", token);
         if (nodeHost["Adventure"]!["Command"]!.GetValue<string>() != "node" ||

@@ -26,9 +26,11 @@ public sealed class AccountEndpointTests
         application.UseRateLimiter();
         AccountEndpoints.Map(application);
         await application.StartAsync();
-        string address = application.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses.Single();
+        string address = application.Services.GetRequiredService<IServer>()
+            .Features.Get<IServerAddressesFeature>()!.Addresses.Single();
         using HttpClient client = new() { BaseAddress = new Uri(address) };
-        using HttpResponseMessage response = await client.PostAsJsonAsync("/api/accounts/login", new AccountLogin("player@example.com", "long-enough-password"));
+        using HttpResponseMessage response = await client.PostAsJsonAsync(
+            "/api/accounts/login", new AccountLogin("player@example.com", "long-enough-password"));
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.ServiceUnavailable));
         Assert.That(response.Headers.CacheControl?.NoStore, Is.True);
         await application.StopAsync();
