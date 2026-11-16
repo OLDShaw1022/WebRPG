@@ -96,13 +96,6 @@ namespace WebRPG
             _lobbyModel?.Tick(Time.unscaledDeltaTime);
         }
 
-        private void OnApplicationQuit()
-        {
-            DisposeLobby();
-            DisposeAdventure();
-            _mainMenuPresenter?.Dispose();
-        }
-
         private void OnDestroy()
         {
             StopSessionMonitoring();
