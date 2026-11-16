@@ -21,7 +21,7 @@ internal sealed class LocalLobbyServer : IAsyncDisposable
         Address = address;
     }
 
-    public static async Task<LocalLobbyServer> StartAsync(Func<string, Task<AccountIdentity?>>? authenticate = null)
+    public static async Task<LocalLobbyServer> StartAsync(Func<string, Task<LobbyAccountSession?>>? authenticate = null)
     {
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
         builder.WebHost.UseUrls("http://127.0.0.1:0");

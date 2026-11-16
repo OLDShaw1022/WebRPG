@@ -109,15 +109,25 @@ public sealed partial class PostgresAccountStore
     {
         if (string.IsNullOrEmpty(token) || token.Length > AccountTokenHelper.MaximumTokenLength) return null;
 
+        var session = await ReadAccountSessionAsync(AccountTokenHelper.Hash(token), cancellationToken);
+        return session?.Identity;
+    }
+
+    private async Task<(AccountIdentity Identity, DateTimeOffset ExpiresAt, Guid? RememberedSessionId)?>
+        ReadAccountSessionAsync(string tokenHash, CancellationToken cancellationToken)
+    {
         await using NpgsqlCommand command = _dataSource.CreateCommand("""
-            SELECT a.account_id, a.username FROM game_account_sessions s
+            SELECT a.account_id, a.username, s.expires_at, s.remembered_session_id FROM game_account_sessions s
             JOIN game_accounts a ON a.account_id = s.account_id
             WHERE s.token_hash = $1 AND s.expires_at > CURRENT_TIMESTAMP;
             """);
-        command.Parameters.AddWithValue(AccountTokenHelper.Hash(token));
+        command.Parameters.AddWithValue(tokenHash);
         await using NpgsqlDataReader reader = await command.ExecuteReaderAsync(cancellationToken);
-        return await reader.ReadAsync(cancellationToken)
-            ? new AccountIdentity(reader.GetGuid(0).ToString("N"), reader.GetString(1)) : null;
+        if (!await reader.ReadAsync(cancellationToken)) return null;
+
+        AccountIdentity identity = new(reader.GetGuid(0).ToString("N"), reader.GetString(1));
+        Guid? rememberedSessionId = reader.IsDBNull(3) ? null : reader.GetGuid(3);
+        return (identity, reader.GetFieldValue<DateTimeOffset>(2), rememberedSessionId);
     }
 
     public async Task LogoutAsync(string token, CancellationToken cancellationToken)
@@ -128,11 +138,22 @@ public sealed partial class PostgresAccountStore
                 DELETE FROM game_account_remembered_sessions WHERE remembered_session_id IN (
                     SELECT remembered_session_id FROM game_account_sessions WHERE token_hash = $1
                 )
+                RETURNING remembered_session_id
+            ), removed AS (
+                DELETE FROM game_account_sessions WHERE token_hash = $1 RETURNING token_hash
             )
-            DELETE FROM game_account_sessions WHERE token_hash = $1;
+            SELECT (SELECT remembered_session_id FROM revoked)
+            WHERE EXISTS (SELECT 1 FROM revoked) OR EXISTS (SELECT 1 FROM removed);
             """);
-        command.Parameters.AddWithValue(AccountTokenHelper.Hash(token));
-        await command.ExecuteNonQueryAsync(cancellationToken);
+        string tokenHash = AccountTokenHelper.Hash(token);
+        command.Parameters.AddWithValue(tokenHash);
+        object? affected = await command.ExecuteScalarAsync(cancellationToken);
+        if (affected is not null)
+        {
+            Guid? family = affected as Guid?;
+            RevokeLobbySessions(session => session.TokenHash == tokenHash ||
+                (family.HasValue && session.RememberedSessionId == family));
+        }
     }
 
 }

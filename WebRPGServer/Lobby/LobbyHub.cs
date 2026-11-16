@@ -24,13 +24,17 @@ public sealed class LobbyHub
         _registry = new LobbyRegistry(options);
     }
 
-    public async Task HandleConnectionAsync(WebSocket socket, CancellationToken token,
-        Func<string, Task<AccountIdentity?>>? authenticate = null)
+    public Task HandleConnectionAsync(WebSocket socket, CancellationToken token) =>
+        HandleConnectionAsync(socket, token, null);
+
+    internal async Task HandleConnectionAsync(WebSocket socket, CancellationToken token,
+        Func<string, Task<LobbyAccountSession?>>? authenticate)
     {
         string playerId = Guid.NewGuid().ToString("N");
         long? lastChat = null;
         bool registered = false;
-        string accessToken = string.Empty;
+        LobbyAccountSession? accountSession = null;
+        WebSocketCloseStatus closeStatus = WebSocketCloseStatus.NormalClosure;
         LobbySendSession session = new(socket, _options.SendTimeoutSeconds, token);
 
         try
@@ -45,25 +49,15 @@ public sealed class LobbyHub
                 try { request = JsonSerializer.Deserialize<LobbyPacket>(json); }
                 catch (JsonException) { request = null; }
 
-                AccountIdentity? identity = null;
-                if (authenticate is not null && request is not null)
+                if (authenticate is not null && request?.Type == LobbyPacketType.Hello &&
+                    request.RequestId?.Length is null or <= MaximumRequestIdLength)
                 {
-                    if (request.Type == LobbyPacketType.Hello)
-                    {
-                        using JsonDocument document = JsonDocument.Parse(json);
-                        accessToken = document.RootElement.TryGetProperty("AccessToken", out JsonElement property) &&
-                            property.ValueKind == JsonValueKind.String ? property.GetString() ?? string.Empty
-                            : string.Empty;
-                    }
-
-                    identity = await authenticate(accessToken);
-                    if (identity is null || (registered && identity.AccountId != playerId))
-                    {
-                        await socket.CloseAsync(WebSocketCloseStatus.PolicyViolation, "Authentication required", token);
-                        break;
-                    }
-
-                    if (!registered) playerId = identity.AccountId;
+                    using JsonDocument document = JsonDocument.Parse(json);
+                    string accessToken = document.RootElement.TryGetProperty("AccessToken", out JsonElement property) &&
+                        property.ValueKind == JsonValueKind.String ? property.GetString() ?? string.Empty : string.Empty;
+                    LobbyAccountSession? nextSession = await authenticate(accessToken);
+                    accountSession?.Dispose();
+                    accountSession = nextSession;
                 }
 
                 await _gate.WaitAsync(token);
@@ -80,13 +74,21 @@ public sealed class LobbyHub
                         EnqueueError(session, string.Empty, "要求識別碼過長。");
                         continue;
                     }
+                    if (authenticate is not null &&
+                        (accountSession is null || !accountSession.IsValidAt(DateTimeOffset.UtcNow) ||
+                            (registered && accountSession.Identity.AccountId != playerId)))
+                    {
+                        closeStatus = WebSocketCloseStatus.PolicyViolation;
+                        break;
+                    }
                     if (!registered)
                     {
                         if (request.Type != LobbyPacketType.Hello) throw new ArgumentException("請先連線。");
                         if (_sessions.Count >= _options.MaximumConnections) throw new ArgumentException("大廳連線已滿。");
+                        playerId = accountSession?.Identity.AccountId ?? playerId;
                         if (_sessions.ContainsKey(playerId)) throw new ArgumentException("此帳號已連線至大廳。");
 
-                        _registry.Connect(playerId, identity?.Username ?? request.Username);
+                        _registry.Connect(playerId, accountSession?.Identity.Username ?? request.Username);
                         _sessions.Add(playerId, session);
                         registered = true;
                         LobbyPacket welcome = _registry.Snapshot(playerId, request.RequestId ?? string.Empty);
@@ -138,6 +140,7 @@ public sealed class LobbyHub
         catch (WebSocketException) { }
         finally
         {
+            accountSession?.Dispose();
             await _gate.WaitAsync();
 
             try
@@ -159,7 +162,9 @@ public sealed class LobbyHub
             {
                 using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(_options.SendTimeoutSeconds));
 
-                try { await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Disconnected", timeout.Token); }
+                string reason = closeStatus == WebSocketCloseStatus.PolicyViolation
+                    ? "Authentication required" : "Disconnected";
+                try { await socket.CloseAsync(closeStatus, reason, timeout.Token); }
                 catch (Exception exception) when (
                     exception is WebSocketException or OperationCanceledException) { socket.Abort(); }
             }

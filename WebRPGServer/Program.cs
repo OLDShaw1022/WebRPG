@@ -78,7 +78,7 @@ public static class Program
                 PostgresAccountStore? accounts = context.RequestServices.GetService<PostgresAccountStore>();
                 await lobbyHub.HandleConnectionAsync(webSocket, context.RequestAborted,
                     async accessToken => accounts is null ? null :
-                        await accounts.AuthenticateAsync(accessToken, context.RequestAborted));
+                        await accounts.AuthenticateLobbyAsync(accessToken, context.RequestAborted));
                 return;
             }
 

@@ -16,7 +16,8 @@ public sealed class AccountWebSocketTests
     public async Task LobbyClientSendsTokenAndReportsAuthenticationRejection()
     {
         await using LocalLobbyServer server = await LocalLobbyServer.StartAsync(token =>
-            Task.FromResult<AccountIdentity?>(token == "test-token" ? new("fixed-account-id", "Test") : null));
+            Task.FromResult<LobbyAccountSession?>(token == "test-token"
+                ? new(new("fixed-account-id", "Test"), DateTimeOffset.MaxValue) : null));
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(TestTimeoutSeconds));
         using LobbyClient client = await LobbyClient.ConnectAsync(server.Address, "Test", timeout.Token, "test-token");
 
@@ -34,13 +35,14 @@ public sealed class AccountWebSocketTests
     public async Task LobbyReauthenticationPreservesRoomAndRequiresSameAccount(bool sameAccount)
     {
         int rotated = 0;
+        using LobbyAccountSession original = new(new("original-account", "Player"), DateTimeOffset.MaxValue);
         await using LocalLobbyServer server = await LocalLobbyServer.StartAsync(token =>
-            Task.FromResult<AccountIdentity?>(token switch
+            Task.FromResult<LobbyAccountSession?>(token switch
             {
-                "peer-token" => new("peer-account", "Peer"),
-                "original-token" when Volatile.Read(ref rotated) == 0 => new("original-account", "Player"),
+                "peer-token" => new(new("peer-account", "Peer"), DateTimeOffset.MaxValue),
+                "original-token" when Volatile.Read(ref rotated) == 0 => original,
                 "renewed-token" when Volatile.Read(ref rotated) != 0 =>
-                    new(sameAccount ? "original-account" : "different-account", "Player"),
+                    new(new(sameAccount ? "original-account" : "different-account", "Player"), DateTimeOffset.MaxValue),
                 _ => null
             }));
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(TestTimeoutSeconds));
@@ -57,6 +59,7 @@ public sealed class AccountWebSocketTests
         await client.ReadTypeAsync("Adventure", cancellation);
         await peer.ReadTypeAsync("Adventure", cancellation);
         await client.RequestAsync("ListRooms", new(), cancellation);
+        original.Revoke();
         Volatile.Write(ref rotated, 1);
 
         JsonObject reauthentication = new() { ["AccessToken"] = "renewed-token" };
@@ -83,10 +86,51 @@ public sealed class AccountWebSocketTests
     }
 
     [Test]
+    public async Task LobbyRequestsReuseHelloAuthentication()
+    {
+        int authenticationCount = 0;
+        await using LocalLobbyServer server = await LocalLobbyServer.StartAsync(token =>
+        {
+            Interlocked.Increment(ref authenticationCount);
+            return Task.FromResult<LobbyAccountSession?>(token == "test-token"
+                ? new(new("fixed-account-id", "Player"), DateTimeOffset.MaxValue) : null);
+        });
+        using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(TestTimeoutSeconds));
+        using LobbyClient client = await LobbyClient.ConnectAsync(server.Address, "Player", timeout.Token, "test-token");
+
+        await client.RequestAsync("ListRooms", new(), timeout.Token);
+        await client.RequestAsync("CreateRoom", new() { ["RoomName"] = "Test" }, timeout.Token);
+        await client.RequestAsync("ListRooms", new(), timeout.Token);
+
+        Assert.That(Volatile.Read(ref authenticationCount), Is.EqualTo(1));
+        await client.RequestAsync("Hello", new() { ["AccessToken"] = "test-token" }, timeout.Token, "Welcome");
+        await client.RequestAsync("ListRooms", new(), timeout.Token);
+
+        Assert.That(Volatile.Read(ref authenticationCount), Is.EqualTo(2));
+    }
+
+    [Test]
+    public async Task ExpiredLobbySessionIsRejected()
+    {
+        using LobbyAccountSession accountSession = new(new("fixed-account-id", "Player"), DateTimeOffset.UtcNow);
+        await using LocalLobbyServer server = await LocalLobbyServer.StartAsync(
+            _ => Task.FromResult<LobbyAccountSession?>(accountSession));
+        using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(TestTimeoutSeconds));
+
+        InvalidOperationException? error = Assert.ThrowsAsync<InvalidOperationException>(async () =>
+        {
+            using LobbyClient rejected = await LobbyClient.ConnectAsync(server.Address, "Player", timeout.Token,
+                "expired-token");
+        });
+
+        Assert.That(error!.Message, Does.Contain("PolicyViolation"));
+    }
+
+    [Test]
     public async Task MissingTokenIsRejected()
     {
         await using LocalLobbyServer server = await LocalLobbyServer.StartAsync(
-            _ => Task.FromResult<AccountIdentity?>(null));
+            _ => Task.FromResult<LobbyAccountSession?>(null));
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(TestTimeoutSeconds));
         using ClientWebSocket socket = new();
         await socket.ConnectAsync(server.Address, timeout.Token);
@@ -101,10 +145,9 @@ public sealed class AccountWebSocketTests
     [Test]
     public async Task AccountIdentityOverridesClientNameAndRevokedTokenCannotAct()
     {
-        bool revoked = false;
+        using LobbyAccountSession accountSession = new(new("fixed-account-id", "註冊名稱"), DateTimeOffset.MaxValue);
         await using LocalLobbyServer server = await LocalLobbyServer.StartAsync(token =>
-            Task.FromResult<AccountIdentity?>(!revoked && token == "test-token" ? new("fixed-account-id", "註冊名稱")
-                : null));
+            Task.FromResult<LobbyAccountSession?>(token == "test-token" ? accountSession : null));
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(TestTimeoutSeconds));
         using ClientWebSocket socket = new();
         await socket.ConnectAsync(server.Address, timeout.Token);
@@ -123,7 +166,7 @@ public sealed class AccountWebSocketTests
 
         Assert.That(JsonNode.Parse(buffer.AsSpan(0, state.Count))!["Room"]!["Members"]![0]!["Username"]!
             .GetValue<string>(), Is.EqualTo("註冊名稱"));
-        revoked = true;
+        accountSession.Revoke();
         await socket.SendAsync(
             Encoding.UTF8.GetBytes("{\"Type\":\"ListRooms\"}"), WebSocketMessageType.Text, true, timeout.Token);
         WebSocketReceiveResult rejected = await socket.ReceiveAsync(buffer, timeout.Token);

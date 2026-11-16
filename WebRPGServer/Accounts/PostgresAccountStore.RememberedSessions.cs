@@ -83,11 +83,14 @@ public sealed partial class PostgresAccountStore
             username = (string)(await account.ExecuteScalarAsync(cancellationToken))!;
         }
 
+        HashSet<string> removedTokenHashes = new();
         await using (NpgsqlCommand remove = new(
-            "DELETE FROM game_account_sessions WHERE remembered_session_id = $1;", connection, transaction))
+            "DELETE FROM game_account_sessions WHERE remembered_session_id = $1 RETURNING token_hash;",
+            connection, transaction))
         {
             remove.Parameters.AddWithValue(family);
-            await remove.ExecuteNonQueryAsync(cancellationToken);
+            await using NpgsqlDataReader reader = await remove.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken)) removedTokenHashes.Add(reader.GetString(0));
         }
 
         string accessToken = AccountTokenHelper.Create();
@@ -106,6 +109,9 @@ public sealed partial class PostgresAccountStore
         }
 
         await transaction.CommitAsync(cancellationToken);
+        if (removedTokenHashes.Count > 0)
+            RevokeLobbySessions(session => removedTokenHashes.Contains(session.TokenHash));
+
         return new RememberedAccountSession(
             new AccountSession(accessToken, accountId.ToString("N"), username, expires), rotatedToken, refreshExpires);
     }
@@ -115,8 +121,9 @@ public sealed partial class PostgresAccountStore
         if (string.IsNullOrEmpty(token) || token.Length > AccountTokenHelper.MaximumTokenLength) return;
 
         await using NpgsqlCommand command = _dataSource.CreateCommand(
-            "DELETE FROM game_account_remembered_sessions WHERE token_hash = $1;");
+            "DELETE FROM game_account_remembered_sessions WHERE token_hash = $1 RETURNING remembered_session_id;");
         command.Parameters.AddWithValue(AccountTokenHelper.Hash(token));
-        await command.ExecuteNonQueryAsync(cancellationToken);
+        if (await command.ExecuteScalarAsync(cancellationToken) is Guid family)
+            RevokeLobbySessions(session => session.RememberedSessionId == family);
     }
 }

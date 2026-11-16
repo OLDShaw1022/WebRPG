@@ -258,6 +258,39 @@ public sealed class AccountPostgresTests
         }
     }
 
+    [TestCase(true)]
+    [TestCase(false)]
+    public async Task LobbySessionsFollowRotationAndRevocation(bool useRememberedCookie)
+    {
+        await using NpgsqlDataSource source = NpgsqlDataSource.Create(_database.ConnectionString);
+        PostgresAccountStore store = new(source);
+        CancellationToken token = CancellationToken.None;
+        await store.InitializeAsync(token);
+        string email = $"lobby-{Guid.NewGuid():N}@example.invalid";
+        const string password = "long-enough-password";
+        await store.RegisterAsync(new(email, password, "Player"), token);
+        AccountSession account = (await store.LoginAsync(new(email, password), token))!;
+        AccountSession other = (await store.LoginAsync(new(email, password), token))!;
+        RememberedAccountSession remembered = await store.RememberAsync(account, token);
+        using LobbyAccountSession original = (await store.AuthenticateLobbyAsync(account.AccessToken, token))!;
+        using LobbyAccountSession unaffected = (await store.AuthenticateLobbyAsync(other.AccessToken, token))!;
+
+        RememberedAccountSession rotated = (await store.RefreshAsync(remembered.RefreshToken, token))!;
+
+        Assert.That(original.IsValidAt(DateTimeOffset.UtcNow), Is.False);
+        Assert.That(await store.AuthenticateLobbyAsync(account.AccessToken, token), Is.Null);
+        using LobbyAccountSession renewed = (
+            await store.AuthenticateLobbyAsync(rotated.Session.AccessToken, token))!;
+        Assert.That(renewed.IsValidAt(DateTimeOffset.UtcNow), Is.True);
+
+        if (useRememberedCookie) await store.RevokeRememberedAsync(rotated.RefreshToken, token);
+        else await store.LogoutAsync(rotated.Session.AccessToken, token);
+
+        Assert.That(renewed.IsValidAt(DateTimeOffset.UtcNow), Is.False);
+        Assert.That(unaffected.IsValidAt(DateTimeOffset.UtcNow), Is.True);
+        Assert.That(await store.AuthenticateLobbyAsync(rotated.Session.AccessToken, token), Is.Null);
+    }
+
     [Test]
     public async Task RealApiSupportsRegistrationLoginLobbyLogoutAndDatabaseRestart()
     {
