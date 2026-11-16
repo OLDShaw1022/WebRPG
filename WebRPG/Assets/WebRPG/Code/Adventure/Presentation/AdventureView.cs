@@ -145,6 +145,7 @@ namespace WebRPG
         private readonly List<AdventureIconItemView> _relicIcons = new List<AdventureIconItemView>();
         private readonly List<List<AdventureMapNodeViewState>> _mapRows = new List<List<AdventureMapNodeViewState>>();
         private readonly List<AdventureSurfaceViewReferences> _connections = new List<AdventureSurfaceViewReferences>();
+        private AdventureMapRowScreenModel[] _renderedMapRows;
         private int _lastMapRow = -1;
 
         public AdventureMenuView Menu => _menu;
@@ -263,10 +264,16 @@ namespace WebRPG
             AdventureUiHelper.RenderSkills(_skills, screen.InspectedSkills);
             AdventureUiHelper.RenderChoices(_choices, screen.Choices, screen.CanChoose);
 
-            if (screen.ShowMap && (previous == null || !ReferenceEquals(previous.MapRows, screen.MapRows)))
+            if (screen.ShowMap && !ReferenceEquals(_renderedMapRows, screen.MapRows))
             {
-                _layoutDirty = true;
                 RenderMap(screen.MapRows);
+                _renderedMapRows = screen.MapRows;
+                _layoutDirty = true;
+            }
+
+            if (screen.ShowMap && _mapNotice.text != screen.MapNotice)
+            {
+                _mapNotice.text = screen.MapNotice;
             }
 
             UpdateLayout();
@@ -365,7 +372,6 @@ namespace WebRPG
             for (int row = 0; row < _mapRows.Count; row++)
             {
                 int count = row < rows.Length ? rows[row].Nodes.Length : 0;
-                _layoutDirty |= _mapRows[row].Count < count;
 
                 while (_mapRows[row].Count < count)
                 {
@@ -404,9 +410,6 @@ namespace WebRPG
                     }
                 }
             }
-
-            _mapNotice.text = _screen.MapNotice;
-            _layout.UpdateMap(_screen);
         }
 
         private void RenderTimeControls()

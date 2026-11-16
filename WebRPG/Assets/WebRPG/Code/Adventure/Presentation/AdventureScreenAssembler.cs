@@ -98,26 +98,14 @@ namespace WebRPG
                     Skills = Array.Empty<AdventureGaugeScreenModel>()
                 }).ToArray() : Array.Empty<AdventureCharacterScreenModel>();
             bool showMap = mapOpen || _model.Phase == AdventurePhase.Map;
-            _content.Refresh(showMap);
-            AdventureMapRowScreenModel[] mapRows = _network == null ? _content.Rows : showMap
-                ? _content.Rows.Select(row => new AdventureMapRowScreenModel
-            {
-                Status = row.Status,
-                Nodes = row.Nodes.Select(node => new AdventureMapNodeScreenModel
-                {
-                    Title = node.Title,
-                    StateText = node.StateText,
-                    CanSelect = node.CanSelect && (_network == null ||
-                        _network.CanVote),
-                    IsChosen = node.IsChosen,
-                    ChoiceIndex = node.ChoiceIndex
-                }).ToArray()
-            }).ToArray() : Array.Empty<AdventureMapRowScreenModel>();
+            bool canVote = _network?.CanVote ?? true;
+            _content.Refresh(showMap, canVote);
+            string situation = _network?.Status ?? _content.SituationText;
             return new AdventureScreenModel
             {
                 Heading = showMap ? MapHeading : _content.HeadingText,
                 Summary = _content.SummaryText,
-                Situation = _network == null ? _content.SituationText : _network.Status,
+                Situation = situation,
                 Journal = _content.JournalText,
                 Choices = _content.ChoiceLabels,
                 PlayerHealth = localHealth,
@@ -142,11 +130,11 @@ namespace WebRPG
                 ShowMap = showMap,
                 CanToggleMap = _model.Phase != AdventurePhase.Ready && _model.Phase != AdventurePhase.Map,
                 MapButtonText = showMap && _model.Phase != AdventurePhase.Map ? ReturnToAdventureText : MapButtonText,
-                MapRows = mapRows,
+                MapRows = _content.Rows,
                 MapCurrentRow = _model.Phase == AdventurePhase.Complete
                     ? _model.GetFloorRows(_model.Configuration.Floors.Length - 1).Count - 1 : _model.RowIndex,
-                MapNotice = _network != null && _model.Phase == AdventurePhase.Map ? _network.Status
-                    : _model.Phase == AdventurePhase.Map ? MapSelectionNotice
+                MapNotice = _model.Phase == AdventurePhase.Map
+                    ? (_network == null ? MapSelectionNotice : situation)
                     : fighting ? BattleMapNotice
                     : ResultMapNotice,
                 InspectedCharacterId = localPlayer.Id,
@@ -158,8 +146,8 @@ namespace WebRPG
                     _model.Phase == AdventurePhase.Failed,
                 CanStart = ended && _network == null,
                 CanAbandon = !ended,
-                CanChoose = _network == null || _model.Phase == AdventurePhase.SkillReward ||
-                    _model.Phase == AdventurePhase.NodeChoice || _network.CanVote,
+                CanChoose = canVote || _model.Phase == AdventurePhase.SkillReward ||
+                    _model.Phase == AdventurePhase.NodeChoice,
                 CanChangeBattleSpeed = _network == null || _network.IsLeader
             };
         }

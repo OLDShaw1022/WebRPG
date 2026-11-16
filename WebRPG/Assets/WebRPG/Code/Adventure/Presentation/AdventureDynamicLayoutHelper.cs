@@ -76,12 +76,6 @@ namespace WebRPG
             LayoutMap();
         }
 
-        public void UpdateMap(AdventureScreenModel screen)
-        {
-            _screen = screen;
-            LayoutMap();
-        }
-
         private void LayoutCharacters()
         {
             float available = Mathf.Max(1, _actorArea.Rect.rect.width - 2 * _settings.CharacterPadding);

@@ -77,7 +77,8 @@ namespace WebRPG
         private int _mapRunVersion = -1;
         private int _mapFloorIndex = -1;
         private int _mapRowIndex = -1;
-        private AdventurePhase _mapPhase;
+        private AdventurePhase? _mapPhase;
+        private bool _mapCanSelect;
 
         public AdventureScreenContentHelper(AdventureModel model)
         {
@@ -92,7 +93,7 @@ namespace WebRPG
         public AdventureMapRowScreenModel[] Rows { get; private set; } = Array.Empty<AdventureMapRowScreenModel>();
         public AdventureIconScreenModel[] RelicIcons { get; private set; }
 
-        public void Refresh(bool showMap)
+        public void Refresh(bool showMap, bool canVote)
         {
             bool runChanged = _runVersion != _model.RunVersion;
             bool phaseChanged = runChanged || _phase != _model.Phase || _node != _model.CurrentNode ||
@@ -131,14 +132,23 @@ namespace WebRPG
                 _relicCount = _model.Relics.Count;
             }
 
-            if (showMap && (_mapRunVersion != _model.RunVersion || _mapFloorIndex != _model.FloorIndex ||
-                _mapRowIndex != _model.RowIndex || _mapPhase != _model.Phase))
+            if (showMap)
             {
-                Rows = MapRows();
-                _mapRunVersion = _model.RunVersion;
-                _mapFloorIndex = _model.FloorIndex;
-                _mapRowIndex = _model.RowIndex;
-                _mapPhase = _model.Phase;
+                AdventurePhase phase = _model.Phase;
+                AdventurePhase? mapPhase = phase == AdventurePhase.Map || phase == AdventurePhase.Complete
+                    ? phase : null;
+                bool canSelect = mapPhase == AdventurePhase.Map && canVote;
+
+                if (_mapRunVersion != _model.RunVersion || _mapFloorIndex != _model.FloorIndex ||
+                    _mapRowIndex != _model.RowIndex || _mapPhase != mapPhase || _mapCanSelect != canSelect)
+                {
+                    Rows = MapRows(canSelect);
+                    _mapRunVersion = _model.RunVersion;
+                    _mapFloorIndex = _model.FloorIndex;
+                    _mapRowIndex = _model.RowIndex;
+                    _mapPhase = mapPhase;
+                    _mapCanSelect = canSelect;
+                }
             }
 
             _runVersion = _model.RunVersion;
@@ -165,7 +175,7 @@ namespace WebRPG
             }
         }
 
-        private AdventureMapRowScreenModel[] MapRows()
+        private AdventureMapRowScreenModel[] MapRows(bool canSelect)
         {
             int floor = Math.Min(_model.FloorIndex, _model.Configuration.Floors.Length - 1);
             System.Collections.Generic.IReadOnlyList<System.Collections.Generic.IReadOnlyList<NodeDefinition>> rows =
@@ -178,7 +188,7 @@ namespace WebRPG
                 Nodes = nodes.Select((node, index) => new AdventureMapNodeScreenModel
                 {
                     Title = node.Name + NewLine + NodeLabel(node.Type),
-                    CanSelect = _model.Phase == AdventurePhase.Map && row == _model.RowIndex,
+                    CanSelect = canSelect && row == _model.RowIndex,
                     IsChosen = row < path.Count && path[row] == index,
                     StateText = row < path.Count ? (path[row] == index ? ChosenNodeText : SkippedNodeText)
                         : row == _model.RowIndex && _model.Phase == AdventurePhase.Map ? SelectableNodeText

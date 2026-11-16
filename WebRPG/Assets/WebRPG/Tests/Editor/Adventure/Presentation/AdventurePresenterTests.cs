@@ -98,6 +98,80 @@ namespace WebRPG.Tests
             }
         }
 
+        [Test]
+        public void MultiplayerMapReusesRowsUntilVotingAvailabilityChanges()
+        {
+            AdventureConfiguration configuration = AdventureModelScenarioHelper.WinningConfiguration();
+            configuration.Floors[0].Rows[0] = new MapRowDefinition
+            {
+                NodeCount = 1,
+                NodePool = new[] { new NodeDefinition { Name = "Chest", Type = AdventureNodeType.Chest } }
+            };
+            TestMultiplayerLobbyModel lobby = new TestMultiplayerLobbyModel
+            {
+                PlayerId = "self",
+                Room = new LobbyRoomSnapshot
+                {
+                    Id = "room", LeaderId = "self",
+                    Members = new[]
+                    {
+                        new LobbyMemberSnapshot { PlayerId = "self" },
+                        new LobbyMemberSnapshot { PlayerId = "teammate" }
+                    }
+                }
+            };
+            using (MultiplayerAdventureSession session = new MultiplayerAdventureSession(lobby, 1, configuration))
+            {
+                TestAdventureView view = new TestAdventureView();
+                using (AdventurePresenter presenter = new AdventurePresenter(session.LocalModel, view, session))
+                {
+                    AdventureScreenModel beforeVote = view.Screen;
+                    presenter.Tick(0);
+
+                    Assert.That(view.Screen.MapRows, Is.SameAs(beforeVote.MapRows));
+                    Assert.That(view.Screen.MapRows[0].Nodes[0].CanSelect, Is.True);
+                    Assert.That(view.Screen.MapNotice, Does.Contain("0/2"));
+
+                    lobby.Emit(new AdventurePacket
+                    {
+                        Type = AdventurePacketType.Command, Command = AdventureCommand.Vote,
+                        RoomId = "room", PlayerId = "self", Sequence = 1, Payload = "0|0"
+                    });
+
+                    Assert.That(view.Screen.MapRows, Is.SameAs(beforeVote.MapRows));
+                    Assert.That(view.Screen.MapNotice, Does.Contain("1/2"));
+
+                    lobby.Emit(new AdventurePacket
+                    {
+                        Type = AdventurePacketType.Command, Command = AdventureCommand.Node,
+                        RoomId = "room", PlayerId = "self", Sequence = 2, Payload = "0|0"
+                    });
+                    lobby.Emit(new AdventurePacket
+                    {
+                        Type = AdventurePacketType.Command, Command = AdventureCommand.Resolve,
+                        RoomId = "room", PlayerId = "self", Sequence = 3, Turn = 1, Payload = "0|0"
+                    });
+
+                    AdventureScreenModel waiting = view.Screen;
+                    Assert.That(waiting.ShowMap, Is.True);
+                    Assert.That(waiting.MapRows[0].Nodes[0].IsChosen, Is.True);
+                    Assert.That(waiting.MapRows[waiting.MapCurrentRow].Nodes.All(node => !node.CanSelect), Is.True);
+
+                    lobby.Emit(new AdventurePacket
+                    {
+                        Type = AdventurePacketType.Command, Command = AdventureCommand.Resolve,
+                        RoomId = "room", PlayerId = "teammate", Sequence = 4, Turn = 1, Payload = "0|0"
+                    });
+
+                    Assert.That(view.Screen.MapCurrentRow, Is.EqualTo(waiting.MapCurrentRow));
+                    Assert.That(view.Screen.MapRows, Is.Not.SameAs(waiting.MapRows));
+                    Assert.That(view.Screen.MapRows[view.Screen.MapCurrentRow].Nodes.All(node => node.CanSelect),
+                        Is.True);
+                    Assert.That(view.Screen.MapNotice, Does.Contain("0/2"));
+                }
+            }
+        }
+
         [TestCase(30)]
         [TestCase(60)]
         [TestCase(144)]
