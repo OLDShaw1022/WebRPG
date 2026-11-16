@@ -18,6 +18,7 @@ namespace WebRPG.Tests
             configuration.Skills[0].CastTime = 1;
             configuration.Skills[0].Cooldown = 1;
             configuration.Skills[0].Effects[0].Amount = 1000;
+
             foreach (EnemyDefinition enemy in configuration.Enemies)
             {
                 enemy.Health = 20;
@@ -30,17 +31,21 @@ namespace WebRPG.Tests
             AdventureModel model = new AdventureModel(configuration, 1);
             model.StartRun();
             model.SelectNode(0);
+
             Assert.That(model.TryUseSkill(0), Is.True);
             model.Tick(1.25f);
+
             Assert.That(model.Health, Is.EqualTo(configuration.StartingHealth - 7));
             Assert.That(model.Phase, Is.EqualTo(AdventurePhase.SkillReward));
             Assert.That(model.Skills[0].RemainingCooldown, Is.Zero);
             model.SelectReward(0);
             int health = model.Health;
             model.SelectNode(0);
+
             Assert.That(model.Health, Is.EqualTo(health));
             Assert.That(model.Skills[0].RemainingCooldown, Is.Zero);
             model.Tick(0.5f);
+
             Assert.That(model.Enemies[0].Health, Is.EqualTo(20));
         }
 
@@ -53,6 +58,7 @@ namespace WebRPG.Tests
             AdventureConfiguration configuration = AdventureModelScenarioHelper.WinningConfiguration();
             configuration.Skills = configuration.Skills.Take(available).ToArray();
             AdventureModel model = AdventureModelScenarioHelper.WinFirstBattle(configuration);
+
             Assert.That(model.Rewards.Count, Is.EqualTo(Math.Min(available, 3)));
             Assert.That(model.Rewards.Select(skill => skill.Id).Distinct().Count(), Is.EqualTo(model.Rewards.Count));
         }
@@ -65,10 +71,12 @@ namespace WebRPG.Tests
             configuration.Skills[0].MaximumLevel = 2;
             AdventureModel model = AdventureModelScenarioHelper.WinFirstBattle(configuration);
             model.SelectReward(0);
+
             Assert.That(model.Skills.Count, Is.EqualTo(1));
             Assert.That(model.Skills[0].Level, Is.EqualTo(2));
             model.SelectNode(0);
             model.Tick(5);
+
             Assert.That(model.Phase, Is.EqualTo(AdventurePhase.Map));
             Assert.That(model.Rewards, Is.Empty);
         }
@@ -80,6 +88,7 @@ namespace WebRPG.Tests
             configuration.StartingSkills = configuration.Skills.Take(6).Select(skill => skill.Id).ToArray();
             configuration.Skills[0].MaximumLevel = 1;
             AdventureModel model = AdventureModelScenarioHelper.WinFirstBattle(configuration);
+
             Assert.That(model.Rewards, Has.Count.EqualTo(3));
             Assert.That(model.Rewards.All(reward => configuration.StartingSkills.Contains(reward.Id)), Is.True);
             Assert.That(model.Rewards.Any(reward => reward.Id == configuration.Skills[0].Id), Is.False);
@@ -91,18 +100,22 @@ namespace WebRPG.Tests
             AdventureConfiguration configuration = AdventureModelScenarioHelper.WinningConfiguration();
             AdventureModel model = AdventureModelScenarioHelper.WinFirstBattle(configuration);
             int rewardIndex = model.Rewards.ToList().FindIndex(skill => skill.Id != configuration.StartingSkills[0]);
+
             Assert.That(rewardIndex, Is.GreaterThanOrEqualTo(0));
             string selected = model.Rewards[rewardIndex].Id;
             model.SelectReward(rewardIndex);
+
             Assert.That(model.Skills[1].Definition.Id, Is.EqualTo(selected));
             configuration = AdventureModelScenarioHelper.WinningConfiguration();
             configuration.StartingSkills = configuration.Skills.Take(6).Select(skill => skill.Id).ToArray();
+
             foreach (SkillDefinition skill in configuration.Skills)
             {
                 skill.MaximumLevel = 1;
             }
 
             model = AdventureModelScenarioHelper.WinFirstBattle(configuration);
+
             Assert.That(model.Phase, Is.EqualTo(AdventurePhase.Map));
             Assert.That(model.Rewards, Is.Empty);
         }
@@ -116,11 +129,13 @@ namespace WebRPG.Tests
             model.SelectReward(0);
             model.SelectNode(1);
             model.ResolveNode(0);
+
             Assert.That(model.Relics.Count, Is.EqualTo(1));
             Assert.That(model.MaximumHealth, Is.EqualTo(configuration.StartingHealth + 30));
             Assert.That(model.Health, Is.EqualTo(model.MaximumHealth));
             model.SelectNode(1);
             model.ResolveNode(0);
+
             Assert.That(model.Health, Is.EqualTo(model.MaximumHealth));
         }
 
@@ -139,6 +154,7 @@ namespace WebRPG.Tests
             int gold = model.Gold;
             model.SelectNode(0);
             model.ResolveNode(0);
+
             Assert.That(model.Phase, Is.EqualTo(AdventurePhase.Failed));
             Assert.That(model.Health, Is.Zero);
             Assert.That(model.Gold, Is.EqualTo(gold));
@@ -149,6 +165,7 @@ namespace WebRPG.Tests
         {
             AdventureModel model = new AdventureModel(AdventureModelScenarioHelper.WinningConfiguration(), 3);
             model.StartRun();
+
             for (int action = 0; action < 100 && model.Phase != AdventurePhase.Complete; action++)
             {
                 switch (model.Phase)
@@ -167,6 +184,7 @@ namespace WebRPG.Tests
             Assert.That(model.FloorIndex, Is.EqualTo(3));
             Assert.That(model.Gold, Is.GreaterThan(0));
             model.StartRun();
+
             Assert.That(model.Phase, Is.EqualTo(AdventurePhase.Map));
             Assert.That(model.FloorIndex, Is.Zero);
             Assert.That(model.Gold, Is.Zero);
@@ -179,6 +197,7 @@ namespace WebRPG.Tests
         public void DeathTimeoutAndAbandonAreTerminalUntilRestart()
         {
             AdventureConfiguration configuration = AdventureModelScenarioHelper.WinningConfiguration();
+
             foreach (EnemyDefinition enemy in configuration.Enemies)
             {
                 enemy.Health = 10000;
@@ -190,13 +209,16 @@ namespace WebRPG.Tests
             model.StartRun();
             model.SelectNode(0);
             model.Tick(1);
+
             Assert.That(model.Phase, Is.EqualTo(AdventurePhase.Failed));
             Assert.That(model.Health, Is.Zero);
             model.SelectReward(0);
             model.SelectNode(0);
+
             Assert.That(model.Phase, Is.EqualTo(AdventurePhase.Failed));
             model.StartRun();
             model.AbandonRun();
+
             Assert.That(model.Phase, Is.EqualTo(AdventurePhase.Failed));
             configuration = AdventureModelScenarioHelper.WinningConfiguration();
             configuration.StartingSkills = new[] { "mend" };
@@ -206,6 +228,7 @@ namespace WebRPG.Tests
             model.StartRun();
             model.SelectNode(0);
             model.Tick(3);
+
             Assert.That(model.Phase, Is.EqualTo(AdventurePhase.Failed));
         }
 
@@ -220,10 +243,12 @@ namespace WebRPG.Tests
             first.SelectNode(-1);
             first.SelectNode(100);
             first.Tick(float.NaN);
+
             Assert.That(first.Phase, Is.EqualTo(AdventurePhase.Map));
             first.SelectNode(0);
             second.SelectNode(0);
             first.Tick(5);
+
             for (int frame = 0; frame < 100; frame++)
             {
                 second.Tick(0.05f);
@@ -239,12 +264,15 @@ namespace WebRPG.Tests
         {
             AdventureConfiguration configuration = AdventureModelScenarioHelper.LoadConfiguration();
             configuration.Skills[0].Cooldown = 0;
+
             Assert.Throws<ArgumentException>(() => new AdventureModel(configuration, 1));
             configuration = AdventureModelScenarioHelper.LoadConfiguration();
             configuration.Floors[0].Rows[0].NodePool[0].EnemyGroupPool = new[] { "missing" };
+
             Assert.Throws<ArgumentException>(() => new AdventureModel(configuration, 1));
             configuration = AdventureModelScenarioHelper.LoadConfiguration();
             configuration.Floors[0].Rows.Last().NodePool[0].Type = AdventureNodeType.Camp;
+
             Assert.Throws<ArgumentException>(() => new AdventureModel(configuration, 1));
         }
 
@@ -256,6 +284,7 @@ namespace WebRPG.Tests
             configuration.BasicAttack.Damage = 6;
             configuration.BasicAttack.CastTime = 0.5f;
             configuration.Skills[0].Cooldown = 5;
+
             foreach (EnemyDefinition enemy in configuration.Enemies)
             {
                 enemy.Health = 100;
@@ -266,13 +295,16 @@ namespace WebRPG.Tests
             model.StartRun();
             model.SelectNode(0);
             model.Tick(0.5f);
+
             Assert.That(model.Enemies[0].Health, Is.EqualTo(100));
             model.Tick(0.125f);
+
             Assert.That(model.Enemies[0].Health, Is.EqualTo(94));
             Assert.That(model.PlayerAction.RemainingCastTime, Is.EqualTo(0.5f));
             Assert.That(model.Skills[0].RemainingCooldown, Is.Zero);
             Assert.That(model.Skills.Count, Is.EqualTo(1));
             model.Tick(0.625f);
+
             Assert.That(model.Enemies[0].Health, Is.EqualTo(88));
         }
 
@@ -282,6 +314,7 @@ namespace WebRPG.Tests
             AdventureConfiguration configuration = AdventureModelScenarioHelper.WinningConfiguration();
             configuration.SimulationStep = 0.125f;
             configuration.BasicAttack.CastTime = 0.5f;
+
             foreach (EnemyDefinition enemy in configuration.Enemies)
             {
                 enemy.CastTime = 0.5f;
@@ -293,12 +326,14 @@ namespace WebRPG.Tests
             model.StartRun();
             model.SelectNode(0);
             model.Tick(0.625f);
+
             Assert.That(model.Phase, Is.EqualTo(AdventurePhase.SkillReward));
             Assert.That(model.Health, Is.EqualTo(configuration.StartingHealth));
             Assert.That(model.PlayerAction, Is.Null);
             model.SelectReward(0);
             model.SelectNode(0);
             model.Tick(0.375f);
+
             Assert.That(model.Enemies[0].Health, Is.EqualTo(1));
         }
 
@@ -322,7 +357,9 @@ namespace WebRPG.Tests
             configuration.Floors[0].Rows = Enumerable.Repeat(branch, rows - 1).Concat(new[] { boss }).ToArray();
             AdventureModel model = new AdventureModel(configuration, 23);
             model.StartRun();
+
             Assert.That(model.CurrentFloorRows.Count, Is.EqualTo(rows));
+
             foreach (IReadOnlyList<NodeDefinition> generated in model.CurrentFloorRows.Take(rows - 1))
             {
                 Assert.That(generated.Count, Is.EqualTo(2));
@@ -350,6 +387,7 @@ namespace WebRPG.Tests
             AdventureModel model = new AdventureModel(configuration, 24);
             model.StartRun();
             model.SelectNode(0);
+
             Assert.That(model.CurrentEnemyGroup.Id, Is.EqualTo("testGroup"));
             Assert.That(model.Enemies.Select(enemy => enemy.Definition.Id), Is.EqualTo(members));
             Assert.That(model.Enemies.Count, Is.EqualTo(count));
@@ -366,12 +404,14 @@ namespace WebRPG.Tests
             }).ToArray();
             configuration.Floors[0].Rows[0].NodePool[0].EnemyGroupPool = new[] { "pair", "trio" };
             HashSet<string> selected = new HashSet<string>();
+
             for (int seed = 0; seed < 32; seed++)
             {
                 AdventureModel model = new AdventureModel(configuration, seed);
                 model.StartRun();
                 model.SelectNode(0);
                 selected.Add(model.CurrentEnemyGroup.Id);
+
                 Assert.That(model.Enemies.Select(enemy => enemy.Definition.Id),
                     Is.EqualTo(model.CurrentEnemyGroup.EnemyIds));
             }
@@ -400,6 +440,7 @@ namespace WebRPG.Tests
             model.ResolveNode(0);
             model.SelectNode(0);
             model.Tick(0.5f);
+
             Assert.That(model.Enemies[0].Health, Is.EqualTo(90));
             Assert.That(model.BasicAttackDamage, Is.EqualTo(10));
         }
@@ -409,16 +450,21 @@ namespace WebRPG.Tests
         {
             AdventureConfiguration configuration = AdventureModelScenarioHelper.LoadConfiguration();
             configuration.Floors[0].Rows[0].NodeCount = 2;
+
             Assert.Throws<ArgumentException>(() => new AdventureModel(configuration, 1));
             configuration = AdventureModelScenarioHelper.LoadConfiguration();
             configuration.EnemyGroups[0].EnemyIds = Array.Empty<string>();
+
             Assert.Throws<ArgumentException>(() => new AdventureModel(configuration, 1));
             configuration.EnemyGroups[0].EnemyIds = Enumerable.Repeat("guard1", 5).ToArray();
+
             Assert.Throws<ArgumentException>(() => new AdventureModel(configuration, 1));
             configuration.EnemyGroups[0].EnemyIds = new[] { "missing" };
+
             Assert.Throws<ArgumentException>(() => new AdventureModel(configuration, 1));
             configuration = AdventureModelScenarioHelper.LoadConfiguration();
             configuration.BasicAttack.CastTime = 0;
+
             Assert.Throws<ArgumentException>(() => new AdventureModel(configuration, 1));
         }
 
@@ -426,25 +472,32 @@ namespace WebRPG.Tests
         public void ChosenMapPathRecordsOnlyValidSelectionsAndResetsOnReplay()
         {
             AdventureModel model = new AdventureModel(AdventureModelScenarioHelper.WinningConfiguration(), 32);
+
             Assert.That(model.GetFloorRows(0), Is.Empty);
             Assert.That(model.GetFloorPath(0), Is.Empty);
             model.StartRun();
+
             Assert.That(model.GetFloorRows(0).Count, Is.EqualTo(model.Configuration.Floors[0].Rows.Length));
             Assert.That(model.GetFloorRows(-1), Is.Empty);
             Assert.That(model.GetFloorRows(100), Is.Empty);
             model.SelectNode(-1);
+
             Assert.That(model.GetFloorPath(0), Is.Empty);
             model.SelectNode(0);
             model.SelectNode(0);
+
             Assert.That(model.GetFloorPath(0), Is.EqualTo(new[] { 0 }));
             model.Tick(5);
             model.SelectReward(0);
             model.SelectNode(1);
+
             Assert.That(model.GetFloorPath(0), Is.EqualTo(new[] { 0, 1 }));
             model.ResolveNode(0);
+
             Assert.That(model.GetFloorPath(0), Is.EqualTo(new[] { 0, 1 }));
             model.AbandonRun();
             model.StartRun();
+
             Assert.That(model.GetFloorPath(0), Is.Empty);
             Assert.That(model.GetFloorPath(-1), Is.Empty);
             Assert.That(model.GetFloorPath(100), Is.Empty);

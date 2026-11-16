@@ -13,6 +13,7 @@ internal sealed class PayPalTopUpService(PayPalCheckout checkout, PayPalSettings
         if (order is null || order.Offer != request.Offer || order.Sandbox != settings.Sandbox
             || order.ApprovalUrl is not null)
             return order;
+
         (string id, string url) = await checkout.CreateAsync(order, cancellationToken);
         return await store.AttachAsync(order, id, url, cancellationToken) ??
             throw new HttpRequestException("PayPal order could not be attached.");
@@ -22,10 +23,12 @@ internal sealed class PayPalTopUpService(PayPalCheckout checkout, PayPalSettings
         string? reversedCaptureId, CancellationToken cancellationToken)
     {
         if (order.PayPalOrderId is null || order.Status == ShopTopUpStatus.Reversed) return;
+
         using JsonDocument document = await checkout.GetOrderAsync(order.PayPalOrderId, cancellationToken);
         JsonElement root = document.RootElement;
         if (!PayPalResponse.TryMatchOrder(root, order, out JsonElement unit))
             throw new HttpRequestException("PayPal order does not match the recorded purchase.");
+
         string? orderStatus = PayPalResponse.Text(root, "status");
 
         if (orderStatus == "APPROVED" && capture)
@@ -35,6 +38,7 @@ internal sealed class PayPalTopUpService(PayPalCheckout checkout, PayPalSettings
                 await store.UpdatePaymentAsync(order, ShopTopUpStatus.Failed, null, cancellationToken);
                 return;
             }
+
             await ReconcileAsync(order, false, false, reversedCaptureId, cancellationToken);
             return;
         }
@@ -48,6 +52,7 @@ internal sealed class PayPalTopUpService(PayPalCheckout checkout, PayPalSettings
             string? captureId = PayPalResponse.Text(payment, "id");
             if (!PayPalResponse.IsId(captureId) || !PayPalResponse.MatchesAmount(payment, order.Offer))
                 throw new HttpRequestException("PayPal capture does not match the recorded purchase.");
+
             ShopTopUpStatus? status = captureId == reversedCaptureId ? ShopTopUpStatus.Reversed :
                 PayPalResponse.Text(payment, "status") switch
                 {
@@ -73,6 +78,7 @@ internal sealed class PayPalTopUpService(PayPalCheckout checkout, PayPalSettings
         IHeaderDictionary headers, JsonElement notification, CancellationToken cancellationToken)
     {
         if (!await checkout.VerifyAsync(headers, notification, cancellationToken)) return false;
+
         string? type = PayPalResponse.Text(notification, "event_type");
         if (type is not ("CHECKOUT.ORDER.APPROVED" or "CHECKOUT.PAYMENT-APPROVAL.REVERSED" or
             "PAYMENT.CAPTURE.COMPLETED" or "PAYMENT.CAPTURE.PENDING" or
@@ -104,6 +110,7 @@ internal sealed class PayPalTopUpService(PayPalCheckout checkout, PayPalSettings
                     is not (ShopTopUpStatus.PartiallyRefunded or ShopTopUpStatus.Reversed))
                 throw new HttpRequestException("PayPal refund is not reflected in the capture yet.");
         }
+
         return true;
     }
 }

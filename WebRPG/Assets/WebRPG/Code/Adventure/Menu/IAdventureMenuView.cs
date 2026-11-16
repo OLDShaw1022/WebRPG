@@ -12,6 +12,7 @@ namespace WebRPG
         public event Action ReturnRequested;
         public event Action ConfirmReturnRequested;
         public event Action BackRequested;
+
         public void Render(AdventureMenuScreen screen);
     }
 }

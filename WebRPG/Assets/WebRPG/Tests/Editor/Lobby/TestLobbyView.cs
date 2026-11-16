@@ -11,13 +11,21 @@ namespace WebRPG.Tests
         public event Action LeaveRequested;
         public event Action ReadyRequested;
         public event Action BackRequested;
+
         public LobbyScreenModel Screen;
+
         public void Render(LobbyScreenModel screen) => Screen = screen;
+
         public void Create() => CreateRequested?.Invoke("Room", true);
+
         public void Join() => JoinRequested?.Invoke(" room-id ");
+
         public void Refresh() => RefreshRequested?.Invoke();
+
         public void Leave() => LeaveRequested?.Invoke();
+
         public void Ready() => ReadyRequested?.Invoke();
+
         public void Back() => BackRequested?.Invoke();
     }
 }

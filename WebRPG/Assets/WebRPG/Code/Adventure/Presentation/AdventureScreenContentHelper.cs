@@ -103,6 +103,7 @@ namespace WebRPG
                 SituationText = Situation();
                 ChoiceLabels = Choices();
             }
+
             if (phaseChanged || _health != _model.Health || _maximumHealth != _model.MaximumHealth
                 || _gold != _model.Gold)
             {
@@ -116,6 +117,7 @@ namespace WebRPG
                 JournalText = string.Join(NewLine, _model.Journal);
                 _journalVersion = _model.JournalVersion;
             }
+
             if (runChanged || _relicCount != _model.Relics.Count)
             {
                 RelicIcons = _model.Relics.Select(relic => new AdventureIconScreenModel
@@ -128,6 +130,7 @@ namespace WebRPG
                 }).ToArray();
                 _relicCount = _model.Relics.Count;
             }
+
             if (showMap && (_mapRunVersion != _model.RunVersion || _mapFloorIndex != _model.FloorIndex ||
                 _mapRowIndex != _model.RowIndex || _mapPhase != _model.Phase))
             {
@@ -137,6 +140,7 @@ namespace WebRPG
                 _mapRowIndex = _model.RowIndex;
                 _mapPhase = _model.Phase;
             }
+
             _runVersion = _model.RunVersion;
             _phase = _model.Phase;
             _node = _model.CurrentNode;

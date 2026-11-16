@@ -16,6 +16,7 @@ namespace WebRPG
             {
                 return;
             }
+
             Vector2 size = Fit(root, panel, preferredSize);
             Rect bounds = root.rect;
             float x = point.x + PointerOffset;

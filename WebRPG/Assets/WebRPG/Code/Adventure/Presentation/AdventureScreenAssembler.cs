@@ -29,6 +29,7 @@ namespace WebRPG
         private const string EventNodeLabel = "事件";
 
         private const string LocalPlayerId = "local-player";
+
         private readonly AdventureModel _model;
         private readonly MultiplayerAdventureSession _network;
         private readonly AdventureScreenContentHelper _content;

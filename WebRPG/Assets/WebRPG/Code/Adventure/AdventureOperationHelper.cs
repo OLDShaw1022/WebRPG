@@ -20,6 +20,7 @@ namespace WebRPG
         public bool Start()
         {
             if (_network != null) return false;
+
             _model.StartRun();
             return true;
         }
@@ -31,6 +32,7 @@ namespace WebRPG
                 _network.SendCommand(AdventureCommand.Abandon);
                 return false;
             }
+
             _model.AbandonRun();
             return true;
         }
@@ -45,8 +47,10 @@ namespace WebRPG
                     case AdventurePhase.NodeChoice: _network.SendCommand(AdventureCommand.Resolve, index); break;
                     case AdventurePhase.SkillReward: _network.SendCommand(AdventureCommand.Reward, index); break;
                 }
+
                 return;
             }
+
             switch (_model.Phase)
             {
                 case AdventurePhase.Map: _model.SelectNode(index); break;

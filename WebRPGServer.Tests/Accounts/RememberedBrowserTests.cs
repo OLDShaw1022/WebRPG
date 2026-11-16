@@ -86,9 +86,11 @@ public sealed class RememberedBrowserTests
         string profile = Path.Combine(Path.GetTempPath(), "WebRPGRememberBrowser-" + Guid.NewGuid().ToString("N"));
         page.Query = "stage=login";
         string first = await RememberedBrowserHelper.RunAsync(browser!, profile, page.Uri, BrowserTimeoutSeconds);
+
         Assert.That(first, Does.Contain("<output id=\"result\">remembered-and-http-only</output>"));
         page.Query = "stage=restore";
         string second = await RememberedBrowserHelper.RunAsync(browser!, profile, page.Uri, BrowserTimeoutSeconds);
+
         Assert.That(second, Does.Contain("<output id=\"result\">restored-after-restart-and-revoked</output>"));
         await application.StopAsync();
     }

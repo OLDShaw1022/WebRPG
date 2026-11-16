@@ -20,14 +20,17 @@ internal static class PayPalWebhookLinks
     {
         if (!resource.TryGetProperty("links", out JsonElement links)
             || links.ValueKind != JsonValueKind.Array) return null;
+
         foreach (JsonElement link in links.EnumerateArray())
         {
             if (PayPalResponse.Text(link, "rel") != "up" ||
                 !Uri.TryCreate(PayPalResponse.Text(link, "href"), UriKind.Absolute, out Uri? uri) ||
                 !uri.AbsolutePath.StartsWith(prefix, StringComparison.Ordinal)) continue;
+
             string id = uri.AbsolutePath[prefix.Length..];
             if (PayPalResponse.IsId(id)) return id;
         }
+
         return null;
     }
 }

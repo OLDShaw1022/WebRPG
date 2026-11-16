@@ -10,6 +10,7 @@ namespace WebRPG
         private const string SkillKeyPrefix = "skill:";
         private const string ProjectileKey = "projectile";
         private const string Separator = "|";
+
         private readonly float _duration;
         private readonly Dictionary<string, ProgressState> _progress = new Dictionary<string, ProgressState>();
 
@@ -17,6 +18,7 @@ namespace WebRPG
         {
             if (float.IsNaN(duration) || float.IsInfinity(duration) || duration <= 0)
                 throw new ArgumentOutOfRangeException(nameof(duration));
+
             _duration = duration;
         }
 
@@ -27,11 +29,15 @@ namespace WebRPG
                 _progress.Clear();
                 return;
             }
+
             if (float.IsNaN(seconds) || float.IsInfinity(seconds) || seconds < 0) seconds = 0;
+
             foreach (AdventureCharacterScreenModel character in screen.Players)
                 SmoothAction(character, seconds);
+
             foreach (AdventureCharacterScreenModel character in screen.Enemies)
                 SmoothAction(character, seconds);
+
             for (int index = 0; index < screen.InspectedSkills.Length; index++)
             {
                 AdventureGaugeScreenModel gauge = screen.InspectedSkills[index];
@@ -43,6 +49,7 @@ namespace WebRPG
                 _progress.Remove(ProjectileKey);
                 return;
             }
+
             AdventureProjectileScreenModel projectile = screen.Projectile;
             projectile.Progress = Sample(ProjectileKey, projectile.Progress,
                 projectile.SourceCharacterId + Separator + projectile.TargetCharacterId + Separator + projectile.Name,
@@ -73,12 +80,14 @@ namespace WebRPG
                     Value = target };
                 return target;
             }
+
             if (target != state.Target)
             {
                 state.Start = state.Value;
                 state.Target = target;
                 state.Elapsed = 0;
             }
+
             state.Elapsed = Math.Min(_duration, state.Elapsed + seconds);
             state.Value = state.Start + (state.Target - state.Start) * (state.Elapsed / _duration);
             return state.Value;

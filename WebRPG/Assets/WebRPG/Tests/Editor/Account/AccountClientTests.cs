@@ -22,9 +22,12 @@ namespace WebRPG.Tests
             Awaitable<string>.Awaiter login = model.SubmitAsync(
                 1, "player@example.com", "long-enough-password", string.Empty, false).GetAwaiter();
             while (!login.IsCompleted) yield return null;
+
             Assert.That(login.GetResult(), Is.Empty);
             while (!response.IsCompleted) yield return null;
+
             response.GetAwaiter().GetResult();
+
             Assert.That(response.IsCompletedSuccessfully, Is.True);
             Assert.That(model.IsLoggedIn, Is.True);
             Assert.That(model.AccountId, Is.EqualTo("account-1"));
@@ -32,9 +35,12 @@ namespace WebRPG.Tests
             response = server.RespondAsync(204, string.Empty);
             Awaitable.Awaiter logout = model.LogoutAsync().GetAwaiter();
             while (!logout.IsCompleted) yield return null;
+
             logout.GetResult();
             while (!response.IsCompleted) yield return null;
+
             response.GetAwaiter().GetResult();
+
             Assert.That(response.IsCompletedSuccessfully, Is.True);
             Assert.That(server.LastAuthorization, Is.EqualTo("Bearer test-token"));
             Assert.That(server.LastPath, Is.EqualTo("/api/accounts/logout"));
@@ -52,10 +58,14 @@ namespace WebRPG.Tests
             Awaitable<string>.Awaiter login = model.SubmitAsync(
                 1, "player@example.com", "incorrect-password", string.Empty, false).GetAwaiter();
             while (!login.IsCompleted) yield return null;
+
             Exception error = Assert.Throws<InvalidOperationException>(() => login.GetResult());
+
             Assert.That(error.Message, Is.EqualTo("Email 或密碼錯誤。"));
             while (!response.IsCompleted) yield return null;
+
             response.GetAwaiter().GetResult();
+
             Assert.That(response.IsCompletedSuccessfully, Is.True);
             Assert.That(model.IsLoggedIn, Is.False);
         }
@@ -68,15 +78,19 @@ namespace WebRPG.Tests
             Awaitable<string>.Awaiter rejected = model.SubmitAsync(1, "player@example.com", "1234567", "玩家", true)
                 .GetAwaiter();
             while (!rejected.IsCompleted) yield return null;
+
             Assert.That(rejected.GetResult(), Does.Contain("8～128"));
             Assert.That(server.LastPath, Is.Null);
             Task response = server.RespondAsync(200, "{}");
             Awaitable<string>.Awaiter accepted = model.SubmitAsync(1, "player@example.com", "12345678", "玩家", true)
                 .GetAwaiter();
             while (!accepted.IsCompleted) yield return null;
+
             Assert.That(accepted.GetResult(), Is.EqualTo("註冊成功，請使用 Email 與密碼登入。"));
             while (!response.IsCompleted) yield return null;
+
             response.GetAwaiter().GetResult();
+
             Assert.That(server.LastPath, Is.EqualTo("/api/accounts/register"));
         }
 

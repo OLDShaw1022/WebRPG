@@ -64,6 +64,7 @@ public sealed class PostgresChatMessageStore : IChatMessageStore
 
         List<ChatPacket> messages = new();
         await using NpgsqlDataReader reader = await command.ExecuteReaderAsync(cancellationToken);
+
         while (await reader.ReadAsync(cancellationToken))
         {
             messages.Add(new ChatPacket

@@ -52,6 +52,7 @@ namespace WebRPG
         private void HandleMultiplayer()
         {
             if (_model.HasEnteredAdventure || _openLobby == null) return;
+
             if (_openLobby()) _view.Hide();
         }
 

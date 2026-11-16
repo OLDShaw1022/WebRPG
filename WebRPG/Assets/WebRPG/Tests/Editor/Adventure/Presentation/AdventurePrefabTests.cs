@@ -17,19 +17,24 @@ namespace WebRPG.Tests
         {
             AdventureView prefab = AssetDatabase.LoadAssetAtPath<AdventureView>(
                 "Assets/WebRPG/Prefabs/AdventureCanvas.prefab");
+
             foreach (string name in new[] { "LocalPlayerHud", "BattleScreen", "Actions", "InspectedSkills", "MapScreen",
                 "Details", "Templates" })
             {
                 Assert.That(prefab.transform.Find(name), Is.Not.Null, name);
             }
+
             foreach (string path in new[] { "PauseMenu/MenuPanel/Title", "PauseMenu/SettingsPanel/Title",
                 "PauseMenu/ConfirmReturn/Title" })
             {
                 TMPro.TextMeshProUGUI title = prefab.transform.Find(path).GetComponent<TMPro.TextMeshProUGUI>();
+
                 Assert.That(title.GetPreferredValues().y, Is.LessThanOrEqualTo(title.rectTransform.rect.height), path);
             }
+
             SerializedObject serialized = new SerializedObject(prefab);
             SerializedProperty property = serialized.GetIterator();
+
             while (property.NextVisible(true))
             {
                 if (property.propertyType == SerializedPropertyType.ObjectReference)
@@ -37,6 +42,7 @@ namespace WebRPG.Tests
                     Assert.That(property.objectReferenceValue, Is.Not.Null, property.propertyPath);
                 }
             }
+
             Assert.That(serialized.FindProperty("_toolbar").arraySize, Is.EqualTo(2));
             Assert.That(serialized.FindProperty("_players").arraySize, Is.EqualTo(4));
             Assert.That(serialized.FindProperty("_enemies").arraySize, Is.EqualTo(4));
@@ -50,6 +56,7 @@ namespace WebRPG.Tests
         {
             AdventureView instance = UnityEngine.Object.Instantiate(AssetDatabase.LoadAssetAtPath<AdventureView>(
                 "Assets/WebRPG/Prefabs/AdventureCanvas.prefab"));
+
             try
             {
                 typeof(AdventureView).GetMethod("Awake", BindingFlags.Instance | BindingFlags.NonPublic)
@@ -58,6 +65,7 @@ namespace WebRPG.Tests
                     .Invoke(instance.Menu, null);
                 Transform restart = instance.transform.Find("Actions/Choices/Restart");
                 Transform returnButton = instance.transform.Find("Actions/Choices/ReturnToMainMenu");
+
                 Assert.That(restart, Is.Not.Null, "Settlement must expose restart directly.");
                 Assert.That(returnButton, Is.Not.Null, "Settlement must expose return directly.");
                 AdventureConfiguration configuration = AdventureModelScenarioHelper.WinningConfiguration();
@@ -65,11 +73,13 @@ namespace WebRPG.Tests
                 {
                     configuration.StartingHealth = 1;
                     configuration.BasicAttack.CastTime = 100;
+
                     foreach (EnemyDefinition enemy in configuration.Enemies)
                     {
                         enemy.CastTime = .125f;
                     }
                 }
+
                 AdventureModel model = new AdventureModel(configuration, 11);
                 int returned = 0;
                 using (AdventurePresenter presenter = new AdventurePresenter(model, instance))
@@ -80,11 +90,13 @@ namespace WebRPG.Tests
                     Assert.That(restart.gameObject.activeSelf, Is.False);
                     Assert.That(returnButton.gameObject.activeSelf, Is.False);
                     instance.RequestStart();
+
                     for (int step = 0; step < 500 && model.Phase != AdventurePhase.Complete
                         && model.Phase != AdventurePhase.Failed; step++)
                     {
                         Assert.That(restart.gameObject.activeSelf, Is.False, model.Phase.ToString());
                         Assert.That(returnButton.gameObject.activeSelf, Is.False, model.Phase.ToString());
+
                         switch (model.Phase)
                         {
                             case AdventurePhase.Map: model.SelectNode(0); break;
@@ -92,22 +104,27 @@ namespace WebRPG.Tests
                             case AdventurePhase.NodeChoice: model.ResolveNode(0); break;
                             case AdventurePhase.Battle: model.Tick(5); break;
                         }
+
                         presenter.SetPaused(false);
                     }
+
                     Assert.That(model.Phase, Is.EqualTo(won ? AdventurePhase.Complete : AdventurePhase.Failed));
                     Assert.That(restart.gameObject.activeInHierarchy, Is.True);
                     Assert.That(returnButton.gameObject.activeInHierarchy, Is.True);
                     Assert.That(restart.GetComponentInChildren<TMPro.TextMeshProUGUI>().text, Is.EqualTo("重新挑戰"));
                     Assert.That(returnButton.GetComponentInChildren<TMPro.TextMeshProUGUI>().text, Is.EqualTo("回主選單"));
                     returnButton.GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
+
                     Assert.That(returned, Is.Zero);
                     Assert.That(
                         instance.transform.Find("PauseMenu/ConfirmReturn").gameObject.activeInHierarchy, Is.True);
                     instance.transform.Find("PauseMenu/ConfirmReturn/Cancel")
                         .GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
                     menu.Close();
+
                     Assert.That(model.Phase, Is.EqualTo(won ? AdventurePhase.Complete : AdventurePhase.Failed));
                     restart.GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
+
                     Assert.That(model.Phase, Is.EqualTo(AdventurePhase.Map));
                     Assert.That(model.Health, Is.EqualTo(configuration.StartingHealth));
                     Assert.That(model.Gold, Is.Zero);
@@ -118,6 +135,7 @@ namespace WebRPG.Tests
                     returnButton.GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
                     instance.transform.Find("PauseMenu/ConfirmReturn/Confirm")
                         .GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
+
                     Assert.That(returned, Is.EqualTo(1));
                 }
             }
@@ -133,11 +151,13 @@ namespace WebRPG.Tests
             AdventureView prefab = AssetDatabase.LoadAssetAtPath<AdventureView>(
                 "Assets/WebRPG/Prefabs/AdventureCanvas.prefab");
             AdventureView instance = UnityEngine.Object.Instantiate(prefab);
+
             try
             {
                 int before = instance.GetComponentsInChildren<Transform>(true).Length;
                 typeof(AdventureView).GetMethod("Awake", BindingFlags.Instance | BindingFlags.NonPublic)
                     .Invoke(instance, null);
+
                 Assert.That(instance.GetComponentsInChildren<Transform>(true).Length, Is.EqualTo(before));
             }
             finally
@@ -151,6 +171,7 @@ namespace WebRPG.Tests
         {
             AdventureView instance = UnityEngine.Object.Instantiate(AssetDatabase.LoadAssetAtPath<AdventureView>(
                 "Assets/WebRPG/Prefabs/AdventureCanvas.prefab"));
+
             try
             {
                 instance.GetComponent<Canvas>().renderMode = RenderMode.WorldSpace;
@@ -162,6 +183,7 @@ namespace WebRPG.Tests
                 RectTransform map = header.Find("MapToggle") as RectTransform;
                 RectTransform relics = instance.transform.Find("Relics") as RectTransform;
                 RectTransform journal = instance.transform.Find("Details") as RectTransform;
+
                 Assert.That(header.rect.width, Is.EqualTo(canvas.rect.width));
                 Assert.That(header.offsetMin.x, Is.Zero);
                 Assert.That(header.offsetMax.x, Is.Zero);
@@ -176,6 +198,7 @@ namespace WebRPG.Tests
                 header.GetWorldCorners(headerCorners);
                 relics.GetWorldCorners(relicCorners);
                 journal.GetWorldCorners(journalCorners);
+
                 Assert.That(relicCorners[1].y, Is.LessThan(headerCorners[0].y));
                 Assert.That(journalCorners[1].y, Is.LessThan(headerCorners[0].y));
                 Assert.That(journalCorners[1].y, Is.EqualTo(relicCorners[1].y).Within(.01f));
@@ -187,6 +210,7 @@ namespace WebRPG.Tests
                     new AdventureModel(configuration, 1), instance))
                 {
                     string summary = header.Find("LocalSummary").GetComponent<TMPro.TextMeshProUGUI>().text;
+
                     Assert.That(summary, Does.StartWith("本機玩家 · 生命 "));
                     Assert.That(summary, Does.EndWith(" 層"));
                     Assert.That(summary, Does.Not.Contain("攻擊"));
@@ -206,9 +230,11 @@ namespace WebRPG.Tests
             AdventureView prefab = AssetDatabase.LoadAssetAtPath<AdventureView>(
                 "Assets/WebRPG/Prefabs/AdventureCanvas.prefab");
             AdventureView instance = UnityEngine.Object.Instantiate(prefab);
+
             try
             {
                 RectTransform header = instance.transform.Find("LocalPlayerHud") as RectTransform;
+
                 Assert.That(header, Is.Not.Null);
                 header.offsetMin = new Vector2(27, -211);
                 header.offsetMax = new Vector2(-31, -19);
@@ -227,6 +253,7 @@ namespace WebRPG.Tests
                     Assert.That(header.offsetMin, Is.EqualTo(new Vector2(27, -211)));
                     Assert.That(header.offsetMax, Is.EqualTo(new Vector2(-31, -19)));
                     text.Update();
+
                     Assert.That(text.FindProperty("m_fontSize").floatValue, Is.EqualTo(33));
                 }
             }
@@ -242,6 +269,7 @@ namespace WebRPG.Tests
             AdventureView prefab = AssetDatabase.LoadAssetAtPath<AdventureView>(
                 "Assets/WebRPG/Prefabs/AdventureCanvas.prefab");
             AdventureView instance = UnityEngine.Object.Instantiate(prefab);
+
             try
             {
                 typeof(AdventureView).GetMethod("Awake", BindingFlags.Instance | BindingFlags.NonPublic)
@@ -262,31 +290,38 @@ namespace WebRPG.Tests
                     instance.MenuRequested += menu.Open;
                     instance.transform.Find("LocalPlayerHud/Menu")
                         .GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
+
                     Assert.That(instance.transform.Find("PauseMenu").gameObject.activeSelf, Is.True);
                     float cooldown = model.PlayerAction.RemainingCastTime;
                     presenter.Tick(.5f);
+
                     Assert.That(model.PlayerAction.RemainingCastTime, Is.EqualTo(cooldown));
                     instance.transform.Find("PauseMenu/MenuPanel/Settings")
                         .GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
+
                     Assert.That(instance.transform.Find("PauseMenu/SettingsPanel").gameObject.activeSelf, Is.True);
                     instance.transform.Find("PauseMenu/SettingsPanel/Back")
                         .GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
                     instance.transform.Find("PauseMenu/MenuPanel/ReturnToMainMenu")
                         .GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
+
                     Assert.That(returned, Is.Zero);
                     instance.transform.Find("PauseMenu/ConfirmReturn/Cancel")
                         .GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
+
                     Assert.That(returned, Is.Zero);
                     Assert.That(model.Phase, Is.EqualTo(AdventurePhase.Battle));
                     instance.transform.Find("PauseMenu/MenuPanel/Resume")
                         .GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
                     presenter.Tick(.1f);
+
                     Assert.That(model.PlayerAction.RemainingCastTime, Is.LessThan(cooldown));
                     menu.Open();
                     instance.transform.Find("PauseMenu/MenuPanel/ReturnToMainMenu")
                         .GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
                     instance.transform.Find("PauseMenu/ConfirmReturn/Confirm")
                         .GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
+
                     Assert.That(returned, Is.EqualTo(1));
                     Assert.That(instance.transform.Find("Details").gameObject.activeSelf, Is.True);
                 }
@@ -305,6 +340,7 @@ namespace WebRPG.Tests
         {
             AdventureView instance = UnityEngine.Object.Instantiate(AssetDatabase.LoadAssetAtPath<AdventureView>(
                 "Assets/WebRPG/Prefabs/AdventureCanvas.prefab"));
+
             try
             {
                 instance.GetComponent<Canvas>().renderMode = RenderMode.WorldSpace;
@@ -336,66 +372,82 @@ namespace WebRPG.Tests
                 Canvas.ForceUpdateCanvases();
                 RectTransform arena = instance.transform.Find("BattleScreen") as RectTransform;
                 RectTransform versus = arena.Find("Versus") as RectTransform;
+
                 Assert.That(versus.anchoredPosition, Is.EqualTo(new Vector2(0, -22)));
                 Assert.That(versus.anchorMin, Is.EqualTo(new Vector2(.5f, .5f)));
                 Vector3[] relicPanelCorners = new Vector3[4];
                 Vector3[] timeControlCorners = new Vector3[4];
                 (instance.transform.Find("Relics") as RectTransform).GetWorldCorners(relicPanelCorners);
                 (arena.Find("TimeControls") as RectTransform).GetWorldCorners(timeControlCorners);
+
                 Assert.That(relicPanelCorners[0].y, Is.GreaterThan(timeControlCorners[1].y));
                 Rect visibleBounds = arena.rect;
                 visibleBounds.min -= Vector2.one * .01f;
                 visibleBounds.max += Vector2.one * .01f;
+
                 foreach (Transform card in arena.Find("CharacterRow/Viewport/Content"))
                 {
                     RectTransform rect = card as RectTransform;
+
                     Assert.That(rect.sizeDelta, Is.EqualTo(new Vector2(176, 170)));
                     Vector3[] corners = new Vector3[4];
                     rect.GetWorldCorners(corners);
+
                     foreach (Vector3 corner in corners)
                     {
                         Assert.That(visibleBounds.Contains(arena.InverseTransformPoint(corner)), Is.True, card.name);
                     }
                 }
+
                 foreach (string path in new[] { "BattleScreen", "InspectedSkills" })
                 {
                     Assert.That(instance.transform.Find(path).GetComponentsInChildren<UnityEngine.UI.ScrollRect>(true)
                         .All(scroll => !scroll.enabled), Is.True, path);
                 }
+
                 foreach (Transform skill in instance.transform.Find("InspectedSkills/SkillRow/Viewport/Content"))
                 {
                     Assert.That(((RectTransform)skill).sizeDelta, Is.EqualTo(new Vector2(88, 112)));
                     TMPro.TextMeshProUGUI name = skill.Find("SkillName").GetComponent<TMPro.TextMeshProUGUI>();
+
                     Assert.That(name.gameObject.activeInHierarchy, Is.True);
                     Assert.That(name.text, Is.EqualTo("鐵劍斬擊"));
                     Assert.That(name.GetPreferredValues().x, Is.LessThanOrEqualTo(name.rectTransform.rect.width));
                     Assert.That(name.GetPreferredValues().y, Is.LessThanOrEqualTo(name.rectTransform.rect.height));
                     UnityEngine.UI.Image placeholder = skill.Find("Icon").GetComponent<UnityEngine.UI.Image>();
+
                     Assert.That(placeholder, Is.Not.Null);
                     Assert.That(placeholder.sprite, Is.Null);
                     Assert.That(placeholder.preserveAspect, Is.True);
                     TMPro.TextMeshProUGUI value = skill.Find("Cooldown/Value").GetComponent<TMPro.TextMeshProUGUI>();
+
                     Assert.That(
                         value.GetPreferredValues().y, Is.LessThanOrEqualTo(value.rectTransform.rect.height),
                         skill.name);
                 }
+
                 Transform relics = instance.transform.Find("Relics/Viewport/Content");
                 AdventureIconItemView[] relicIcons = relics.GetComponentsInChildren<AdventureIconItemView>();
+
                 Assert.That(relicIcons, Has.Length.EqualTo(relicCount));
+
                 foreach (AdventureIconItemView relic in relicIcons)
                 {
                     Assert.That(relic.Rect.sizeDelta, Is.EqualTo(new Vector2(88, 56)));
                     Assert.That(relic.Rect.anchoredPosition.y,
                         Is.EqualTo(relicIcons[0].Rect.anchoredPosition.y));
                     TMPro.TextMeshProUGUI name = relic.transform.Find("Label").GetComponent<TMPro.TextMeshProUGUI>();
+
                     Assert.That(name.gameObject.activeInHierarchy, Is.True);
                     Assert.That(name.text, Is.EqualTo("石心護符"));
                     Assert.That(name.GetPreferredValues().x, Is.LessThanOrEqualTo(name.rectTransform.rect.width));
                     Assert.That(name.GetPreferredValues().y, Is.LessThanOrEqualTo(name.rectTransform.rect.height));
                     Assert.That(relic.transform.Find("Icon").GetComponent<UnityEngine.UI.Image>().sprite, Is.Null);
                 }
+
                 UnityEngine.UI.ScrollRect relicScroll = instance.transform.Find("Relics")
                     .GetComponent<UnityEngine.UI.ScrollRect>();
+
                 Assert.That(relicScroll.enabled, Is.True);
                 Assert.That(relicScroll.horizontal, Is.True);
                 Assert.That(relicScroll.vertical, Is.False);
@@ -406,23 +458,27 @@ namespace WebRPG.Tests
                 Vector3[] lastRelicCorners = new Vector3[4];
                 relicScroll.viewport.GetWorldCorners(viewportCorners);
                 relicIcons[relicCount - 1].Rect.GetWorldCorners(lastRelicCorners);
+
                 Assert.That(lastRelicCorners[0].x, Is.GreaterThanOrEqualTo(viewportCorners[0].x - .05f));
                 Assert.That(lastRelicCorners[2].x, Is.LessThanOrEqualTo(viewportCorners[2].x + .05f));
                 relicScroll.horizontalNormalizedPosition = 0;
                 Canvas.ForceUpdateCanvases();
                 AdventureTooltipTargetView target = relicIcons[0].GetComponent<AdventureTooltipTargetView>();
                 target.OnPointerEnter(null);
+
                 Assert.That(instance.transform.Find("TooltipHost/Tooltip").gameObject.activeSelf, Is.True);
                 Assert.That(
                     instance.transform.Find("TooltipHost/Tooltip/Description")
                     .GetComponent<TMPro.TextMeshProUGUI>().text,
                     Is.EqualTo("生命上限+30"));
                 target.OnPointerExit(null);
+
                 Assert.That(instance.transform.Find("TooltipHost/Tooltip").gameObject.activeSelf, Is.False);
                 AdventureTooltipTargetView skillTarget = instance.transform.Find(
                     "InspectedSkills/SkillRow/Viewport/Content/Skill0")
                     .GetComponent<AdventureTooltipTargetView>();
                 skillTarget.OnSelect(null);
+
                 Assert.That(
                     instance.transform.Find("TooltipHost/Tooltip/Description")
                     .GetComponent<TMPro.TextMeshProUGUI>().text,
@@ -441,6 +497,7 @@ namespace WebRPG.Tests
         {
             AdventureView instance = UnityEngine.Object.Instantiate(AssetDatabase.LoadAssetAtPath<AdventureView>(
                 "Assets/WebRPG/Prefabs/AdventureCanvas.prefab"));
+
             try
             {
                 instance.GetComponent<Canvas>().renderMode = RenderMode.WorldSpace;
@@ -464,9 +521,11 @@ namespace WebRPG.Tests
                 typeof(AdventureTooltipView).GetMethod("LateUpdate", BindingFlags.NonPublic | BindingFlags.Instance)
                     .Invoke(tooltip, null);
                 Vector3 after = root.InverseTransformPoint(panel.position);
+
                 Assert.That(after.x - before.x, Is.EqualTo(20).Within(.01f));
                 Assert.That(after.y - before.y, Is.EqualTo(30).Within(.01f));
                 Rect bounds = root.rect;
+
                 foreach (Vector2 point in new[] { bounds.min + Vector2.one, bounds.max - Vector2.one,
                     new Vector2(bounds.xMin + 1, bounds.yMax - 1), new Vector2(bounds.xMax - 1, bounds.yMin + 1) })
                 {
@@ -474,23 +533,30 @@ namespace WebRPG.Tests
                     target.OnPointerMove(pointer);
                     Vector3[] corners = new Vector3[4];
                     panel.GetWorldCorners(corners);
+
                     foreach (Vector3 corner in corners)
                     {
                         Vector3 local = root.InverseTransformPoint(corner);
+
                         Assert.That(local.x, Is.InRange(bounds.xMin, bounds.xMax));
                         Assert.That(local.y, Is.InRange(bounds.yMin, bounds.yMax));
                     }
                 }
+
                 target.OnPointerExit(pointer);
+
                 Assert.That(panel.gameObject.activeSelf, Is.False);
                 target.OnSelect(null);
+
                 Assert.That(panel.gameObject.activeSelf, Is.True);
                 Vector3 keyboardPosition = panel.position;
                 pointer.position += new Vector2(50, 50);
                 typeof(AdventureTooltipView).GetMethod("LateUpdate", BindingFlags.NonPublic | BindingFlags.Instance)
                     .Invoke(tooltip, null);
+
                 Assert.That(panel.position, Is.EqualTo(keyboardPosition));
                 target.OnDeselect(null);
+
                 Assert.That(panel.gameObject.activeSelf, Is.False);
             }
             finally
@@ -504,6 +570,7 @@ namespace WebRPG.Tests
         {
             AdventureView instance = UnityEngine.Object.Instantiate(AssetDatabase.LoadAssetAtPath<AdventureView>(
                 "Assets/WebRPG/Prefabs/AdventureCanvas.prefab"));
+
             try
             {
                 Transform[] underlay = new[] { instance.transform.Find("LocalPlayerHud"),
@@ -514,16 +581,20 @@ namespace WebRPG.Tests
                 instance.transform.Find("TooltipHost").SetAsLastSibling();
                 instance.Menu.Render(AdventureMenuScreen.Menu);
                 Transform overlay = instance.transform.Find("PauseMenu");
+
                 Assert.That(overlay.GetSiblingIndex(), Is.EqualTo(instance.transform.childCount - 1));
                 UnityEngine.UI.Image backdrop = overlay.GetComponent<UnityEngine.UI.Image>();
+
                 Assert.That(backdrop.color.a, Is.InRange(.4f, .8f));
                 Assert.That(backdrop.raycastTarget, Is.True);
                 Assert.That(overlay.GetComponent<UnityEngine.UI.Outline>().enabled, Is.False);
                 Assert.That(underlay.Select(item => item.gameObject.activeSelf).ToArray(), Is.EqualTo(active));
                 instance.Menu.Render(AdventureMenuScreen.Settings);
+
                 Assert.That(overlay.GetSiblingIndex(), Is.EqualTo(instance.transform.childCount - 1));
                 Assert.That(underlay.Select(item => item.gameObject.activeSelf).ToArray(), Is.EqualTo(active));
                 instance.Menu.Render(AdventureMenuScreen.Hidden);
+
                 Assert.That(overlay.gameObject.activeSelf, Is.False);
             }
             finally
@@ -540,12 +611,15 @@ namespace WebRPG.Tests
             AdventureIconSpriteCatalog catalog = UnityEngine.Object.Instantiate(
                 AssetDatabase.LoadAssetAtPath<AdventureIconSpriteCatalog>(
                     "Assets/WebRPG/Data/AdventureIconSprites.asset"));
+
             try
             {
                 Sprite replacement = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/WebRPG/Arts/UI/FantasyUIBorder.png");
+
                 Assert.That(replacement, Is.Not.Null);
                 SerializedObject data = new SerializedObject(catalog);
                 SerializedProperty entries = data.FindProperty("_entries");
+
                 for (int index = 0; index < entries.arraySize; index++)
                 {
                     SerializedProperty entry = entries.GetArrayElementAtIndex(index);
@@ -554,6 +628,7 @@ namespace WebRPG.Tests
                         entry.FindPropertyRelative("Sprite").objectReferenceValue = replacement;
                     }
                 }
+
                 data.ApplyModifiedPropertiesWithoutUndo();
                 AdventureIconView icon = instance.transform.Find(
                     "InspectedSkills/SkillRow/Viewport/Content/Skill0/Icon")
@@ -563,8 +638,10 @@ namespace WebRPG.Tests
                 control.ApplyModifiedPropertiesWithoutUndo();
                 icon.SetIcon("slash");
                 UnityEngine.UI.Image image = icon.GetComponent<UnityEngine.UI.Image>();
+
                 Assert.That(image.sprite, Is.SameAs(replacement));
                 icon.SetIcon("empty");
+
                 Assert.That(image.sprite, Is.Null);
                 Assert.That(image.preserveAspect, Is.True);
             }
@@ -581,9 +658,11 @@ namespace WebRPG.Tests
             AdventureView prefab = AssetDatabase.LoadAssetAtPath<AdventureView>(
                 "Assets/WebRPG/Prefabs/AdventureCanvas.prefab");
             AdventureView instance = UnityEngine.Object.Instantiate(prefab);
+
             try
             {
                 Transform template = instance.transform.Find("Templates/MapNodeTemplate");
+
                 Assert.That(template, Is.Not.Null);
                 Component label = template.Find("Label").GetComponents<Component>()
                     .Single(item => item.GetType().Name == "TextMeshProUGUI");
@@ -600,14 +679,17 @@ namespace WebRPG.Tests
                 using (AdventurePresenter presenter = new AdventurePresenter(model, instance))
                 {
                     Assert.That(nodes.childCount, Is.GreaterThan(0));
+
                     foreach (Transform node in nodes)
                     {
                         Component nodeLabel = node.Find("Label").GetComponents<Component>()
                             .Single(item => item.GetType().Name == "TextMeshProUGUI");
+
                         Assert.That(new SerializedObject(nodeLabel).FindProperty("m_fontSize").floatValue,
                             Is.EqualTo(25));
                     }
                 }
+
                 int count = nodes.childCount;
                 model.AbandonRun();
                 model.StartRun();

@@ -44,9 +44,11 @@ namespace WebRPG
         private const int MinimumPasswordLength = 8;
         private const int MaximumPasswordLength = 128;
         private const int MaximumUsernameLength = 24;
+
         private readonly LobbyServerConfiguration[] _servers;
         private UnityWebRequest _request;
         private bool _disposed;
+
         public string[] ServerNames { get; }
         public int DefaultServerIndex { get; }
         internal int StartupServerIndex { get; }
@@ -84,9 +86,11 @@ namespace WebRPG
             if (register && (string.IsNullOrWhiteSpace(username) || username.Trim().Length > MaximumUsernameLength ||
                 password.Length < MinimumPasswordLength ||
                 password.Length > MaximumPasswordLength)) return RegistrationFieldsMessage;
+
             JObject payload = new JObject { [EmailProperty] = email.Trim(), [PasswordProperty] = password };
             if (register) payload[UsernameProperty] = username.Trim();
             else payload[RememberMeProperty] = rememberMe;
+
             string response = await SendAsync(
                 serverIndex, register ? RegisterPath : LoginPath, payload.ToString(Formatting.None), false);
             if (register)
@@ -94,6 +98,7 @@ namespace WebRPG
                 RegistrationSucceeded = true;
                 return RegisteredMessage;
             }
+
             ApplySession(serverIndex, response);
             CanRefreshSession = rememberMe;
             return string.Empty;
@@ -102,6 +107,7 @@ namespace WebRPG
         internal void SaveLoginServerSelection()
         {
             if (_servers.Length <= 1) return;
+
             PlayerPrefs.SetString(LastLoginServerPreference, _servers[ServerIndex].Id);
             PlayerPrefs.Save();
         }
@@ -110,6 +116,7 @@ namespace WebRPG
         {
             string response = await SendAsync(serverIndex, RefreshPath, string.Empty, false, true);
             if (string.IsNullOrEmpty(response)) return false;
+
             ApplySession(serverIndex, response);
             CanRefreshSession = true;
             return true;
@@ -118,11 +125,13 @@ namespace WebRPG
         internal async Awaitable<bool> TryRefreshSessionAsync()
         {
             if (!CanRefreshSession || !IsLoggedIn) return false;
+
             string accountId = AccountId;
             DateTimeOffset previousExpiry = ExpiresAt;
             string response = await SendAsync(
                 ServerIndex, RefreshPath, string.Empty, true, true, RefreshTimeoutSeconds);
             if (string.IsNullOrEmpty(response) || DateTimeOffset.UtcNow >= previousExpiry) return false;
+
             ApplySession(ServerIndex, response, accountId);
             return true;
         }
@@ -136,6 +145,7 @@ namespace WebRPG
                 string.IsNullOrEmpty(session.Username) || session.ExpiresAt <= DateTimeOffset.UtcNow ||
                 (expectedAccountId != null && session.AccountId != expectedAccountId))
                 throw new InvalidOperationException(InvalidResponseMessage);
+
             ServerIndex = serverIndex;
             AccessToken = session.AccessToken;
             AccountId = session.AccountId;
@@ -174,6 +184,7 @@ namespace WebRPG
         {
             if (_disposed || _request != null || serverIndex < 0 || serverIndex >= _servers.Length)
                 throw new InvalidOperationException(RequestFailedMessage);
+
             Uri socket = new Uri(_servers[serverIndex].Url);
             UriBuilder address = new UriBuilder(socket)
             {
@@ -188,6 +199,7 @@ namespace WebRPG
             if (authenticated) request.SetRequestHeader(AuthorizationHeader, BearerPrefix + AccessToken);
             request.timeout = timeoutSeconds;
             _request = request;
+
             try
             {
                 AccountBrowserRequestHelper.Configure(address.Uri);
@@ -206,13 +218,16 @@ namespace WebRPG
                 {
                     string message = request.responseCode == UnauthorizedStatus ? LoginFailedMessage :
                         request.responseCode == RateLimitStatus ? RateLimitMessage : RequestFailedMessage;
+
                     try
                     {
                         message = JObject.Parse(request.downloadHandler.text).Value<string>(ErrorProperty) ?? message;
                     }
                     catch (JsonException) { }
+
                     throw new InvalidOperationException(message);
                 }
+
                 return request.downloadHandler.text;
             }
             finally

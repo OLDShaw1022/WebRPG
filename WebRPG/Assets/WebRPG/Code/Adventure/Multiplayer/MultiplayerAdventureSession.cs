@@ -39,6 +39,7 @@ namespace WebRPG
         {
             _lobby = lobby ?? throw new ArgumentNullException(nameof(lobby));
             if (lobby.Room == null) throw new ArgumentException(nameof(lobby));
+
             _roomId = lobby.Room.Id;
             _members = lobby.Room.Members.Select(member => new LobbyMemberSnapshot
             {
@@ -46,6 +47,7 @@ namespace WebRPG
             }).ToArray();
             _localIndex = Array.FindIndex(_members, member => member.PlayerId == lobby.PlayerId);
             if (_localIndex < 0) throw new ArgumentException(nameof(lobby));
+
             Party = new MultiplayerAdventureModel(
                 configuration, seed, _members.Select(member => member.PlayerId).ToArray());
             _timeout = configuration.Multiplayer.NetworkTimeoutSeconds;
@@ -54,6 +56,7 @@ namespace WebRPG
         }
 
         public event Action Changed;
+
         public MultiplayerAdventureModel Party { get; }
         public AdventureModel LocalModel => Party.Players[_localIndex];
         public string PlayerId => _members[_localIndex].PlayerId;
@@ -75,6 +78,7 @@ namespace WebRPG
             if (_disposed || _failed || IsComplete || float.IsNaN(seconds) || float.IsInfinity(seconds)
                 || seconds <= 0) return;
             if (!_lobby.IsConnected || _lobby.Room == null) { Fail(); return; }
+
             _silenceTime += seconds;
             if (_silenceTime >= _timeout)
             {
@@ -83,8 +87,10 @@ namespace WebRPG
                 return;
             }
             if (!IsLeader) return;
+
             _accumulatedTime = Math.Min(MaximumAccumulatedTimeSeconds, _accumulatedTime + seconds);
             if (_accumulatedTime < PacketInterval) return;
+
             int steps = Math.Min(MaximumStepsPerPacket, (int)(_accumulatedTime / NetworkStep));
             _accumulatedTime -= steps * NetworkStep;
             SendCommand(AdventureCommand.Tick, steps);
@@ -95,6 +101,7 @@ namespace WebRPG
             if (_disposed || _failed) return;
             if (action == AdventureCommand.Vote
                 && (!CanVote || index < 0 || index >= LocalModel.AvailableNodes.Count)) return;
+
             _lobby.SendAdventureAsync(new AdventurePacket
             {
                 Type = AdventurePacketType.Command, Command = action, Turn = Turn,
@@ -113,6 +120,7 @@ namespace WebRPG
         public void Dispose()
         {
             if (_disposed) return;
+
             _disposed = true;
             _lobby.AdventureReceived -= HandleAdventure;
             _lobby.Changed -= HandleLobbyChanged;
@@ -121,6 +129,7 @@ namespace WebRPG
         private void HandleLobbyChanged()
         {
             if (_disposed || _failed || IsComplete) return;
+
             if (!_lobby.IsConnected || _lobby.Room == null || _lobby.Room.Id != _roomId ||
                 !_members.Select(member => member.PlayerId)
                     .SequenceEqual(_lobby.Room.Members.Select(member => member.PlayerId)))
@@ -130,6 +139,7 @@ namespace WebRPG
         private void Fail()
         {
             if (_failed) return;
+
             _failed = true;
             Party.Fail();
             Changed?.Invoke();
@@ -149,6 +159,7 @@ namespace WebRPG
                 Fail();
                 return;
             }
+
             _lastSequence = packet.Sequence;
             _silenceTime = 0;
             if (packet.Type == AdventurePacketType.Failed && IsComplete) return;
@@ -163,8 +174,10 @@ namespace WebRPG
                 Fail();
                 return;
             }
+
             int player = Array.FindIndex(_members, member => member.PlayerId == packet.PlayerId);
             if (player < 0) { Fail(); return; }
+
             switch (packet.Command)
             {
                 case AdventureCommand.Vote:
@@ -172,6 +185,7 @@ namespace WebRPG
                     break;
                 case AdventureCommand.Node:
                     if (!CanVote || index < 0 || index >= LocalModel.AvailableNodes.Count) { Fail(); return; }
+
                     Party.SelectNode(index);
                     Turn++;
                     _votes.Clear();
@@ -195,6 +209,7 @@ namespace WebRPG
                         Fail();
                         return;
                     }
+
                     BattleSpeed = index;
                     break;
                 case AdventureCommand.Tick:
@@ -203,7 +218,9 @@ namespace WebRPG
                 Fail();
                 return;
             }
+
                     for (int step = 0; step < index * BattleSpeed; step++) Party.Tick(NetworkStep);
+
                     break;
                 case AdventureCommand.Abandon:
                     Fail();
@@ -212,6 +229,7 @@ namespace WebRPG
                     Fail();
                     return;
             }
+
             Changed?.Invoke();
         }
     }

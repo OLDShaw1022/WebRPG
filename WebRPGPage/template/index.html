@@ -14,8 +14,10 @@
   <script>
     const statusElement = document.querySelector("#unity-status");
     const buildDirectory = "Build";
+
     const loaderScript = document.createElement("script");
     loaderScript.src = buildDirectory + "/{{{ LOADER_FILENAME }}}";
+
     loaderScript.onerror = () => { statusElement.textContent = "無法載入遊戲程式。"; };
     loaderScript.onload = () => {
       createUnityInstance(document.querySelector("#unity-canvas"), {
@@ -38,6 +40,7 @@
         statusElement.textContent = "遊戲載入失敗：" + String(error);
       });
     };
+
     document.body.appendChild(loaderScript);
   </script>
 </body>

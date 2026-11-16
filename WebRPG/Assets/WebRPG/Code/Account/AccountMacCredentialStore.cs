@@ -15,6 +15,7 @@ namespace WebRPG
         private const int ItemNotFound = -25300;
         private const string WriteFailedMessage = "Could not save the WebRPG remembered login in macOS Keychain.";
         private const string DeleteFailedMessage = "Could not clear the WebRPG remembered login in macOS Keychain.";
+
         private static readonly byte[] Service = Encoding.UTF8.GetBytes("WebRPG");
 
         [DllImport(Security)]
@@ -53,6 +54,7 @@ namespace WebRPG
             try
             {
                 byte[] bytes = new byte[length];
+
                 try
                 {
                     Marshal.Copy(data, bytes, 0, bytes.Length);
@@ -69,6 +71,7 @@ namespace WebRPG
             byte[] password = Encoding.UTF8.GetBytes(value);
             int status = FindItem(IntPtr.Zero, (uint)Service.Length, Service, (uint)account.Length, account,
                 IntPtr.Zero, IntPtr.Zero, out IntPtr item);
+
             try
             {
                 if (status == Success)
@@ -91,6 +94,7 @@ namespace WebRPG
             byte[] account = Encoding.UTF8.GetBytes(key);
             int status = FindItem(IntPtr.Zero, (uint)Service.Length, Service, (uint)account.Length, account,
                 IntPtr.Zero, IntPtr.Zero, out IntPtr item);
+
             try
             {
                 if (status == Success) status = SecKeychainItemDelete(item);

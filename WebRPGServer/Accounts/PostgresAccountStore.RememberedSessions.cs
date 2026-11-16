@@ -24,6 +24,7 @@ public sealed partial class PostgresAccountStore
             insert.Parameters.AddWithValue(expires);
             await insert.ExecuteNonQueryAsync(cancellationToken);
         }
+
         await using (NpgsqlCommand attach = new(
             "UPDATE game_account_sessions SET remembered_session_id = $1 WHERE token_hash = $2;", connection,
             transaction))
@@ -33,6 +34,7 @@ public sealed partial class PostgresAccountStore
             if (await attach.ExecuteNonQueryAsync(cancellationToken) != 1)
                 throw new InvalidOperationException("Login session is no longer available.");
         }
+
         await transaction.CommitAsync(cancellationToken);
         return new RememberedAccountSession(session, token, expires);
     }
@@ -42,6 +44,7 @@ public sealed partial class PostgresAccountStore
     {
         if (string.IsNullOrEmpty(token) || token.Length > AccountTokenHelper.MaximumTokenLength ||
             previousAccessToken?.Length > AccountTokenHelper.MaximumTokenLength) return null;
+
         string? previousTokenHash = string.IsNullOrEmpty(previousAccessToken)
             ? null : AccountTokenHelper.Hash(previousAccessToken);
         string rotatedToken = AccountTokenHelper.Create();
@@ -66,10 +69,12 @@ public sealed partial class PostgresAccountStore
             rotate.Parameters.AddWithValue(NpgsqlTypes.NpgsqlDbType.Text, (object?)previousTokenHash ?? DBNull.Value);
             await using NpgsqlDataReader reader = await rotate.ExecuteReaderAsync(cancellationToken);
             if (!await reader.ReadAsync(cancellationToken)) return null;
+
             family = reader.GetGuid(0);
             accountId = reader.GetGuid(1);
             refreshExpires = reader.GetFieldValue<DateTimeOffset>(2);
         }
+
         string username;
         await using (NpgsqlCommand account = new(
             "SELECT username FROM game_accounts WHERE account_id = $1;", connection, transaction))
@@ -77,12 +82,14 @@ public sealed partial class PostgresAccountStore
             account.Parameters.AddWithValue(accountId);
             username = (string)(await account.ExecuteScalarAsync(cancellationToken))!;
         }
+
         await using (NpgsqlCommand remove = new(
             "DELETE FROM game_account_sessions WHERE remembered_session_id = $1;", connection, transaction))
         {
             remove.Parameters.AddWithValue(family);
             await remove.ExecuteNonQueryAsync(cancellationToken);
         }
+
         string accessToken = AccountTokenHelper.Create();
         DateTimeOffset expires = DateTimeOffset.UtcNow.AddHours(AccountTokenHelper.SessionLifetimeHours);
         if (expires > refreshExpires) expires = refreshExpires;
@@ -97,6 +104,7 @@ public sealed partial class PostgresAccountStore
             insert.Parameters.AddWithValue(family);
             await insert.ExecuteNonQueryAsync(cancellationToken);
         }
+
         await transaction.CommitAsync(cancellationToken);
         return new RememberedAccountSession(
             new AccountSession(accessToken, accountId.ToString("N"), username, expires), rotatedToken, refreshExpires);
@@ -105,6 +113,7 @@ public sealed partial class PostgresAccountStore
     public async Task RevokeRememberedAsync(string? token, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(token) || token.Length > AccountTokenHelper.MaximumTokenLength) return;
+
         await using NpgsqlCommand command = _dataSource.CreateCommand(
             "DELETE FROM game_account_remembered_sessions WHERE token_hash = $1;");
         command.Parameters.AddWithValue(AccountTokenHelper.Hash(token));

@@ -59,6 +59,7 @@ namespace WebRPG
                 gauge.Text = WaitingText;
                 gauge.CompactText = WaitingCompactText;
             }
+
             return gauge;
         }
 
@@ -94,6 +95,7 @@ namespace WebRPG
             {
                 return string.Format(ProjectileFormat, projectile.Name);
             }
+
             AdventureActionState action = enemy.Action;
             string effects = action.IsSpecial ? Effects(enemy.Definition.SpecialSkill.Effects, 1)
                 : string.Format(DamageFormat, enemy.Definition.Damage);
@@ -106,6 +108,7 @@ namespace WebRPG
             {
                 return string.Empty;
             }
+
             EnemySkillDefinition special = enemy.Definition.SpecialSkill;
             if (special == null)
             {
@@ -115,6 +118,7 @@ namespace WebRPG
             {
                 return string.Format(CastingSpecialFormat, special.Name, special.BasicAttacksBeforeUse);
             }
+
             return string.Format(IntentFormat, enemy.BasicAttacksUntilSpecial, special.Name,
                 Effects(special.Effects, 1), special.CastTime, enemy.RemainingSpecialCooldown);
         }

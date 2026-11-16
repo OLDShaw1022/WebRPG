@@ -21,6 +21,7 @@ public sealed class LobbyConcurrencyTests
         Task slowConnection = hub.HandleConnectionAsync(slow, token);
         Task fastConnection = hub.HandleConnectionAsync(fast, token);
         Task observerConnection = hub.HandleConnectionAsync(observer, token);
+
         try
         {
             await slow.RequestAsync(new LobbyPacket { Type = LobbyPacketType.Hello, Username = "Slow" }, token);
@@ -38,6 +39,7 @@ public sealed class LobbyConcurrencyTests
             using CancellationTokenSource progress = new(TimeSpan.FromSeconds(2));
             LobbyPacket joined = await fast.ReadAsync(progress.Token);
             while (joined.RequestId != "join") joined = await fast.ReadAsync(progress.Token);
+
             await fast.RequestAsync(
                 new LobbyPacket { Type = LobbyPacketType.SetReady, IsReady = true }, progress.Token);
             await fast.RequestAsync(
@@ -52,6 +54,7 @@ public sealed class LobbyConcurrencyTests
             slow.ResumeSending();
             LobbyPacket[] snapshots = new LobbyPacket[4];
             for (int index = 0; index < snapshots.Length; index++) snapshots[index] = await slow.ReadAsync(token);
+
             if (snapshots[0].Room.Members.Length != 2 || snapshots[0].Room.Members[1].IsReady ||
                 !snapshots[1].Room.Members[1].IsReady || snapshots[2].Room.Members[1].IsReady ||
                 snapshots[3].Room.Members.Length != 1)

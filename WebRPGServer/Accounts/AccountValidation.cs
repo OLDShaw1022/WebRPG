@@ -19,6 +19,7 @@ public static class AccountValidation
         if (registration.Password is null || registration.Password.Length < MinimumPasswordLength ||
             registration.Password.Length > MaximumPasswordLength)
             throw new ArgumentException("密碼須為 8～128 個字元。");
+
         return registration with { Email = email, Username = username };
     }
 
@@ -28,6 +29,7 @@ public static class AccountValidation
         if (value.Length > MaximumEmailLength || !MailAddress.TryCreate(value, out MailAddress? parsed) ||
             parsed.Address != value || value.Any(char.IsControl))
             throw new ArgumentException("請輸入有效的 Email。");
+
         return value.ToUpperInvariant();
     }
 }

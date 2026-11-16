@@ -11,6 +11,7 @@ public sealed class AccountValidationTests
     {
         AccountRegistration first = new(" Player@Example.com ", "long-enough-password", "玩家");
         AccountRegistration second = new("other@example.com", "long-enough-password", "玩家");
+
         Assert.That(AccountValidation.Normalize(first).Email, Is.EqualTo("PLAYER@EXAMPLE.COM"));
         Assert.That(AccountValidation.Normalize(second).Username, Is.EqualTo("玩家"));
     }
@@ -28,6 +29,7 @@ public sealed class AccountValidationTests
     {
         string first = AccountPasswordHelper.Hash("long-enough-password");
         string second = AccountPasswordHelper.Hash("long-enough-password");
+
         Assert.That(first, Is.Not.EqualTo(second));
         Assert.That(AccountPasswordHelper.Verify(first, "long-enough-password"), Is.True);
         Assert.That(AccountPasswordHelper.Verify(first, "wrong-password"), Is.False);

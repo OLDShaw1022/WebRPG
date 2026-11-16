@@ -13,6 +13,7 @@ namespace WebRPG
         private TMPro.TextMeshProUGUI _name;
         [SerializeField]
         private AdventureTooltipTargetView _tooltip;
+
         public RectTransform Rect => _rect;
 
         public void Render(AdventureIconScreenModel model)

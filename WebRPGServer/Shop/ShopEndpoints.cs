@@ -11,6 +11,7 @@ public static class ShopEndpoints
             PostgresAccountStore accounts = context.RequestServices.GetRequiredService<PostgresAccountStore>();
             AccountIdentity? identity = await accounts.AuthenticateAsync(readToken(context), context.RequestAborted);
             if (identity is null) return Results.Unauthorized();
+
             PostgresShopStore shop = context.RequestServices.GetRequiredService<PostgresShopStore>();
             ShopCatalog catalog = context.RequestServices.GetRequiredService<ShopCatalog>();
 
@@ -33,6 +34,7 @@ public static class ShopEndpoints
             PostgresAccountStore accounts = context.RequestServices.GetRequiredService<PostgresAccountStore>();
             AccountIdentity? identity = await accounts.AuthenticateAsync(readToken(context), context.RequestAborted);
             if (identity is null) return Results.Unauthorized();
+
             PostgresShopStore shop = context.RequestServices.GetRequiredService<PostgresShopStore>();
             ShopCatalog catalog = context.RequestServices.GetRequiredService<ShopCatalog>();
             if (request.RequestId == Guid.Empty || !request.ConfirmedOffer.IsValid)

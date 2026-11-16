@@ -18,6 +18,7 @@ namespace WebRPG.Tests
                 Assert.That(starts, Is.Zero);
                 view.StartSinglePlayer();
                 view.StartSinglePlayer();
+
                 Assert.That(starts, Is.EqualTo(1));
                 Assert.That(model.HasEnteredAdventure, Is.True);
                 Assert.That(view.Hidden, Is.True);
@@ -34,10 +35,12 @@ namespace WebRPG.Tests
                 model, view, () => succeeds, () => { }))
             {
                 view.StartSinglePlayer();
+
                 Assert.That(model.HasEnteredAdventure, Is.False);
                 Assert.That(view.Hidden, Is.False);
                 succeeds = true;
                 view.StartSinglePlayer();
+
                 Assert.That(model.HasEnteredAdventure, Is.True);
                 Assert.That(view.Hidden, Is.True);
             }
@@ -53,11 +56,13 @@ namespace WebRPG.Tests
                 new MainMenuModel(), view,
                 () => { starts++; return true; }, () => quits++);
             view.Quit();
+
             Assert.That(quits, Is.EqualTo(1));
             presenter.Dispose();
             presenter.Dispose();
             view.Quit();
             view.StartSinglePlayer();
+
             Assert.That(quits, Is.EqualTo(1));
             Assert.That(starts, Is.Zero);
         }
@@ -72,11 +77,14 @@ namespace WebRPG.Tests
                 () => false, () => { }, () => { opened++; return true; }))
             {
                 view.Multiplayer();
+
                 Assert.That(opened, Is.EqualTo(1));
                 Assert.That(view.Hidden, Is.True);
                 Assert.That(model.HasEnteredAdventure, Is.False);
             }
+
             view.Multiplayer();
+
             Assert.That(opened, Is.EqualTo(1));
         }
 
@@ -86,10 +94,15 @@ namespace WebRPG.Tests
             public event Action SinglePlayerRequested;
             public event Action MultiplayerRequested;
             public event Action QuitRequested;
+
             public bool Hidden { get; private set; }
+
             public void Hide() => Hidden = true;
+
             public void StartSinglePlayer() => SinglePlayerRequested?.Invoke();
+
             public void Multiplayer() => MultiplayerRequested?.Invoke();
+
             public void Quit() => QuitRequested?.Invoke();
         }
     }

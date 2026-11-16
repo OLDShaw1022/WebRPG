@@ -80,6 +80,7 @@ namespace WebRPG
             RequireUnique(Relics.Select(relic => relic.Id));
             RequireUnique(Enemies.Select(enemy => enemy.Id));
             RequireUnique(EnemyGroups.Select(group => group.Id));
+
             foreach (SkillDefinition skill in Skills)
             {
                 Require(!string.IsNullOrWhiteSpace(skill.Name) && IsPositive(skill.Cooldown)
@@ -98,6 +99,7 @@ namespace WebRPG
             Require(StartingSkills != null && StartingSkills.Length > 0 && StartingSkills.Length <= SkillSlots &&
                 StartingSkills.Distinct().Count() == StartingSkills.Length &&
                 StartingSkills.All(id => Skills.Any(skill => skill.Id == id)), InvalidStartingSkillsMessage);
+
             foreach (EnemyDefinition enemy in Enemies)
             {
                 Require(!string.IsNullOrWhiteSpace(enemy.Name) && enemy.Health > 0 && enemy.Damage > 0 &&
@@ -125,11 +127,13 @@ namespace WebRPG
             {
                 Require(!string.IsNullOrWhiteSpace(floor.Name) && floor.Rows != null && floor.Rows.Length > 0,
                     InvalidFloorMessage);
+
                 foreach (MapRowDefinition row in floor.Rows)
                 {
                     Require(row != null && row.NodePool != null && row.NodePool.Length > 0 &&
                         row.NodeCount >= 1 && row.NodeCount <= MaximumMapChoices &&
                         row.NodeCount <= row.NodePool.Length, InvalidMapRowMessage);
+
                     foreach (NodeDefinition node in row.NodePool)
                     {
                         Require(node != null && !string.IsNullOrWhiteSpace(node.Name) &&
@@ -162,6 +166,7 @@ namespace WebRPG
         {
             Require(
                 effects != null && effects.Length > 0 && effects.All(effect => effect != null), MissingEffectsMessage);
+
             foreach (EffectDefinition effect in effects)
             {
                 Require(effect.Amount > 0 && effect.PerLevel >= 0 &&

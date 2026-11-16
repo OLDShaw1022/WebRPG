@@ -8,6 +8,7 @@ namespace WebRPGServer;
 public static class Program
 {
     private const int WebSocketKeepAliveIntervalSeconds = 30;
+
     public static async Task Main(string[] arguments)
     {
         WebApplicationBuilder builder = WebApplication.CreateBuilder(arguments);
@@ -26,17 +27,21 @@ public static class Program
 
         builder.Services.AddSingleton(new ShopCatalog(builder.Configuration));
         builder.Services.AddSingleton(new ShopTopUpCatalog(builder.Configuration));
+
         PayPalSettings payPal = new(builder.Configuration);
         if (payPal.Enabled && !payPal.Configured)
             throw new InvalidOperationException(
                 "Enabled PayPal checkout requires server credentials and HTTPS callback URLs.");
+
         builder.Services.AddSingleton(payPal);
         builder.Services.AddHttpClient<PayPalCheckout>(client => client.BaseAddress = new Uri(payPal.Sandbox
             ? "https://api-m.sandbox.paypal.com/" : "https://api-m.paypal.com/"));
+
         AccountEndpoints.AddServices(builder.Services);
         builder.Services.Configure<ForwardedHeadersOptions>(options =>
             options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto);
         AccountCorsHelper.AddServices(builder.Services, builder.Configuration);
+
         LobbyOptions lobbyOptions = builder.Configuration.GetSection("Lobby").Get<LobbyOptions>() ?? new LobbyOptions();
         lobbyOptions.Validate();
         builder.Services.AddSingleton(lobbyOptions);
@@ -59,6 +64,7 @@ public static class Program
         application.UseRouting();
         application.UseCors();
         application.UseRateLimiter();
+
         AccountEndpoints.Map(application);
         ShopTopUpEndpoints.MapPayPal(application);
 

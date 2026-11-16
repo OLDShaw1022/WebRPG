@@ -22,11 +22,13 @@ public static class AccountPasswordHelper
         string[] parts = encoded.Split(':');
         if (parts.Length != HashParts || !int.TryParse(parts[0], out int iterations) || iterations != Iterations)
             return false;
+
         try
         {
             byte[] salt = Convert.FromBase64String(parts[1]);
             byte[] expected = Convert.FromBase64String(parts[2]);
             if (salt.Length != SaltBytes || expected.Length != HashBytes) return false;
+
             byte[] actual = Rfc2898DeriveBytes.Pbkdf2(password, salt, iterations, HashAlgorithmName.SHA256, HashBytes);
             return CryptographicOperations.FixedTimeEquals(actual, expected);
         }

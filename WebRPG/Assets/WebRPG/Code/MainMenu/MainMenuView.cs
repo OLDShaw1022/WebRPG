@@ -89,7 +89,9 @@ namespace WebRPG
         }
 
         private void HandleMultiplayerRequested() => MultiplayerRequested?.Invoke();
+
         private void HandleShopRequested() => ShopRequested?.Invoke();
+
         private void HandleLogoutRequested() => LogoutRequested?.Invoke();
 
         private void HandleQuitRequested()

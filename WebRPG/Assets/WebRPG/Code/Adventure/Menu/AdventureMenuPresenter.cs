@@ -38,6 +38,7 @@ namespace WebRPG
             {
                 return;
             }
+
             _model.Navigate(AdventureMenuScreen.Menu);
             Refresh();
         }
@@ -54,6 +55,7 @@ namespace WebRPG
             {
                 return;
             }
+
             _disposed = true;
             _view.ResumeRequested -= Close;
             _view.AbandonRequested -= HandleAbandon;
@@ -94,6 +96,7 @@ namespace WebRPG
             {
                 return;
             }
+
             Close();
             _return();
         }

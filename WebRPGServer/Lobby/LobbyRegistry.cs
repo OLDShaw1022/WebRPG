@@ -6,6 +6,7 @@ namespace WebRPGServer;
 public sealed class LobbyRegistry
 {
     private const int MaximumAdventurePayloadLength = 6000;
+
     private readonly LobbyOptions _options;
     private readonly Dictionary<string, LobbyMemberSnapshot> _players = new();
     private readonly Dictionary<string, LobbyRoomSnapshot> _rooms = new();
@@ -23,12 +24,14 @@ public sealed class LobbyRegistry
         string name = username?.Trim() ?? string.Empty;
         if (name.Length == 0 || name.Length > LobbyPacketLimits.UsernameLength || name.Any(char.IsControl))
             throw new ArgumentException("玩家名稱須為 1～24 個字元，且不可含控制字元。");
+
         _players.Add(playerId, new LobbyMemberSnapshot { PlayerId = playerId, Username = name });
     }
 
     public bool Execute(string playerId, LobbyPacket request)
     {
         if (!_players.ContainsKey(playerId)) throw new ArgumentException("請先連線。");
+
         switch (request.Type)
         {
             case LobbyPacketType.ListRooms:
@@ -36,9 +39,11 @@ public sealed class LobbyRegistry
             case LobbyPacketType.CreateRoom:
                 if (_memberships.ContainsKey(playerId)) throw new ArgumentException("請先離開目前房間。");
                 if (_rooms.Count >= _options.MaximumRooms) throw new ArgumentException("房間數已達上限。");
+
                 string name = request.RoomName?.Trim() ?? string.Empty;
                 if (name.Length == 0 || name.Length > LobbyPacketLimits.RoomNameLength || name.Any(char.IsControl))
                     throw new ArgumentException("房間名稱須為 1～40 個字元，且不可含控制字元。");
+
                 LobbyRoomSnapshot created = new()
                 {
                     Id = Guid.NewGuid().ToString("N"),
@@ -58,6 +63,7 @@ public sealed class LobbyRegistry
                     throw new ArgumentException("找不到房間，請重新整理列表。");
                 if (room.Members.Length >= room.Capacity) throw new ArgumentException("房間已滿。");
                 if (_adventures.ContainsKey(room.Id)) throw new ArgumentException("冒險進行中，無法加入房間。");
+
                 _players[playerId].IsReady = false;
                 room.Members = room.Members.Append(_players[playerId]).ToArray();
                 _memberships.Add(playerId, room.Id);
@@ -67,6 +73,7 @@ public sealed class LobbyRegistry
                 return true;
             case LobbyPacketType.SetReady:
                 if (!_memberships.ContainsKey(playerId)) throw new ArgumentException("尚未加入房間。");
+
                 _players[playerId].IsReady = request.IsReady;
                 return true;
             default:
@@ -86,6 +93,7 @@ public sealed class LobbyRegistry
             if (room.LeaderId != playerId || room.Members.Any(member => !member.IsReady))
                 throw new ArgumentException("只有隊長可在全員準備後開始冒險。");
             if (_adventures.ContainsKey(roomId)) throw new ArgumentException("冒險已經開始。");
+
             _adventures.Add(roomId, new MultiplayerRoomState());
             return new AdventurePacket
             {
@@ -96,6 +104,7 @@ public sealed class LobbyRegistry
         }
         if (!_adventures.TryGetValue(roomId, out MultiplayerRoomState? adventure))
             throw new ArgumentException("冒險尚未開始。");
+
         return adventure.Execute(playerId, room, request);
     }
 
@@ -141,6 +150,7 @@ public sealed class LobbyRegistry
     {
         FailAdventure(playerId);
         if (!_memberships.Remove(playerId, out string? roomId)) return;
+
         LobbyRoomSnapshot room = _rooms[roomId];
         room.Members = room.Members.Where(member => member.PlayerId != playerId).ToArray();
         _players[playerId].IsReady = false;
@@ -150,6 +160,7 @@ public sealed class LobbyRegistry
             _adventures.Remove(roomId);
             return;
         }
+
         if (room.LeaderId == playerId)
         {
             room.LeaderId = room.Members[0].PlayerId;

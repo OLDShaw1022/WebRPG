@@ -116,6 +116,7 @@ internal sealed class PostgresTopUpStore(NpgsqlDataSource source)
         await using NpgsqlDataReader reader = await query.ExecuteReaderAsync(cancellationToken);
         List<ShopTopUpReceipt> receipts = [];
         while (await reader.ReadAsync(cancellationToken)) receipts.Add(ReadOrder(reader).Receipt);
+
         return receipts;
     }
 
@@ -144,6 +145,7 @@ internal sealed class PostgresTopUpStore(NpgsqlDataSource source)
             initialize.Parameters.AddWithValue(order.AccountId);
             await initialize.ExecuteNonQueryAsync(cancellationToken);
         }
+
         await using (NpgsqlCommand wallet = new(
             "SELECT 1 FROM game_wallets WHERE account_id = $1 FOR UPDATE;", connection, transaction))
         {
@@ -160,6 +162,7 @@ internal sealed class PostgresTopUpStore(NpgsqlDataSource source)
             query.Parameters.AddWithValue(order.OrderId);
             await using NpgsqlDataReader reader = await query.ExecuteReaderAsync(cancellationToken);
             if (!await reader.ReadAsync(cancellationToken)) return;
+
             current = (ShopTopUpStatus)reader.GetInt32(0);
             credited = reader.GetBoolean(1);
             if (captureId is not null && !reader.IsDBNull(2) && reader.GetString(2) != captureId) return;

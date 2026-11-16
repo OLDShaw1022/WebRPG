@@ -19,6 +19,7 @@ namespace WebRPG
         private const string StartAdventureLabel = "開始冒險";
         private const string NoRoomMessage = "尚未加入房間。\n可從公開列表加入，或輸入房間 ID。";
         private const string NewLine = "\n";
+
         private readonly ILobbyModel _model;
         private readonly ILobbyView _view;
         private readonly Action _back;
@@ -43,6 +44,7 @@ namespace WebRPG
         public void Dispose()
         {
             if (_disposed) return;
+
             _disposed = true;
             _model.Changed -= Refresh;
             _view.CreateRequested -= Create;
@@ -56,10 +58,14 @@ namespace WebRPG
         private void Create(string name, bool isPublic) =>
             _model.SendAsync(
                 new LobbyPacket { Type = LobbyPacketType.CreateRoom, RoomName = name, IsPublic = isPublic }).Forget();
+
         private void Join(string roomId) =>
             _model.SendAsync(new LobbyPacket { Type = LobbyPacketType.JoinRoom, RoomId = roomId?.Trim() }).Forget();
+
         private void List() => _model.SendAsync(new LobbyPacket { Type = LobbyPacketType.ListRooms }).Forget();
+
         private void Leave() => _model.SendAsync(new LobbyPacket { Type = LobbyPacketType.LeaveRoom }).Forget();
+
         private void Ready()
         {
             LobbyRoomSnapshot room = _model.Room;
@@ -68,10 +74,12 @@ namespace WebRPG
                 _model.SendAdventureAsync(new AdventurePacket { Type = AdventurePacketType.Start }).Forget();
                 return;
             }
+
             bool ready = _model.Room?.Members.Any(member => member.PlayerId == _model.PlayerId && member.IsReady)
                 ?? false;
             _model.SendAsync(new LobbyPacket { Type = LobbyPacketType.SetReady, IsReady = !ready }).Forget();
         }
+
         private void Back() => _back();
 
         private void Refresh()

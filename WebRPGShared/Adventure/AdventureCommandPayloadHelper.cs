@@ -9,6 +9,7 @@ namespace WebRPGShared
         {
             index = 0;
             amount = 0;
+
             string[] fields = (payload ?? string.Empty).Split('|');
             return fields.Length == 2 &&
                 int.TryParse(fields[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out index) &&

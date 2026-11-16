@@ -67,6 +67,7 @@ namespace WebRPG
         internal static void Write(string key, string value)
         {
             IntPtr blob = Marshal.StringToCoTaskMemUni(value);
+
             try
             {
                 Credential credential = new Credential

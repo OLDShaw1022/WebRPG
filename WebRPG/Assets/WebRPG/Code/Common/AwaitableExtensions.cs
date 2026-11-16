@@ -11,6 +11,7 @@ namespace WebRPG
             float seconds, CancellationToken cancellationToken = default)
         {
             float elapsed = 0f;
+
             while (elapsed < seconds)
             {
                 cancellationToken.ThrowIfCancellationRequested();

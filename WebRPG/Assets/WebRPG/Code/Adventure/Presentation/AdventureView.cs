@@ -174,29 +174,35 @@ namespace WebRPG
             }
 
             _bound = true;
+
             for (int index = 1; index < _skills.Length; index++)
             {
                 int slot = index - 1;
                 _skills[index].Button.onClick.AddListener(() => SkillRequested?.Invoke(slot));
             }
+
             for (int index = 0; index < _battleSpeedControls.Length; index++)
             {
                 int speed = index;
                 AdventureUiHelper.BindClick(_battleSpeedControls[index], () => BattleSpeedRequested?.Invoke(speed));
             }
+
             AdventureUiHelper.BindClick(_resultRestart, RequestStart);
             AdventureUiHelper.BindClick(_resultReturn, _menu.RequestReturn);
             AdventureUiHelper.BindClick(_toolbar[0], ToggleMenu);
             AdventureUiHelper.BindClick(_toolbar[1], () => MapToggleRequested?.Invoke());
+
             for (int index = 0; index < _choices.Length; index++)
             {
                 int choice = index;
                 AdventureUiHelper.BindClick(_choices[index], () => ChoiceRequested?.Invoke(choice));
             }
+
             foreach (AdventureActorViewReferences actor in _players)
             {
                 AdventureUiHelper.BindActor(actor, id => CharacterFocusRequested?.Invoke(id));
             }
+
             foreach (AdventureActorViewReferences actor in _enemies)
             {
                 AdventureUiHelper.BindActor(actor, id => CharacterFocusRequested?.Invoke(id));
@@ -247,6 +253,7 @@ namespace WebRPG
             _resultRestart.Button.interactable = screen.CanStart;
             _resultReturn.Rect.gameObject.SetActive(screen.ShowResultActions);
             _skillHeading.text = screen.InspectedCharacterName + InspectedSkillsTitleSuffix;
+
             for (int index = 0; index < _players.Length; index++)
             {
                 RenderActor(_players[index], index < screen.Players.Length ? screen.Players[index] : null);
@@ -261,6 +268,7 @@ namespace WebRPG
                 _layoutDirty = true;
                 RenderMap(screen.MapRows);
             }
+
             UpdateLayout();
             if (screen.ShowMap && (modeChanged || _lastMapRow != screen.MapCurrentRow))
             {
@@ -289,6 +297,7 @@ namespace WebRPG
         public void EnableRoomChat()
         {
             if (!_roomChat || _roomChat.gameObject.activeSelf) return;
+
             RectTransform scroll = _detailsScroll.Rect;
             scroll.offsetMin += Vector2.up * ChatComposerHeight;
             _roomChat.gameObject.SetActive(true);
@@ -303,12 +312,14 @@ namespace WebRPG
         private void RenderRelics(AdventureIconScreenModel[] relics)
         {
             _noRelics.enabled = relics.Length == 0;
+
             while (_relicIcons.Count < relics.Length)
             {
                 AdventureIconItemView item = Instantiate(_relicTemplate, _relicArea.Content);
                 item.name = RelicNamePrefix + _relicIcons.Count;
                 _relicIcons.Add(item);
             }
+
             for (int index = 0; index < _relicIcons.Count; index++)
             {
                 bool visible = index < relics.Length;
@@ -327,6 +338,7 @@ namespace WebRPG
             {
                 return;
             }
+
             control.Id = character.Id;
             control.Name.text = character.Name;
             control.Badge.text = character.IsDefeated ? (control.IsPlayer ? PlayerDefeatedText : EnemyDefeatedText)
@@ -349,10 +361,12 @@ namespace WebRPG
             {
                 _mapRows.Add(new List<AdventureMapNodeViewState>());
             }
+
             for (int row = 0; row < _mapRows.Count; row++)
             {
                 int count = row < rows.Length ? rows[row].Nodes.Length : 0;
                 _layoutDirty |= _mapRows[row].Count < count;
+
                 while (_mapRows[row].Count < count)
                 {
                     AdventureMapNodeViewState node = null;
@@ -372,6 +386,7 @@ namespace WebRPG
                     {
                         continue;
                     }
+
                     AdventureMapNodeScreenModel data = rows[row].Nodes[index];
                     node.ChoiceIndex = data.ChoiceIndex;
                     node.Control.Label.text = data.Title + NewLine + data.StateText;
@@ -397,6 +412,7 @@ namespace WebRPG
         private void RenderTimeControls()
         {
             string[] labels = { PauseSpeedText, NormalSpeedText, DoubleSpeedText };
+
             for (int index = 0; index < _battleSpeedControls.Length; index++)
             {
                 bool selected = _screen.BattleSpeed == index;
@@ -413,6 +429,7 @@ namespace WebRPG
             {
                 return;
             }
+
             AdventureProjectileScreenModel projectile = _screen.Projectile;
             bool visible = _screen.ShowBattle && !_screen.ShowMap && projectile != null;
             _projectile.gameObject.SetActive(visible);
@@ -420,6 +437,7 @@ namespace WebRPG
             {
                 return;
             }
+
             AdventureActorViewReferences source = AdventureUiHelper.FindActor(
                 _players, _enemies, projectile.SourceCharacterId);
             AdventureActorViewReferences target = AdventureUiHelper.FindActor(
@@ -429,6 +447,7 @@ namespace WebRPG
                 _projectile.gameObject.SetActive(false);
                 return;
             }
+
             _projectile.position = Vector3.Lerp(
                 source.Badge.rectTransform.position, target.Badge.rectTransform.position,
                 Mathf.Clamp01(projectile.Progress));
@@ -441,6 +460,7 @@ namespace WebRPG
             bool multiplayerChat = _roomChat && _roomChat.gameObject.activeSelf;
             _detailsHeading.text = multiplayerChat ? MultiplayerJournalHeading : JournalHeading;
             if (multiplayerChat) return;
+
             if (_detailsText.text != _screen.Journal)
             {
                 bool followLatest = _detailsScroll.Scroll.verticalNormalizedPosition <= JournalFollowBottomThreshold ||
@@ -460,11 +480,13 @@ namespace WebRPG
             {
                 return;
             }
+
             Vector2 size = _root.rect.size;
             if (!_layoutDirty && size == _lastSize)
             {
                 return;
             }
+
             _lastSize = size;
             _layoutDirty = false;
             _layout.Update(_screen);

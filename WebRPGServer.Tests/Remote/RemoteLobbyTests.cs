@@ -15,6 +15,7 @@ public sealed class RemoteLobbyTests
     {
         string? endpoint = TestContext.Parameters["ServerUrl"] ?? Environment.GetEnvironmentVariable(
             "WEBRPG_TEST_SERVER_URL");
+
         Assert.That(
             endpoint, Is.Not.Null.And.Not.Empty,
             "Provide ServerUrl through TestRunParameters or WEBRPG_TEST_SERVER_URL.");

@@ -27,6 +27,7 @@ internal static class PayPalResponse
             !root.TryGetProperty("purchase_units", out JsonElement units) || units.ValueKind != JsonValueKind.Array ||
             units.GetArrayLength() != 1)
             return false;
+
         unit = units[0];
         return Text(unit, "custom_id") == order.OrderId.ToString("N") && MatchesAmount(unit, order.Offer);
     }

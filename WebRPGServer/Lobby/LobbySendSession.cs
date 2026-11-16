@@ -9,6 +9,7 @@ namespace WebRPGServer;
 internal sealed class LobbySendSession : IAsyncDisposable
 {
     private const int MaximumPendingPackets = 128;
+
     private readonly WebSocket _socket;
     private readonly int _timeoutSeconds;
     private readonly Channel<byte[]> _packets = Channel.CreateBounded<byte[]>(
@@ -33,6 +34,7 @@ internal sealed class LobbySendSession : IAsyncDisposable
     public void Enqueue(LobbyPacket packet)
     {
         if (_socket.State != WebSocketState.Open || _shutdown.IsCancellationRequested) return;
+
         // 在呼叫端持有房間鎖時凍結快照，避免排隊期間引用的房間資料被修改。
         byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(packet);
         if (!_packets.Writer.TryWrite(bytes)) _socket.Abort();
@@ -45,6 +47,7 @@ internal sealed class LobbySendSession : IAsyncDisposable
             await foreach (byte[] bytes in _packets.Reader.ReadAllAsync(_shutdown.Token))
             {
                 if (_socket.State != WebSocketState.Open) break;
+
                 await LobbySocketHelper.SendAsync(_socket, bytes, _timeoutSeconds, _shutdown.Token);
             }
         }
@@ -56,6 +59,7 @@ internal sealed class LobbySendSession : IAsyncDisposable
     {
         _packets.Writer.TryComplete();
         _shutdown.Cancel();
+
         try { await _sender; }
         finally { _shutdown.Dispose(); }
     }

@@ -11,6 +11,7 @@ namespace WebRPGShared
         public string LeaderId { get; set; } = string.Empty;
         public bool IsPublic { get; set; }
         public int Capacity { get; set; }
+
         public LobbyMemberSnapshot[] Members { get; set; } = Array.Empty<LobbyMemberSnapshot>();
     }
 }

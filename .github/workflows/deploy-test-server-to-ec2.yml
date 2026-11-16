@@ -45,6 +45,7 @@ jobs:
               ...context.repo,
               ref: 'heads/main'
             });
+
             if (data.object.sha !== context.sha) {
               core.setFailed('This commit is no longer the latest main commit. Deployment skipped.');
             }
@@ -59,11 +60,14 @@ jobs:
           install -m 600 /dev/null ~/.ssh/webrpg-test
           printf '%s\n' "$EC2_SSH_PRIVATE_KEY" > ~/.ssh/webrpg-test
           ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts
+
           ssh_options=(-i "$HOME/.ssh/webrpg-test" -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes)
           host="$EC2_USER@$EC2_HOST"
+
           stage=$(ssh "${ssh_options[@]}" "$host" 'mktemp -d /home/ec2-user/myserver-test.deploy.XXXXXXXX')
           [[ "$stage" =~ ^/home/ec2-user/myserver-test\.deploy\.[[:alnum:]]{8}$ ]]
           rsync -azc -e "ssh ${ssh_options[*]}" publish/ "$host:$stage/"
+
           ssh "${ssh_options[@]}" "$host" bash -s -- "$stage" <<'REMOTE'
           set -euo pipefail
           stage=$1

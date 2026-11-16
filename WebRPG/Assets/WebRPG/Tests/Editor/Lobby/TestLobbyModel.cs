@@ -9,15 +9,19 @@ namespace WebRPG.Tests
     {
         public event Action Changed;
         public event Action<AdventurePacket> AdventureReceived;
+
         public bool IsConnected { get; set; } = true;
         public bool IsBusy => false;
         public string PlayerId => "self";
         public string Status => "Connected";
         public LobbyRoomSnapshot Room { get; set; }
         public LobbyRoomSummary[] Rooms => Array.Empty<LobbyRoomSummary>();
+
         public LobbyPacket Last;
         public int ConnectCalls;
+
         public void Notify() => Changed?.Invoke();
+
         public Awaitable ConnectAsync()
         {
             ConnectCalls++;
@@ -25,6 +29,7 @@ namespace WebRPG.Tests
             source.SetResult();
             return source.Awaitable;
         }
+
         public Awaitable SendAsync(LobbyPacket packet)
         {
             Last = packet;
@@ -32,6 +37,7 @@ namespace WebRPG.Tests
             source.SetResult();
             return source.Awaitable;
         }
+
         public Awaitable SendAdventureAsync(AdventurePacket packet)
         {
             AdventureReceived?.Invoke(packet);

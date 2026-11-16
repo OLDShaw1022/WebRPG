@@ -43,7 +43,9 @@ namespace WebRPG
         {
             if (Outcome != AdventureBattleOutcome.Running || float.IsNaN(seconds) ||
                 float.IsInfinity(seconds) || seconds <= 0) return;
+
             _accumulatedTime += seconds;
+
             while (Outcome == AdventureBattleOutcome.Running && _accumulatedTime >= _configuration.SimulationStep)
             {
                 _accumulatedTime -= _configuration.SimulationStep;
@@ -58,6 +60,7 @@ namespace WebRPG
             {
                 Projectile.RemainingTime = Math.Max(0, Projectile.RemainingTime - seconds);
                 if (Projectile.RemainingTime > 0) return;
+
                 ResolveProjectile();
                 if (!CompleteIfResolved()) LaunchReadyAction();
                 return;
@@ -65,9 +68,11 @@ namespace WebRPG
 
             _battleTime += seconds;
             foreach (AdventureBattleModel player in _players) player.AdvanceAction(seconds);
+
             foreach (AdventureEnemyState enemy in Enemies)
             {
                 if (enemy.Health == 0 || enemy.Action == null) continue;
+
                 enemy.RemainingSpecialCooldown = Math.Max(0, enemy.RemainingSpecialCooldown - seconds);
                 enemy.Action.RemainingCastTime = Math.Max(0, enemy.Action.RemainingCastTime - seconds);
             }
@@ -76,6 +81,7 @@ namespace WebRPG
                 Stop(AdventureBattleOutcome.TimedOut);
                 return;
             }
+
             LaunchReadyAction();
         }
 
@@ -86,15 +92,18 @@ namespace WebRPG
                 AdventureBattleModel player = _players[index];
                 if (player.Health == 0 || player.PlayerAction == null
                     || player.PlayerAction.RemainingCastTime > 0) continue;
+
                 SourcePlayerIndex = index;
                 TargetPlayerIndex = index;
                 Projectile = player.LaunchPlayerAction(++ProjectileSequence);
                 return;
             }
+
             for (int index = 0; index < Enemies.Count; index++)
             {
                 AdventureEnemyState enemy = Enemies[index];
                 if (enemy.Health == 0 || enemy.Action == null || enemy.Action.RemainingCastTime > 0) continue;
+
                 int[] living = Enumerable.Range(0, _players.Length).Where(item => _players[item].Health > 0).ToArray();
                 SourcePlayerIndex = -1;
                 TargetPlayerIndex = _targetRandom == null ? living[0] : living[_targetRandom.Next(living.Length)];
@@ -111,13 +120,16 @@ namespace WebRPG
             if (enemy.Action.IsSpecial)
             {
                 EnemySkillDefinition special = enemy.Definition.SpecialSkill;
+
                 foreach (EffectDefinition effect in special.Effects)
                 {
                     if (effect.Type == AdventureEffectType.Damage) damage += effect.Amount;
                     else if (effect.Type == AdventureEffectType.Heal) healing += effect.Amount;
                 }
+
                 enemy.RemainingSpecialCooldown = special.Cooldown;
             }
+
             Projectile = new AdventureProjectileState(++ProjectileSequence, index,
                 damage > 0 ? -1 : index, enemy.Action.Name, damage, healing,
                 _configuration.ProjectileTravelTime, !enemy.Action.IsSpecial, enemy.Action.IsSpecial);
@@ -138,6 +150,7 @@ namespace WebRPG
                     player.RecordMessage(projectile.Name + SkillAttackJournalSeparator + target.Definition.Name +
                         DamageJournalSeparator + projectile.Damage + SentenceTerminator);
                 }
+
                 player.Heal(projectile.Healing);
             }
             else
@@ -149,6 +162,7 @@ namespace WebRPG
                     source.BasicAttacksUntilSpecial = source.Definition.SpecialSkill.BasicAttacksBeforeUse;
                 else if (source.Definition.SpecialSkill != null)
                     source.BasicAttacksUntilSpecial = Math.Max(0, source.BasicAttacksUntilSpecial - 1);
+
                 if (projectile.Damage > 0)
                     player.RecordMessage(source.Definition.Name + EnemyAttackJournalSeparator +
                         projectile.Damage + EnemyDamageMessageSuffix);
@@ -157,6 +171,7 @@ namespace WebRPG
                         projectile.Healing + SentenceTerminator);
                 StartEnemyAction(source);
             }
+
             foreach (AdventureBattleModel participant in _players) participant.SelectLivingTarget();
         }
 
@@ -174,6 +189,7 @@ namespace WebRPG
         {
             if (_players.All(player => player.Health == 0)) Stop(AdventureBattleOutcome.Defeated);
             else if (Enemies.All(enemy => enemy.Health == 0)) Stop(AdventureBattleOutcome.Won);
+
             return Outcome != AdventureBattleOutcome.Running;
         }
 

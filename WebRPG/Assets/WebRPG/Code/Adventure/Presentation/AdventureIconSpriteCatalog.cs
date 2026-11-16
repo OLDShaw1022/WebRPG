@@ -18,6 +18,7 @@ namespace WebRPG
                     return entry.Sprite;
                 }
             }
+
             return null;
         }
     }

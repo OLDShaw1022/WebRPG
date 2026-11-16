@@ -119,10 +119,12 @@ namespace WebRPG
             ShopTopUpOffer[] topUps = page == ShopPage.TopUp ? snapshot?.TopUpOffers : null;
             ShopTopUpOrder[] orders = page == ShopPage.History ? snapshot?.TopUpOrders : null;
             if (_offers == offers && _topUpOffers == topUps && _orders == orders && _page == page) return;
+
             _offers = offers;
             _topUpOffers = topUps;
             _orders = orders;
             _page = page;
+
             foreach (ShopOfferCardView card in _cards)
             {
                 card.gameObject.SetActive(false);
@@ -130,12 +132,15 @@ namespace WebRPG
             }
 
             _cards.Clear();
+
             foreach (ShopOffer offer in offers ?? Array.Empty<ShopOffer>())
                 AddCard(card => card.Bind(offer, selected => OfferRequested?.Invoke(selected)));
+
             foreach (ShopTopUpOffer offer in topUps ?? Array.Empty<ShopTopUpOffer>())
                 AddCard(card => card.Bind(string.Format(CrystalFormat, offer.Crystals),
                     string.Format(PriceFormat, offer.Currency, offer.Amount),
                         () => TopUpOfferRequested?.Invoke(offer)));
+
             foreach (ShopTopUpOrder order in orders ?? Array.Empty<ShopTopUpOrder>())
                 AddCard(card => card.Bind(string.Format(ReceiptFormat, order.CreatedAt.ToLocalTime()),
                     DescribeStatus(order.Status), () => TopUpOrderRequested?.Invoke(order)));

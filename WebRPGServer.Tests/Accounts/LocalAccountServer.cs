@@ -10,9 +10,11 @@ internal sealed class LocalAccountServer : IAsyncDisposable
 {
     private const int StartupTimeoutSeconds = 20;
     private const int RetryDelayMilliseconds = 50;
+
     private readonly Process _process;
     private readonly Task<string> _output;
     private readonly Task<string> _errors;
+
     public Uri Address { get; }
 
     private LocalAccountServer(Process process, int port)
@@ -37,17 +39,21 @@ internal sealed class LocalAccountServer : IAsyncDisposable
         };
         start.ArgumentList.Add(Path.Combine(TestContext.CurrentContext.TestDirectory, "WebRPGServer.dll"));
         foreach (string argument in configurationArguments) start.ArgumentList.Add(argument);
+
         start.Environment["PORT"] = port.ToString();
         start.Environment["ConnectionStrings__GameDatabase"] = database.ConnectionString;
         LocalAccountServer server = new(Process.Start(start)!, port);
+
         try
         {
             using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(StartupTimeoutSeconds));
+
             while (true)
             {
                 if (server._process.HasExited)
                     throw new InvalidOperationException(
                         $"Local account server exited: {await server._output}\n{await server._errors}");
+
                 try
                 {
                     using TcpClient probe = new();

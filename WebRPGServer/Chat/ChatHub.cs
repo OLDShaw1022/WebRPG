@@ -11,6 +11,7 @@ public sealed class ChatHub
 {
     private const int RecentMessageLimit = 50;
     private const int ReceiveBufferSizeBytes = 4096;
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = false
@@ -27,6 +28,7 @@ public sealed class ChatHub
     public async Task HandleConnectionAsync(WebSocket webSocket, CancellationToken cancellationToken)
     {
         ChatSession? session = null;
+
         try
         {
             while (webSocket.State == WebSocketState.Open && !cancellationToken.IsCancellationRequested)
@@ -38,6 +40,7 @@ public sealed class ChatHub
                 }
 
                 ChatPacket? packet;
+
                 try
                 {
                     packet = JsonSerializer.Deserialize<ChatPacket>(json, JsonOptions);
@@ -81,6 +84,7 @@ public sealed class ChatHub
                     if (_messageStore is not null)
                     {
                         await session.SendLock.WaitAsync(cancellationToken);
+
                         try
                         {
                             _sessions.TryAdd(session.ConnectionId, session);
@@ -170,6 +174,7 @@ public sealed class ChatHub
     {
         string json = JsonSerializer.Serialize(packet, JsonOptions);
         byte[] payload = Encoding.UTF8.GetBytes(json);
+
         foreach (ChatSession session in _sessions.Values)
         {
             if (session.Socket.State != WebSocketState.Open)
@@ -178,6 +183,7 @@ public sealed class ChatHub
             }
 
             await session.SendLock.WaitAsync(cancellationToken);
+
             try
             {
                 if (session.Socket.State == WebSocketState.Open)
@@ -213,6 +219,7 @@ public sealed class ChatHub
     private static async Task SendAsync(ChatSession session, ChatPacket packet, CancellationToken cancellationToken)
     {
         await session.SendLock.WaitAsync(cancellationToken);
+
         try
         {
             await SendUnlockedAsync(session, packet, cancellationToken);
@@ -243,6 +250,7 @@ public sealed class ChatHub
         using MemoryStream message = new();
         WebSocketReceiveResult result;
         bool isTextMessage = true;
+
         do
         {
             result = await socket.ReceiveAsync(buffer, cancellationToken);

@@ -38,6 +38,7 @@ namespace WebRPG.ContinuousIntegration
                 AssetDatabase.LoadAssetAtPath<TextAsset>("Assets/WebRPG/Data/LobbyClient.json");
             if (!lobbyConfigurationAsset)
                 throw new InvalidOperationException("Lobby server catalog is required for WebGL.");
+
             LobbyClientConfiguration lobbyConfiguration =
                 JsonConvert.DeserializeObject<LobbyClientConfiguration>(lobbyConfigurationAsset.text);
             lobbyConfiguration.Validate();

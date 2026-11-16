@@ -86,8 +86,10 @@ namespace WebRPG
             _refreshButton.interactable = available;
             _leaveButton.interactable = available && screen.InRoom;
             _readyButton.interactable = available && screen.InRoom;
+
             while (_rows.Count < screen.Rooms.Length)
                 _rows.Add(Instantiate(_roomTemplate, _rooms));
+
             for (int index = 0; index < _rows.Count; index++)
             {
                 bool visible = index < screen.Rooms.Length;
@@ -101,12 +103,19 @@ namespace WebRPG
             _username.text = username;
             _username.interactable = false;
         }
+
         private void Create() => CreateRequested?.Invoke(_roomName.text, _publicToggle.isOn);
+
         private void Join() => JoinRequested?.Invoke(_roomId.text);
+
         private void SelectRoom(string roomId) => JoinRequested?.Invoke(roomId);
+
         private void Refresh() => RefreshRequested?.Invoke();
+
         private void Leave() => LeaveRequested?.Invoke();
+
         private void Ready() => ReadyRequested?.Invoke();
+
         private void Back() => BackRequested?.Invoke();
     }
 }

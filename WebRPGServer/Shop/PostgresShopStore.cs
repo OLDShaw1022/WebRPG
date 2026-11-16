@@ -92,6 +92,7 @@ public sealed class PostgresShopStore(NpgsqlDataSource source)
                     reader.GetString(0), reader.GetInt64(1), reader.GetInt64(2), reader.GetInt64(3));
                 if (original != confirmed)
                     return new ShopExchangeResult(ShopExchangeStatus.RequestConflict, balance, offer);
+
                 return JsonSerializer.Deserialize<ShopExchangeResult>(reader.GetString(4))!;
             }
         }

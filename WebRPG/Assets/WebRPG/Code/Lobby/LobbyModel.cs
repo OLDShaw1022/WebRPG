@@ -94,6 +94,7 @@ namespace WebRPG
                 Changed?.Invoke();
                 return;
             }
+
             int serverIndex = _account.ServerIndex;
             string name = _account.Username.Trim();
             if (name.Length == 0 || name.Length > LobbyPacketLimits.UsernameLength)
@@ -108,6 +109,7 @@ namespace WebRPG
                 Changed?.Invoke();
                 return;
             }
+
             WebSocket socket = new WebSocket(_servers[serverIndex].Url);
             _socket = socket;
             IsBusy = true;
@@ -129,6 +131,7 @@ namespace WebRPG
                 if (!_disposed && socket == _socket) Disconnect(DisconnectedMessage);
             };
             Changed?.Invoke();
+
             try { await socket.Connect(); }
             catch (Exception exception)
             {
@@ -144,18 +147,21 @@ namespace WebRPG
                 await CloseSocketAsync(socket);
                 return;
             }
+
             await SendPacketAsync(new LobbyPacket { Type = LobbyPacketType.Hello, Username = username });
         }
 
         public async Awaitable SendAsync(LobbyPacket packet)
         {
             if (_disposed || !IsConnected || IsBusy) return;
+
             await SendPacketAsync(packet);
         }
 
         public async Awaitable SendChatAsync(string draft)
         {
             if (_disposed || !CanChat || string.IsNullOrWhiteSpace(draft)) return;
+
             string message = draft.Trim();
             if (message.Length > LobbyPacketLimits.ChatMessageLength)
             {
@@ -184,6 +190,7 @@ namespace WebRPG
         public async Awaitable SendAdventureAsync(AdventurePacket packet)
         {
             if (_disposed || !IsConnected || packet == null) return;
+
             WebSocket socket = _socket;
             packet.RequestId = (++_requestNumber).ToString();
             _adventureRequests.Add(packet.RequestId, Room?.Id ?? string.Empty);
@@ -211,9 +218,11 @@ namespace WebRPG
             WebSocket socket, LobbyPacket packet, Action<WebSocket, Exception> failed)
         {
             await _sendGate.WaitAsync();
+
             try
             {
                 if (_disposed || socket != _socket || socket == null) return;
+
                 await SendSocketPacketCoreAsync(socket, packet, failed);
             }
             finally { _sendGate.Release(); }
@@ -226,6 +235,7 @@ namespace WebRPG
             {
                 Newtonsoft.Json.Linq.JObject json = Newtonsoft.Json.Linq.JObject.FromObject(packet);
                 json[TokenProperty] = _account.AccessToken;
+
                 try { await socket.SendText(json.ToString(Formatting.None)); }
                 catch (Exception exception) { failed(socket, exception); }
             }
@@ -239,6 +249,7 @@ namespace WebRPG
 
             await _sendGate.WaitAsync(cancellationToken);
             _refreshingSession = true;
+
             try
             {
                 WebSocket socket = _socket;
@@ -271,6 +282,7 @@ namespace WebRPG
             _refreshRequestId = (++_requestNumber).ToString();
             _refreshResponseType = responseType;
             _refreshReplyTime = 0f;
+
             try
             {
                 await SendSocketPacketCoreAsync(socket,
@@ -289,6 +301,7 @@ namespace WebRPG
         private void HandlePacket(string json)
         {
             LobbyPacket packet;
+
             try { packet = JsonConvert.DeserializeObject<LobbyPacket>(json); }
             catch (JsonException) { Disconnect(InvalidPacketMessage); return; }
             if (packet == null) { Disconnect(InvalidPacketMessage); return; }
@@ -300,6 +313,7 @@ namespace WebRPG
             if (packet.Type == LobbyPacketType.RoomChat)
             {
                 if (Room == null || packet.RoomId != Room.Id) return;
+
                 AppendRoomLog(string.Format(ChatLineFormat, packet.Username, packet.Message));
                 if (_chatRequestId.Length != 0 && packet.RequestId == _chatRequestId)
                 {
@@ -307,6 +321,7 @@ namespace WebRPG
                     CompleteChat(string.Empty);
                 }
                 else ChatChanged?.Invoke();
+
                 return;
             }
             if (packet.Type == LobbyPacketType.Adventure)
@@ -317,8 +332,10 @@ namespace WebRPG
                         _adventureRequests.Remove(packet.Adventure.RequestId);
                     AdventureReceived?.Invoke(packet.Adventure);
                 }
+
                 return;
             }
+
             if (packet.Type == LobbyPacketType.Welcome || packet.Type == LobbyPacketType.State)
             {
                 PlayerId = packet.PlayerId;
@@ -356,14 +373,17 @@ namespace WebRPG
                         Status = packet.Error;
                         Changed?.Invoke();
                     }
+
                     return;
                 }
                 if (string.IsNullOrEmpty(_pendingId) || packet.RequestId != _pendingId) return;
+
                 IsBusy = false;
                 _pendingId = string.Empty;
                 Status = packet.Error;
             }
             else return;
+
             Changed?.Invoke();
         }
 
@@ -371,11 +391,14 @@ namespace WebRPG
         {
             if (Room?.Id != previousRoom?.Id) ClearRoomLog();
             if (Room == null) return;
+
             LobbyMemberSnapshot[] previousMembers = previousRoom?.Id == Room.Id
                 ? previousRoom.Members : Array.Empty<LobbyMemberSnapshot>();
+
             foreach (LobbyMemberSnapshot member in previousMembers)
                 if (!Room.Members.Any(current => current.PlayerId == member.PlayerId))
                     AppendRoomLog(string.Format(LeftLineFormat, member.Username));
+
             foreach (LobbyMemberSnapshot member in Room.Members)
                 if (!previousMembers.Any(previous => previous.PlayerId == member.PlayerId))
                     AppendRoomLog(string.Format(JoinedLineFormat, member.Username));
@@ -413,12 +436,14 @@ namespace WebRPG
                 if (_refreshReplyTime >= _requestTimeoutSeconds) _refreshReply?.TrySetResult(false);
                 return;
             }
+
             if (_chatRequestId.Length != 0)
             {
                 _chatTime += deltaTime;
                 if (_chatTime >= _requestTimeoutSeconds) CompleteChat(ChatTimeoutMessage);
             }
             if (!IsBusy) return;
+
             _pendingTime += deltaTime;
             if (_pendingTime >= _requestTimeoutSeconds) Disconnect(TimeoutMessage);
         }
@@ -444,6 +469,7 @@ namespace WebRPG
         public async Awaitable DisposeAsync()
         {
             if (_disposed) return;
+
             _disposed = true;
             WebSocket socket = _socket;
             _socket = null;

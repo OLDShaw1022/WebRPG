@@ -26,6 +26,7 @@ internal sealed class ControlledLobbySocket : WebSocket
     public override string? SubProtocol => null;
 
     public void PauseSending() => _sendRelease = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
     public void ResumeSending() => _sendRelease?.TrySetResult();
 
     public void Submit(LobbyPacket packet) => _incoming.Writer.TryWrite(JsonSerializer.SerializeToUtf8Bytes(packet));
@@ -36,6 +37,7 @@ internal sealed class ControlledLobbySocket : WebSocket
     {
         packet.RequestId = Guid.NewGuid().ToString("N");
         Submit(packet);
+
         while (true)
         {
             LobbyPacket response = await ReadAsync(token);
@@ -47,6 +49,7 @@ internal sealed class ControlledLobbySocket : WebSocket
         bool endOfMessage, CancellationToken cancellationToken)
     {
         if (Interlocked.Increment(ref _sending) != 1) ConcurrentSendDetected = true;
+
         try
         {
             using CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(
@@ -56,6 +59,7 @@ internal sealed class ControlledLobbySocket : WebSocket
                 _sendStarted.TrySetResult();
                 await _sendRelease.Task.WaitAsync(linked.Token);
             }
+
             await _outgoing.Writer.WriteAsync(JsonSerializer.Deserialize<LobbyPacket>(buffer.AsSpan())!, linked.Token);
         }
         finally { Interlocked.Decrement(ref _sending); }
@@ -66,6 +70,7 @@ internal sealed class ControlledLobbySocket : WebSocket
     {
         using CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(
             cancellationToken, _aborted.Token);
+
         try
         {
             byte[] message = await _incoming.Reader.ReadAsync(linked.Token);
@@ -101,5 +106,4 @@ internal sealed class ControlledLobbySocket : WebSocket
         _aborted.Dispose();
     }
 }
-
 

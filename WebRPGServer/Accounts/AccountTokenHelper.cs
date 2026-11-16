@@ -12,5 +12,6 @@ public static class AccountTokenHelper
     private const int TokenBytes = 32;
 
     public static string Create() => Convert.ToHexString(RandomNumberGenerator.GetBytes(TokenBytes));
+
     public static string Hash(string token) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
 }

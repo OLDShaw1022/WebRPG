@@ -92,6 +92,7 @@ namespace WebRPG
                 _server.SetValueWithoutNotify(_registrationServer.value);
                 _server.RefreshShownValue();
             }
+
             ClearPassword();
             _loginPage.SetActive(!registration);
             _registrationPage.SetActive(registration);
@@ -122,8 +123,11 @@ namespace WebRPG
         }
 
         private void OpenRegistration() => PageRequested?.Invoke(true);
+
         private void BackToLogin() => PageRequested?.Invoke(false);
+
         private void Login() => Submitted?.Invoke(_server.value, _email.text, _password.text, _username.text, false);
+
         private void Register() => Submitted?.Invoke(
             _registrationServer.value, _registrationEmail.text, _registrationPassword.text, _username.text, true);
     }

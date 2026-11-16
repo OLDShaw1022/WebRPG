@@ -10,14 +10,19 @@ namespace WebRPG.Tests
         public void MenuSettingsAndConfirmationRespectPauseMode(bool singlePlayer)
         {
             AdventureMenuModel model = new AdventureMenuModel(singlePlayer);
+
             Assert.That(model.IsPaused, Is.False);
+
             foreach (AdventureMenuScreen screen in new[] { AdventureMenuScreen.Menu, AdventureMenuScreen.Settings,
                 AdventureMenuScreen.ConfirmReturn })
             {
                 model.Navigate(screen);
+
                 Assert.That(model.IsPaused, Is.EqualTo(singlePlayer));
             }
+
             model.Navigate(AdventureMenuScreen.Hidden);
+
             Assert.That(model.IsPaused, Is.False);
         }
     }

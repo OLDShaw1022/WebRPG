@@ -24,6 +24,7 @@ namespace WebRPG
             _view = view;
             _adventure = adventure;
             if (!_view) return;
+
             _roomId = _model.Room?.Id;
             if (_adventure != null)
             {
@@ -31,9 +32,11 @@ namespace WebRPG
                     foreach (string line in _model.RoomLog.Split(new[] { NewLine }, StringSplitOptions.None))
                         AppendEntry(line, true);
                 foreach (string line in _adventure.Journal) AppendEntry(line, false);
+
                 _model.RoomLogEntryAdded += AddRoomEntry;
                 _adventure.JournalEntryAdded += AddAdventureEntry;
             }
+
             _model.ChatChanged += Refresh;
             _model.ChatDelivered += _view.ClearDelivered;
             _view.SendRequested += Send;
@@ -43,12 +46,14 @@ namespace WebRPG
         public void Dispose()
         {
             if (!_view) return;
+
             _model.ChatChanged -= Refresh;
             if (_adventure != null)
             {
                 _model.RoomLogEntryAdded -= AddRoomEntry;
                 _adventure.JournalEntryAdded -= AddAdventureEntry;
             }
+
             _model.ChatDelivered -= _view.ClearDelivered;
             _view.SendRequested -= Send;
         }
@@ -77,6 +82,7 @@ namespace WebRPG
                 _adventureLog.RemoveAll(entry => entry.IsRoomEntry);
                 _roomId = roomId;
             }
+
             string log = _adventure == null ? _model.RoomLog :
                 string.Join(NewLine, _adventureLog.Select(entry => entry.Text));
             _view.Render(roomId, log, _model.ChatError, _model.CanChat);

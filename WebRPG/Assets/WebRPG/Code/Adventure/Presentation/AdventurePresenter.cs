@@ -44,6 +44,7 @@ namespace WebRPG
         public void Tick(float seconds)
         {
             if (_disposed) return;
+
             _operations.Tick(seconds, _paused);
             Render(seconds);
         }
@@ -78,28 +79,28 @@ namespace WebRPG
         private void HandleStart()
         {
             if (!_operations.Start()) return;
+
             _mapOpen = false;
             Refresh();
         }
-
 
         private void HandleAbandon()
         {
             if (!_operations.Abandon()) return;
+
             _mapOpen = false;
             Refresh();
         }
-
 
         private void HandleChoice(int index)
         {
             AdventurePhase previousPhase = _model.Phase;
             _operations.Choose(index);
             if (_operations.IsMultiplayer) return;
+
             if (previousPhase == AdventurePhase.Map && _model.Phase != AdventurePhase.Map) _mapOpen = false;
             Refresh();
         }
-
 
         private void HandleCharacterFocus(string characterId)
         {
@@ -145,6 +146,7 @@ namespace WebRPG
         private void Render(float seconds)
         {
             if (_disposed) return;
+
             AdventureScreenModel screen = _screenAssembler.Build(_paused, _mapOpen);
             float presentationSeconds = _network == null && _paused ? 0 : seconds * screen.BattleSpeed;
             _presentation.Apply(screen, presentationSeconds);

@@ -10,10 +10,12 @@ namespace WebRPGShared
         public string RequestId { get; set; } = string.Empty;
         public string RoomId { get; set; } = string.Empty;
         public string PlayerId { get; set; } = string.Empty;
+
         public string Command { get; set; } = string.Empty;
         public int Turn { get; set; }
         public long Sequence { get; set; }
         public string Payload { get; set; } = string.Empty;
+
         public string Error { get; set; } = string.Empty;
     }
 }

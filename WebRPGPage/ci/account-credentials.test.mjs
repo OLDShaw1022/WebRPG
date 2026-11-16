@@ -22,6 +22,7 @@ function setup() {
             return Promise.resolve('response');
         }
     };
+
     const context = vm.createContext({
         URL,
         Set,
@@ -32,6 +33,7 @@ function setup() {
         mergeInto: (target, values) => Object.assign(target, values) });
     vm.runInContext(source, context);
     context.WebRPGAccountCredentials = library.$WebRPGAccountCredentials;
+
     return { calls, module, register: library.WebRPG_RegisterAccountRequest };
 }
 
@@ -42,6 +44,7 @@ test('registered account POST requests include browser credentials on both Unity
         const signal = new AbortController().signal;
         const progress = () => {};
         const options = { method: 'POST', headers: { 'X-WebRPG-Request': '1' }, signal, onProgress: progress };
+
         assert.equal(await state.module[method](endpoint, options), 'response');
         assert.equal(state.calls[0].init.credentials, 'include');
         assert.equal(state.calls[0].init.signal, signal);
@@ -55,6 +58,7 @@ test('registered account POST requests include browser credentials on both Unity
 test('assets, other hosts, unregistered URLs, and GETs retain their original credential mode', async () => {
     const state = setup();
     state.register(endpoint);
+
     for (const [resource, method] of [
         ['https://ws.oldshaw-webrpg.com/Build/game.data', 'POST'],
         ['https://other.example/api/accounts/refresh', 'POST'],
@@ -63,6 +67,7 @@ test('assets, other hosts, unregistered URLs, and GETs retain their original cre
     ]) {
         const options = { method, credentials: 'omit' };
         await state.module.fetchWithProgress(resource, options);
+
         assert.equal(state.calls.at(-1).init, options);
         assert.equal(state.calls.at(-1).init.credentials, 'omit');
     }
@@ -75,8 +80,10 @@ test('repeated registration does not stack wrappers and can register a second ac
     state.register(endpoint);
     const login = 'https://ws.oldshaw-webrpg.com/api/accounts/login';
     state.register(login);
+
     assert.equal(state.module.fetchWithProgress, wrapper);
     await state.module.fetchWithProgress(login, { method: 'POST' });
+
     assert.equal(state.calls.length, 1);
     assert.equal(state.calls[0].init.credentials, 'include');
 });

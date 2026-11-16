@@ -46,6 +46,7 @@ namespace WebRPG
             {
                 _logType = logType;
             }
+
             public override void Write(char value)
             {
                 if (value == '\n')
@@ -57,6 +58,7 @@ namespace WebRPG
                     _buffer.Append(value);
                 }
             }
+
             public override void WriteLine(string value)
             {
                 Log(value);

@@ -12,6 +12,7 @@ namespace WebRPGServer.Tests;
 internal sealed class LocalLobbyServer : IAsyncDisposable
 {
     private readonly WebApplication _application;
+
     public Uri Address { get; }
 
     private LocalLobbyServer(WebApplication application, Uri address)
@@ -31,6 +32,7 @@ internal sealed class LocalLobbyServer : IAsyncDisposable
         application.Run(async context =>
         {
             if (!context.WebSockets.IsWebSocketRequest) { context.Response.StatusCode = 400; return; }
+
             using System.Net.WebSockets.WebSocket socket = await context.WebSockets.AcceptWebSocketAsync();
             await hub.HandleConnectionAsync(socket, context.RequestAborted, authenticate);
         });

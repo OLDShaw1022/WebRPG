@@ -61,9 +61,12 @@ public sealed partial class PostgresAccountStore
     public async Task<AccountSession?> LoginAsync(AccountLogin login, CancellationToken cancellationToken)
     {
         if (login.Password is null || login.Password.Length > AccountValidation.MaximumPasswordLength) return null;
+
         string email;
+
         try { email = AccountValidation.NormalizeEmail(login.Email); }
         catch (ArgumentException) { return null; }
+
         Guid accountId = Guid.Empty;
         string username = string.Empty;
         string hash = _dummyHash;
@@ -79,8 +82,10 @@ public sealed partial class PostgresAccountStore
                 hash = reader.GetString(2);
             }
         }
+
         bool valid = AccountPasswordHelper.Verify(hash, login.Password);
         if (!valid || accountId == Guid.Empty) return null;
+
         string token = AccountTokenHelper.Create();
         DateTimeOffset expires = DateTimeOffset.UtcNow.AddHours(AccountTokenHelper.SessionLifetimeHours);
         await using (NpgsqlCommand cleanup = _dataSource.CreateCommand(
@@ -89,6 +94,7 @@ public sealed partial class PostgresAccountStore
         {
             await cleanup.ExecuteNonQueryAsync(cancellationToken);
         }
+
         await using NpgsqlCommand insert = _dataSource.CreateCommand("""
             INSERT INTO game_account_sessions(token_hash, account_id, expires_at) VALUES ($1, $2, $3);
             """);
@@ -102,6 +108,7 @@ public sealed partial class PostgresAccountStore
     public async Task<AccountIdentity?> AuthenticateAsync(string? token, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(token) || token.Length > AccountTokenHelper.MaximumTokenLength) return null;
+
         await using NpgsqlCommand command = _dataSource.CreateCommand("""
             SELECT a.account_id, a.username FROM game_account_sessions s
             JOIN game_accounts a ON a.account_id = s.account_id

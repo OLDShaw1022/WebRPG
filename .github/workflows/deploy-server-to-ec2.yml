@@ -64,6 +64,7 @@ jobs:
               ...context.repo,
               ref: 'heads/main'
             });
+
             if (data.object.sha !== context.sha) {
               core.setFailed('This commit is no longer the latest main commit. Deployment skipped.');
             }
@@ -76,6 +77,7 @@ jobs:
           install -m 700 -d ~/.ssh
           printf '%s\n' "$EC2_SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
+
           ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts
 
       - name: Copy server to EC2
@@ -85,6 +87,7 @@ jobs:
         run: |
           ssh "$EC2_USER@$EC2_HOST" 'mkdir -p /home/ec2-user/myserver'
           ssh "$EC2_USER@$EC2_HOST" 'command -v rsync >/dev/null || { echo "rsync is required on EC2"; exit 1; }'
+
           rsync -azc --itemize-changes publish/ "$EC2_USER@$EC2_HOST:/home/ec2-user/myserver/"
 
       - name: Restart server

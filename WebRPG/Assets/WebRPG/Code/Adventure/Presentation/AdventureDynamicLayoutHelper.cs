@@ -97,10 +97,12 @@ namespace WebRPG
             {
                 return;
             }
+
             int columns = Math.Min(MaximumFactionColumns, count);
             int rows = Mathf.CeilToInt((float)count / columns);
             float width = _settings.CharacterWidth;
             float height = _settings.CharacterHeight;
+
             for (int index = 0; index < count; index++)
             {
                 int row = index / columns;
@@ -124,10 +126,12 @@ namespace WebRPG
             {
                 return;
             }
+
             float width = _settings.SkillWidth;
             float spacing = _settings.SkillSpacing;
             float group = count * width + (count - 1) * spacing;
             float start = (_skillArea.Rect.rect.width - group) / 2;
+
             for (int index = 0; index < count; index++)
             {
                 PlaceCard(_skills[index].Rect, start + width / 2 + index * (width + spacing), width,
@@ -147,6 +151,7 @@ namespace WebRPG
             content.sizeDelta = new Vector2(contentWidth, _relicArea.Rect.rect.height);
             content.anchoredPosition = new Vector2(
                 Mathf.Clamp(content.anchoredPosition.x, viewportWidth - contentWidth, 0), 0);
+
             for (int index = 0; index < count; index++)
             {
                 RectTransform rect = _relicIcons[index].Rect;
@@ -164,6 +169,7 @@ namespace WebRPG
             {
                 return;
             }
+
             AdventureMapRowScreenModel[] rows = _screen.MapRows;
             float width = Mathf.Max(1, _mapScroll.Viewport.rect.width);
             float height = Math.Max(
@@ -176,6 +182,7 @@ namespace WebRPG
                 width / MapNodeWidthDivisor - MapNodeWidthSpacing, _settings.MapNodeMinimumWidth,
                 _settings.MapNodeMaximumWidth);
             int connection = 0;
+
             for (int row = 0; row < rows.Length; row++)
             {
                 for (int index = 0; index < rows[row].Nodes.Length; index++)
@@ -190,6 +197,7 @@ namespace WebRPG
                     {
                         continue;
                     }
+
                     for (int next = 0; next < rows[row + 1].Nodes.Length; next++)
                     {
                         if (connection >= _connections.Count)

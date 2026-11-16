@@ -10,6 +10,7 @@ namespace WebRPG.Tests
     internal sealed class AccountHttpTestServer : IDisposable
     {
         private readonly HttpListener _listener = new HttpListener();
+
         public string SocketUrl { get; }
         public string LastPath { get; private set; }
         public string LastAuthorization { get; private set; }
@@ -39,6 +40,7 @@ namespace WebRPG.Tests
             using (System.IO.StreamReader reader = new System.IO.StreamReader(
                 context.Request.InputStream, Encoding.UTF8))
                 LastBody = await reader.ReadToEndAsync();
+
             context.Response.StatusCode = status;
             context.Response.ContentType = "application/json";
             byte[] bytes = Encoding.UTF8.GetBytes(body);

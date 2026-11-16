@@ -11,6 +11,7 @@ namespace WebRPG
         public event Action LeaveRequested;
         public event Action ReadyRequested;
         public event Action BackRequested;
+
         public void Render(LobbyScreenModel screen);
     }
 }

@@ -11,6 +11,7 @@ namespace WebRPG
         private const string PendingMessage = "處理中，請稍候…";
         private const string RestoringMessage = "正在恢復登入…";
         private const string RestoreFailedMessage = "無法恢復登入，請重新整理重試，或使用 Email 與密碼登入。";
+
         private readonly AccountModel _model;
         private readonly AccountView _view;
         private readonly Action _loggedIn;
@@ -31,12 +32,15 @@ namespace WebRPG
         public async Awaitable RestoreAsync()
         {
             if (_busy || _disposed) return;
+
             _busy = true;
             _view.Render(true, RestoringMessage);
+
             try
             {
                 bool restored = await _model.TryRestoreAsync(_model.StartupServerIndex);
                 if (_disposed || !_view) return;
+
                 _view.Render(false, InitialMessage);
                 if (restored) _loggedIn();
             }
@@ -50,6 +54,7 @@ namespace WebRPG
         private void ChangePage(bool registration)
         {
             if (_busy || _disposed) return;
+
             _view.ShowPage(registration);
             _view.Render(false, registration ? RegistrationMessage : InitialMessage);
         }
@@ -57,6 +62,7 @@ namespace WebRPG
         private void Submit(int server, string email, string password, string username, bool register)
         {
             if (_busy || _disposed) return;
+
             SubmitAsync(server, email, password, username, register).Forget();
         }
 
@@ -64,10 +70,12 @@ namespace WebRPG
         {
             _busy = true;
             _view.Render(true, PendingMessage);
+
             try
             {
                 string status = await _model.SubmitAsync(server, email, password, username, register, _view.RememberMe);
                 if (_disposed || !_view) return;
+
                 _view.ClearPassword();
                 if (register && _model.RegistrationSucceeded) _view.ShowPage(false);
                 _view.Render(false, status);

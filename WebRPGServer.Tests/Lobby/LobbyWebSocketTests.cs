@@ -54,12 +54,15 @@ public sealed class LobbyWebSocketTests
         await fifth.RequestAsync("JoinRoom", new() { ["RoomId"] = roomId }, token);
         fifth.Abort();
         JsonObject cleaned;
+
         do
         {
             cleaned = await second.RequestAsync("ListRooms", new(), token);
             if (cleaned["Room"]!["Members"]!.AsArray().Count == 3) break;
+
             await Task.Delay(30, token);
         } while (true);
+
         Check(cleaned["Room"]!["Members"]!.AsArray().All(m => m!["PlayerId"]!.GetValue<string>() != fifth.PlayerId),
             "Disconnected member must be removed.");
         await second.RequestAsync("LeaveRoom", new(), token);
@@ -103,6 +106,7 @@ public sealed class LobbyWebSocketTests
         await host.RequestAsync("RoomChat",
             new() { ["Message"] = "hello", ["Username"] = "Spoofed" }, token, "RoomChat");
         JsonObject received = await member.ReadTypeAsync("RoomChat", token);
+
         Assert.That(received["Message"]!.GetValue<string>(), Is.EqualTo("hello"));
         Assert.That(received["Username"]!.GetValue<string>(), Is.EqualTo("Host"));
         Assert.That(received["RoomId"]!.GetValue<string>(), Is.EqualTo(roomId));

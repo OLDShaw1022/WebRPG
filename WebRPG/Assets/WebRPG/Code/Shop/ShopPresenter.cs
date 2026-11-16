@@ -136,10 +136,12 @@ namespace WebRPG
             _notice = string.Empty;
             int version = _sessionVersion;
             Render();
+
             try
             {
                 if (syncOrderId != Guid.Empty) await _model.SyncTopUpAsync(syncOrderId);
                 if (version != _sessionVersion) return;
+
                 ShopSnapshot snapshot = await _model.LoadAsync();
                 if (version == _sessionVersion)
                 {
@@ -180,6 +182,7 @@ namespace WebRPG
                     _selectedOrder = null;
                     LoadAsync(orderId).Forget();
                 }
+
                 return;
             }
             if (_selectedTopUp != null)
@@ -187,9 +190,11 @@ namespace WebRPG
                 CreateTopUpAsync().Forget();
                 return;
             }
+
             if (_pendingOffer == null)
             {
                 if (_selectedOffer == null) return;
+
                 _pendingOffer = _selectedOffer;
                 _requestId = Guid.NewGuid();
             }
@@ -216,6 +221,7 @@ namespace WebRPG
         private void SelectOffer(ShopOffer offer)
         {
             if (_busy || _selectedOffer != null || _pendingOffer != null || _notice.Length > 0) return;
+
             _selectedOffer = offer;
             Render();
         }
@@ -226,10 +232,12 @@ namespace WebRPG
             int version = _sessionVersion;
             ShopOffer offer = _pendingOffer;
             Render();
+
             try
             {
                 ShopExchangeResult result = await _model.ExchangeAsync(_requestId, offer);
                 if (version != _sessionVersion) return;
+
                 _pendingOffer = null;
                 _selectedOffer = null;
                 _snapshot.Balance = result.Balance;
@@ -259,6 +267,7 @@ namespace WebRPG
             catch (Exception)
             {
                 if (version != _sessionVersion) return;
+
                 _selectedOffer = null;
                 _notice = RetryRequired;
             }
@@ -291,10 +300,12 @@ namespace WebRPG
             _notice = string.Empty;
             int version = _sessionVersion;
             Render();
+
             try
             {
                 ShopTopUpResult result = await _model.CreateTopUpAsync(_topUpRequestId, _selectedTopUp);
                 if (version != _sessionVersion) return;
+
                 _selectedTopUp = null;
                 if (result.OfferChanged)
                 {
@@ -304,6 +315,7 @@ namespace WebRPG
                         _snapshot = snapshot;
                         _notice = Changed;
                     }
+
                     return;
                 }
 

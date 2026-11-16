@@ -31,6 +31,7 @@ namespace WebRPG
                 _preferredSize = _panel.rect.size;
                 _hasPreferredSize = true;
             }
+
             _owner = owner;
             _anchor = anchor;
             _pointer = pointer;
@@ -45,6 +46,7 @@ namespace WebRPG
             {
                 return;
             }
+
             _pointer = pointer;
             UpdatePosition();
         }
@@ -76,6 +78,7 @@ namespace WebRPG
             {
                 return;
             }
+
             _title.text = title;
             _description.text = description;
             _status.text = status;

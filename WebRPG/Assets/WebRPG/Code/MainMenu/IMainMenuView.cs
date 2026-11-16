@@ -8,6 +8,7 @@ namespace WebRPG
         public event Action SinglePlayerRequested;
         public event Action MultiplayerRequested;
         public event Action QuitRequested;
+
         public void Hide();
     }
 }

@@ -9,6 +9,7 @@ namespace WebRPG
     {
         private const string SecureWebSocketScheme = "wss";
         private const string LocalWebSocketScheme = "ws";
+
         public string DefaultServerId;
         public LobbyServerConfiguration[] Servers;
         public float RequestTimeoutSeconds;

@@ -8,6 +8,7 @@ namespace WebRPG
     {
         private const string HealthTitle = "生命";
         private const string HealthFormat = "生命 {0} / {1}";
+
         public static AdventureCharacterScreenModel[] Characters(MultiplayerAdventureSession session,
             AdventureCharacterScreenModel localPlayer)
         {

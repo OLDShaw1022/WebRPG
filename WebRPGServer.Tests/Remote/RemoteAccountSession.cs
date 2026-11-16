@@ -8,7 +8,9 @@ namespace WebRPGServer.Tests;
 internal sealed class RemoteAccountSession : IAsyncDisposable
 {
     private const int LogoutTimeoutSeconds = 10;
+
     private readonly HttpClient _client;
+
     public string AccessToken { get; }
 
     private RemoteAccountSession(HttpClient client, string accessToken)
@@ -27,9 +29,11 @@ internal sealed class RemoteAccountSession : IAsyncDisposable
                 "for a dedicated test account.");
         if (address.Scheme != "wss")
             throw new InvalidOperationException("Remote account tests require WSS and HTTPS.");
+
         UriBuilder api = new(
             address) { Scheme = "https", Path = "/api/accounts/", Query = string.Empty, Fragment = string.Empty };
         HttpClient client = new(new HttpClientHandler { AllowAutoRedirect = false }) { BaseAddress = api.Uri };
+
         try
         {
             using HttpResponseMessage response = await client.PostAsJsonAsync("login", new { email, password }, token);
@@ -37,10 +41,12 @@ internal sealed class RemoteAccountSession : IAsyncDisposable
                 throw new InvalidOperationException(
                     $"Remote test account {account} login failed: HTTP {(int)response.StatusCode}. " +
                     "Check account API proxy, database and test credentials.");
+
             JsonObject? session = await response.Content.ReadFromJsonAsync<JsonObject>(token);
             string? accessToken = session?["accessToken"]?.GetValue<string>();
             if (string.IsNullOrWhiteSpace(accessToken))
                 throw new InvalidOperationException("Remote login returned no access token.");
+
             return new RemoteAccountSession(client, accessToken);
         }
         catch

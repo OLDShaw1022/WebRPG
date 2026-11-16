@@ -4,13 +4,16 @@ namespace WebRPGServer;
 public sealed class ShopCatalog
 {
     public const int MaximumOfferIdLength = 64;
+
     private readonly Dictionary<string, ShopOffer> _offers;
+
     public IReadOnlyCollection<ShopOffer> Offers => _offers.Values;
 
     public ShopCatalog(IConfiguration configuration)
     {
         ShopOffer[] offers = configuration.GetSection("Shop:Offers").Get<ShopOffer[]>() ?? [];
         _offers = new Dictionary<string, ShopOffer>(StringComparer.Ordinal);
+
         foreach (ShopOffer offer in offers)
         {
             if (!offer.IsValid || !_offers.TryAdd(offer.Id, offer))

@@ -20,6 +20,7 @@ namespace WebRPG.Tests
         {
             LobbyClientConfiguration configuration = JsonConvert.DeserializeObject<LobbyClientConfiguration>(
                 ConfigurationJson);
+
             Assert.DoesNotThrow(configuration.Validate);
         }
 
@@ -35,10 +36,12 @@ namespace WebRPG.Tests
                     Url = "ws://localhost:8080/ws?channel=lobby", EditorOnly = true }
             };
             LobbyServerConfiguration[] playerServers = configuration.GetAvailableServers(false);
+
             Assert.That(playerServers.Length, Is.EqualTo(1));
             Assert.That(playerServers[0].Id, Is.EqualTo(configuration.DefaultServerId));
             Assert.That(configuration.GetAvailableServers(true).Length, Is.EqualTo(2));
             configuration.Servers[0].Url = "ws://example.com/ws?channel=lobby";
+
             Assert.Throws<System.InvalidOperationException>(configuration.Validate);
         }
 
@@ -59,6 +62,7 @@ namespace WebRPG.Tests
                 new object[] {
                     JsonConvert.SerializeObject(
                     new LobbyPacket { Type = LobbyPacketType.Error, RequestId = requestId, Error = "rejected" }) });
+
             Assert.That(model.IsBusy, Is.True);
             Assert.That(model.Status, Is.EqualTo(status));
             Assert.That(changes, Is.Zero);
@@ -76,6 +80,7 @@ namespace WebRPG.Tests
                 new object[] {
                     JsonConvert.SerializeObject(
                     new LobbyPacket { Type = LobbyPacketType.Error, RequestId = "lobby", Error = "rejected" }) });
+
             Assert.That(model.IsBusy, Is.False);
             Assert.That(model.Status, Is.EqualTo("rejected"));
         }
@@ -101,6 +106,7 @@ namespace WebRPG.Tests
                         Type = AdventurePacketType.Command, PlayerId = playerId, RequestId = "1", RoomId = "room"
                     }
                 }) });
+
             Assert.That(requests.Count, Is.EqualTo(remaining));
             Assert.That(received, Is.EqualTo(1));
         }
@@ -129,6 +135,7 @@ namespace WebRPG.Tests
             var handle = typeof(LobbyModel).GetMethod("HandlePacket", BindingFlags.Instance | BindingFlags.NonPublic);
             handle.Invoke(model, new object[] { json });
             handle.Invoke(model, new object[] { json });
+
             Assert.That(model.IsBusy, Is.True);
             Assert.That(model.Status, Is.EqualTo(status));
             Assert.That(changes, Is.Zero);
@@ -145,6 +152,7 @@ namespace WebRPG.Tests
         {
             LobbyView view = AssetDatabase.LoadAssetAtPath<LobbyView>("Assets/WebRPG/Prefabs/LobbyCanvas.prefab");
             Transform browsePage = view.transform.Find("Lobby/BrowsePage");
+
             Assert.That(browsePage, Is.Not.Null);
             Assert.That(browsePage.Find("ServerDropdown"), Is.Null);
             Assert.That(browsePage.Find("ServerLabel"), Is.Null);

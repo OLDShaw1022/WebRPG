@@ -32,6 +32,7 @@ namespace WebRPG
             string key = SessionKeyPrefix + address.GetLeftPart(UriPartial.Authority);
             string header;
             await Awaitable.BackgroundThreadAsync();
+
             try { header = DesktopCredentialStore.Read(key); }
             finally { await Awaitable.MainThreadAsync(); }
 
@@ -50,6 +51,7 @@ namespace WebRPG
             string key = SessionKeyPrefix + address.GetLeftPart(UriPartial.Authority);
             bool remember = ReadCookie(address, header) != null;
             await Awaitable.BackgroundThreadAsync();
+
             try
             {
                 if (remember) DesktopCredentialStore.Write(key, header);

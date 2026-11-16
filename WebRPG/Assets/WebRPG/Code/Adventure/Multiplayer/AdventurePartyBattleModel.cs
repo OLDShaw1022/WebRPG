@@ -7,6 +7,7 @@ namespace WebRPG
     public sealed class AdventurePartyBattleModel
     {
         private readonly AdventureBattleInstanceModel _instance;
+
         public AdventureBattleOutcome Outcome => _instance.Outcome;
         public int SourcePlayerIndex => _instance.SourcePlayerIndex;
         public int TargetPlayerIndex => _instance.TargetPlayerIndex;
@@ -20,6 +21,7 @@ namespace WebRPG
                 players.Distinct().Count() != players.Length)
                 throw new ArgumentException(nameof(players));
             if (targetRandom == null) throw new ArgumentNullException(nameof(targetRandom));
+
             EnemyDefinition[] enemies = players[0].Enemies.Select(enemy =>
                 MultiplayerEnemyScalingHelper.Scale(enemy.Definition, configuration.Multiplayer, players.Length))
                     .ToArray();

@@ -15,6 +15,7 @@ namespace WebRPG.Tests
         {
             GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/WebRPG/Prefabs/LobbyCanvas.prefab");
             GameObject instance = Object.Instantiate(prefab);
+
             try
             {
                 TestLobbyModel model = new TestLobbyModel
@@ -38,6 +39,7 @@ namespace WebRPG.Tests
                     TextMeshProUGUI members = instance.transform.Find("Lobby/RoomPage/Members")
                         .GetComponent<TextMeshProUGUI>();
                     members.ForceMeshUpdate(true, true);
+
                     Assert.That(members.isTextOverflowing, Is.False, "四名成員與最長房名必須完整顯示");
                 }
             }
@@ -48,10 +50,13 @@ namespace WebRPG.Tests
         public void LobbyPrefabAndMainReferencesExist()
         {
             GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/WebRPG/Prefabs/LobbyCanvas.prefab");
+
             Assert.That(prefab, Is.Not.Null, "多人房間大廳 Prefab 尚未實作");
             Component view = prefab.GetComponent("LobbyView");
+
             Assert.That(view, Is.Not.Null);
             SerializedObject serialized = new SerializedObject(view);
+
             foreach (string field in new[] { "_username", "_roomName", "_roomId",
                 "_createButton", "_joinButton", "_refreshButton", "_leaveButton", "_readyButton",
                 "_backButton", "_status", "_members", "_rooms", "_publicToggle", "_browsePage", "_roomPage",
@@ -60,6 +65,7 @@ namespace WebRPG.Tests
 
             MainMenuView menu = AssetDatabase.LoadAssetAtPath<MainMenuView>(
                 "Assets/WebRPG/Prefabs/MainMenuCanvas.prefab");
+
             Assert.That(
                 new SerializedObject(menu).FindProperty("_multiplayerButton").objectReferenceValue, Is.Not.Null);
         }

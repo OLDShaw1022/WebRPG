@@ -13,6 +13,7 @@ namespace WebRPG.Tests
         public void PresenterExposesInitialHealthAsStructuredFullGauge()
         {
             System.Reflection.PropertyInfo property = typeof(AdventureScreenModel).GetProperty("PlayerHealth");
+
             Assert.That(property, Is.Not.Null, "Structured health gauges have not been implemented.");
             AdventureConfiguration configuration = JsonConvert.DeserializeObject<AdventureConfiguration>(
                 File.ReadAllText(
@@ -22,6 +23,7 @@ namespace WebRPG.Tests
             using (AdventurePresenter presenter = new AdventurePresenter(model, view))
             {
                 object gauge = property.GetValue(view.Screen);
+
                 Assert.That(gauge, Is.Not.Null);
                 Assert.That(gauge.GetType().GetProperty("FillAmount").GetValue(gauge), Is.EqualTo(1f));
                 Assert.That(gauge.GetType().GetProperty("Text").GetValue(gauge).ToString(),

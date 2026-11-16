@@ -19,11 +19,13 @@ public sealed class AccountWebSocketTests
             Task.FromResult<AccountIdentity?>(token == "test-token" ? new("fixed-account-id", "Test") : null));
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(TestTimeoutSeconds));
         using LobbyClient client = await LobbyClient.ConnectAsync(server.Address, "Test", timeout.Token, "test-token");
+
         Assert.That(client.PlayerId, Is.EqualTo("fixed-account-id"));
         InvalidOperationException? error = Assert.ThrowsAsync<InvalidOperationException>(async () =>
         {
             using LobbyClient rejected = await LobbyClient.ConnectAsync(server.Address, "Test", timeout.Token);
         });
+
         Assert.That(error!.Message, Does.Contain("PolicyViolation").And.Contain("Authentication required"));
     }
 
@@ -62,17 +64,20 @@ public sealed class AccountWebSocketTests
         {
             InvalidOperationException? error = Assert.ThrowsAsync<InvalidOperationException>(async () =>
                 await client.RequestAsync("Hello", reauthentication, cancellation, "Welcome"));
+
             Assert.That(error!.Message, Does.Contain("PolicyViolation"));
             return;
         }
 
         JsonObject welcome = await client.RequestAsync("Hello", reauthentication, cancellation, "Welcome");
+
         Assert.That(welcome["PlayerId"]!.GetValue<string>(), Is.EqualTo(client.PlayerId));
         Assert.That(welcome["Room"]!["Id"]!.GetValue<string>(), Is.EqualTo(roomId));
         await client.SendRawAsync(
             """{"Type":"Adventure","Adventure":{"Type":"AdventureCommand","Command":"vote","Payload":"1|0"}}""",
             cancellation);
         JsonObject vote = await peer.ReadTypeAsync("Adventure", cancellation);
+
         Assert.That(vote["Adventure"]!["Command"]!.GetValue<string>(), Is.EqualTo("vote"));
         Assert.That(vote["Adventure"]!["Sequence"]!.GetValue<long>(), Is.EqualTo(1));
     }
@@ -89,6 +94,7 @@ public sealed class AccountWebSocketTests
             Encoding.UTF8.GetBytes("{\"Type\":\"Hello\",\"Username\":\"Spoofed\"}"), WebSocketMessageType.Text, true,
             timeout.Token);
         WebSocketReceiveResult response = await socket.ReceiveAsync(new byte[BufferBytes], timeout.Token);
+
         Assert.That(response.CloseStatus, Is.EqualTo(WebSocketCloseStatus.PolicyViolation));
     }
 
@@ -107,18 +113,21 @@ public sealed class AccountWebSocketTests
             WebSocketMessageType.Text, true, timeout.Token);
         byte[] buffer = new byte[BufferBytes];
         WebSocketReceiveResult welcome = await socket.ReceiveAsync(buffer, timeout.Token);
+
         Assert.That(JsonNode.Parse(buffer.AsSpan(0, welcome.Count))!["PlayerId"]!.GetValue<string>(),
             Is.EqualTo("fixed-account-id"));
         await socket.SendAsync(
             Encoding.UTF8.GetBytes("{\"Type\":\"CreateRoom\",\"RoomName\":\"Test\",\"IsPublic\":true}"),
             WebSocketMessageType.Text, true, timeout.Token);
         WebSocketReceiveResult state = await socket.ReceiveAsync(buffer, timeout.Token);
+
         Assert.That(JsonNode.Parse(buffer.AsSpan(0, state.Count))!["Room"]!["Members"]![0]!["Username"]!
             .GetValue<string>(), Is.EqualTo("註冊名稱"));
         revoked = true;
         await socket.SendAsync(
             Encoding.UTF8.GetBytes("{\"Type\":\"ListRooms\"}"), WebSocketMessageType.Text, true, timeout.Token);
         WebSocketReceiveResult rejected = await socket.ReceiveAsync(buffer, timeout.Token);
+
         Assert.That(rejected.CloseStatus, Is.EqualTo(WebSocketCloseStatus.PolicyViolation));
     }
 }

@@ -22,6 +22,7 @@ namespace WebRPG.Tests
             configuration.BasicAttack.Damage = 6;
             Populate(configuration, "{'ProjectileTravelTime':0.5}");
             Populate(configuration.BasicAttack, "{'CastTime':2}");
+
             foreach (SkillDefinition skill in configuration.Skills)
             {
                 skill.Cooldown = 4;
@@ -31,12 +32,14 @@ namespace WebRPG.Tests
                 };
                 Populate(skill, "{'CastTime':3}");
             }
+
             foreach (EnemyDefinition enemy in configuration.Enemies)
             {
                 enemy.Health = 100;
                 enemy.Damage = 3;
                 Populate(enemy, "{'CastTime':10,'SpecialSkill':null}");
             }
+
             EnemyGroupDefinition group = new EnemyGroupDefinition
             {
                 Id = "battle-flow-test",
@@ -52,6 +55,7 @@ namespace WebRPG.Tests
             AdventureModel model = new AdventureModel(configuration ?? Configuration(), 17);
             model.StartRun();
             model.SelectNode(0);
+
             Assert.That(model.Phase, Is.EqualTo(AdventurePhase.Battle));
             return model;
         }
@@ -65,6 +69,7 @@ namespace WebRPG.Tests
         {
             Assert.That(target, Is.Not.Null, name + " 的來源物件不應為空。");
             PropertyInfo property = target.GetType().GetProperty(name, BindingFlags.Instance | BindingFlags.Public);
+
             Assert.That(property, Is.Not.Null, "尚未實作公開屬性：" + name);
             return (T)property.GetValue(target);
         }
@@ -73,6 +78,7 @@ namespace WebRPG.Tests
         {
             MethodInfo method = target.GetType().GetMethod(name, BindingFlags.Instance | BindingFlags.Public,
                 null, arguments.Select(argument => argument.GetType()).ToArray(), null);
+
             Assert.That(method, Is.Not.Null, "尚未實作公開方法：" + name);
             return method.Invoke(target, arguments);
         }

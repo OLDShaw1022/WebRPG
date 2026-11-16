@@ -4,6 +4,7 @@ namespace WebRPGServer;
 public sealed class ShopTopUpCatalog
 {
     private const int DecimalCurrencyScale = 2;
+
     private static readonly HashSet<string> SupportedCurrencies = new(StringComparer.Ordinal)
     {
         "AUD", "BRL", "CAD", "CNY", "CZK", "DKK", "EUR", "HKD", "HUF", "ILS", "JPY", "MYR",
@@ -17,6 +18,7 @@ public sealed class ShopTopUpCatalog
         foreach (IConfigurationSection section in configuration.GetSection("Shop:TopUpOffers").GetChildren())
         {
             if (!section.GetValue<bool>("Enabled")) continue;
+
             ShopTopUpOffer? offer = section.Get<ShopTopUpOffer>();
             if (offer is null || !IsValid(offer) || !_offers.TryAdd(offer.Id, offer))
                 throw new InvalidOperationException("Shop:TopUpOffers contains invalid or duplicate payment terms.");

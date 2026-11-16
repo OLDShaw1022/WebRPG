@@ -32,7 +32,6 @@ namespace WebRPG
         private const string RunCompletedMessagePrefix = "三層 Boss 已全部擊敗，挑戰成功！本輪金幣：";
         private const string FloorEntryMessagePrefix = "進入「";
 
-
         private readonly AdventureConfiguration _configuration;
         private readonly bool _partyMode;
         private readonly Random _mapRandom;
@@ -108,6 +107,7 @@ namespace WebRPG
         public IReadOnlyList<RelicDefinition> Relics => _readOnlyRelics;
         public IReadOnlyCollection<string> Journal => _journalSnapshot;
         public int RunVersion { get; private set; }
+
         public event Action<string> JournalEntryAdded;
 
         public int JournalVersion { get; private set; }
@@ -141,6 +141,7 @@ namespace WebRPG
             _chosenPaths.Clear();
             _readOnlyChosenPaths.Clear();
             RunVersion++;
+
             foreach (FloorDefinition floor in _configuration.Floors)
             {
                 _map.Add(Array.AsReadOnly(floor.Rows.Select(DrawNodes).ToArray()));
@@ -159,6 +160,7 @@ namespace WebRPG
             RowIndex = 0;
             CurrentNode = null;
             CurrentEnemyGroup = null;
+
             foreach (string identifier in _configuration.StartingSkills)
             {
                 _skills.Add(new AdventureSkillState(_configuration.Skills.First(skill => skill.Id == identifier)));
@@ -201,9 +203,11 @@ namespace WebRPG
             {
                 return;
             }
+
             _battle.Tick(seconds * BattleSpeed);
             Health = _battle.Health;
             _projectileSequence = _battle.ProjectileSequence;
+
             switch (_battle.Outcome)
             {
                 case AdventureBattleOutcome.Won:
@@ -262,6 +266,7 @@ namespace WebRPG
                 {
                     RelicDefinition relic = pool[_relicRandom.Next(pool.Length)];
                     _relics.Add(relic);
+
                     foreach (EffectDefinition effect in relic.Effects)
                     {
                         if (effect.Type == AdventureEffectType.MaximumHealth)
@@ -306,6 +311,7 @@ namespace WebRPG
                         {
                             Fail(EventHealthCostFailureMessage);
                         }
+
                         return;
                     }
 
@@ -355,6 +361,7 @@ namespace WebRPG
         public void SynchronizePartyBattle()
         {
             if (!_partyMode || Phase != AdventurePhase.Battle || _battle == null) return;
+
             Health = _battle.Health;
             _projectileSequence = _battle.ProjectileSequence;
             if (_battle.Outcome == AdventureBattleOutcome.Won) WinBattle();
@@ -380,11 +387,13 @@ namespace WebRPG
                 return owned != null ? owned.Level < definition.MaximumLevel
                     : _skills.Count < _configuration.SkillSlots;
             }).ToList();
+
             while (_rewards.Count < _configuration.RewardChoices && pool.Count > 0)
             {
                 double totalWeight = pool.Sum(definition => (double)SkillWeight(definition));
                 double draw = _skillRandom.NextDouble() * totalWeight;
                 SkillDefinition selected = pool[pool.Count - 1];
+
                 foreach (SkillDefinition candidate in pool)
                 {
                     draw -= SkillWeight(candidate);
@@ -444,6 +453,7 @@ namespace WebRPG
 
             List<int> candidates = Enumerable.Range(0, row.NodePool.Length).ToList();
             HashSet<int> selected = new HashSet<int>();
+
             for (int index = 0; index < row.NodeCount; index++)
             {
                 int draw = _mapRandom.Next(candidates.Count);
@@ -457,6 +467,7 @@ namespace WebRPG
         private void ResetCooldowns()
         {
             _battle?.Stop();
+
             foreach (AdventureSkillState skill in _skills)
             {
                 skill.RemainingCooldown = 0;
@@ -479,10 +490,12 @@ namespace WebRPG
         private void Record(string message)
         {
             _journal.Enqueue(message);
+
             while (_journal.Count > MaximumJournalEntries)
             {
                 _journal.Dequeue();
             }
+
             _journalSnapshot = Array.AsReadOnly(_journal.ToArray());
             JournalVersion++;
             JournalEntryAdded?.Invoke(message);

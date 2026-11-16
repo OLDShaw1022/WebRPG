@@ -31,6 +31,7 @@ public sealed class AccountEndpointTests
         using HttpClient client = new() { BaseAddress = new Uri(address) };
         using HttpResponseMessage response = await client.PostAsJsonAsync(
             "/api/accounts/login", new AccountLogin("player@example.com", "long-enough-password"));
+
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.ServiceUnavailable));
         Assert.That(response.Headers.CacheControl?.NoStore, Is.True);
         await application.StopAsync();

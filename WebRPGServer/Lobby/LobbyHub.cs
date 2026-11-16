@@ -9,6 +9,7 @@ namespace WebRPGServer;
 public sealed class LobbyHub
 {
     private const int MaximumRequestIdLength = 64;
+
     private static readonly TimeSpan ChatSendInterval = TimeSpan.FromSeconds(1);
 
     private readonly LobbyOptions _options;
@@ -31,15 +32,19 @@ public sealed class LobbyHub
         bool registered = false;
         string accessToken = string.Empty;
         LobbySendSession session = new(socket, _options.SendTimeoutSeconds, token);
+
         try
         {
             while (socket.State == WebSocketState.Open && !token.IsCancellationRequested)
             {
                 string? json = await LobbySocketHelper.ReceiveAsync(socket, token);
                 if (json is null) break;
+
                 LobbyPacket? request;
+
                 try { request = JsonSerializer.Deserialize<LobbyPacket>(json); }
                 catch (JsonException) { request = null; }
+
                 AccountIdentity? identity = null;
                 if (authenticate is not null && request is not null)
                 {
@@ -50,15 +55,19 @@ public sealed class LobbyHub
                             property.ValueKind == JsonValueKind.String ? property.GetString() ?? string.Empty
                             : string.Empty;
                     }
+
                     identity = await authenticate(accessToken);
                     if (identity is null || (registered && identity.AccountId != playerId))
                     {
                         await socket.CloseAsync(WebSocketCloseStatus.PolicyViolation, "Authentication required", token);
                         break;
                     }
+
                     if (!registered) playerId = identity.AccountId;
                 }
+
                 await _gate.WaitAsync(token);
+
                 try
                 {
                     if (request is null)
@@ -76,6 +85,7 @@ public sealed class LobbyHub
                         if (request.Type != LobbyPacketType.Hello) throw new ArgumentException("請先連線。");
                         if (_sessions.Count >= _options.MaximumConnections) throw new ArgumentException("大廳連線已滿。");
                         if (_sessions.ContainsKey(playerId)) throw new ArgumentException("此帳號已連線至大廳。");
+
                         _registry.Connect(playerId, identity?.Username ?? request.Username);
                         _sessions.Add(playerId, session);
                         registered = true;
@@ -95,6 +105,7 @@ public sealed class LobbyHub
                     {
                         if (lastChat.HasValue && Stopwatch.GetElapsedTime(lastChat.Value) < ChatSendInterval)
                             throw new ArgumentException("請稍候再傳送聊天訊息。");
+
                         BroadcastRoomChat(playerId, request);
                         lastChat = Stopwatch.GetTimestamp();
                         continue;
@@ -107,6 +118,7 @@ public sealed class LobbyHub
                         if (adventure.Type == AdventurePacketType.Start) Broadcast(string.Empty);
                         continue;
                     }
+
                     string[] affected = _registry.GetRoomPlayers(playerId);
                     AdventurePacket? failure = request.Type == LobbyPacketType.LeaveRoom
                         ? _registry.FailAdventure(playerId) : null;
@@ -127,6 +139,7 @@ public sealed class LobbyHub
         finally
         {
             await _gate.WaitAsync();
+
             try
             {
                 if (registered)
@@ -140,10 +153,12 @@ public sealed class LobbyHub
                 }
             }
             finally { _gate.Release(); }
+
             await session.DisposeAsync();
             if (socket.State is WebSocketState.Open or WebSocketState.CloseReceived)
             {
                 using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(_options.SendTimeoutSeconds));
+
                 try { await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Disconnected", timeout.Token); }
                 catch (Exception exception) when (
                     exception is WebSocketException or OperationCanceledException) { socket.Abort(); }
@@ -163,15 +178,18 @@ public sealed class LobbyHub
     {
         LobbyRoomSnapshot? room = _registry.Snapshot(playerId).Room;
         if (room is null) throw new ArgumentException("加入房間後才能聊天。");
+
         string message = request.Message?.Trim() ?? string.Empty;
         if (message.Length == 0 || message.Length > LobbyPacketLimits.ChatMessageLength ||
             message.Any(char.IsControl))
             throw new ArgumentException("請輸入有效的單行聊天訊息。");
 
         LobbyMemberSnapshot sender = room.Members.Single(member => member.PlayerId == playerId);
+
         foreach (LobbyMemberSnapshot member in room.Members)
         {
             if (!_sessions.TryGetValue(member.PlayerId, out LobbySendSession? session)) continue;
+
             session.Enqueue(new LobbyPacket
             {
                 Type = LobbyPacketType.RoomChat,
@@ -192,6 +210,7 @@ public sealed class LobbyHub
             PlayerId = adventure.PlayerId,
             Adventure = adventure
         };
+
         foreach (string playerId in playerIds)
         {
             if (_sessions.TryGetValue(playerId, out LobbySendSession? session)) session.Enqueue(packet);

@@ -9,14 +9,18 @@ namespace WebRPG
     {
         public event Action Changed;
         public event Action<AdventurePacket> AdventureReceived;
+
         public bool IsConnected { get; }
         public bool IsBusy { get; }
         public string PlayerId { get; }
         public string Status { get; }
         public LobbyRoomSnapshot Room { get; }
         public LobbyRoomSummary[] Rooms { get; }
+
         public Awaitable ConnectAsync();
+
         public Awaitable SendAsync(LobbyPacket packet);
+
         public Awaitable SendAdventureAsync(AdventurePacket packet);
     }
 }

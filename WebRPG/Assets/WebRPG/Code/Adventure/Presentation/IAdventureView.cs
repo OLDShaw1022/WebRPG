@@ -12,6 +12,7 @@ namespace WebRPG
         public event Action MapToggleRequested;
         public event Action<int> SkillRequested;
         public event Action<float> BattleSpeedRequested;
+
         public void Render(AdventureScreenModel screen);
     }
 }

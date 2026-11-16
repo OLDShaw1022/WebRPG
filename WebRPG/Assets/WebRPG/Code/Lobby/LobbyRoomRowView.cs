@@ -9,6 +9,7 @@ namespace WebRPG
     public sealed class LobbyRoomRowView : MonoBehaviour
     {
         private const string RoomLabelFormat = "{0}　{1}/{2}　加入";
+
         [SerializeField]
         private UnityEngine.UI.Button _join;
         [SerializeField]
@@ -28,6 +29,7 @@ namespace WebRPG
         }
 
         private void Select() => _selected?.Invoke(_roomId);
+
         private void OnDestroy()
         {
             if (_join) _join.onClick.RemoveListener(Select);

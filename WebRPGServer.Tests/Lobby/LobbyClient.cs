@@ -9,12 +9,14 @@ internal sealed class LobbyClient : IDisposable
 {
     private readonly ClientWebSocket _socket = new();
     private int _requestNumber;
+
     public string PlayerId { get; private set; } = string.Empty;
 
     public static async Task<LobbyClient> ConnectAsync(
         Uri address, string username, CancellationToken token, string? accessToken = null)
     {
         LobbyClient client = new();
+
         try
         {
             await client._socket.ConnectAsync(address, token);
@@ -38,6 +40,7 @@ internal sealed class LobbyClient : IDisposable
         packet["Type"] = type;
         packet["RequestId"] = id;
         await SendRawAsync(packet.ToJsonString(), token);
+
         while (true)
         {
             JsonObject response = await ReadAsync(token);
@@ -46,10 +49,12 @@ internal sealed class LobbyClient : IDisposable
             {
                 if (response["Type"]?.GetValue<string>() == "Error")
                     throw new InvalidOperationException(response.ToJsonString());
+
                 continue;
             }
             if (response["Type"]!.GetValue<string>() != expected)
                 throw new InvalidOperationException($"Expected {expected}, got {response}");
+
             return response;
         }
     }
@@ -71,17 +76,21 @@ internal sealed class LobbyClient : IDisposable
         byte[] buffer = new byte[32768];
         using MemoryStream message = new();
         WebSocketReceiveResult result;
+
         do
         {
             result = await _socket.ReceiveAsync(buffer, token);
             if (result.MessageType == WebSocketMessageType.Close)
                 throw new InvalidOperationException(
                     $"WebSocket closed: {result.CloseStatus}: {result.CloseStatusDescription}");
+
             message.Write(buffer, 0, result.Count);
         } while (!result.EndOfMessage);
+
         return JsonNode.Parse(message.ToArray())!.AsObject();
     }
 
     public void Abort() => _socket.Abort();
+
     public void Dispose() => _socket.Dispose();
 }

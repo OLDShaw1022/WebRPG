@@ -32,6 +32,7 @@ namespace WebRPG
         }
 
         public event Action<string> MessageRecorded;
+
         public AdventureBattleOutcome Outcome => _instance.Outcome;
         public int Health { get; private set; }
         public int MaximumHealth { get; }
@@ -88,6 +89,7 @@ namespace WebRPG
         internal void ReceiveDamage(int damage)
         {
             if (damage <= 0) return;
+
             Health = Math.Max(0, Health - damage);
             if (Health == 0) PlayerAction = null;
         }
@@ -95,8 +97,10 @@ namespace WebRPG
         internal void AdvanceAction(float seconds)
         {
             if (Health == 0 || PlayerAction == null) return;
+
             foreach (AdventureSkillState skill in _skills)
                 skill.RemainingCooldown = Math.Max(0, skill.RemainingCooldown - seconds);
+
             PlayerAction.RemainingCastTime = Math.Max(0, PlayerAction.RemainingCastTime - seconds);
         }
 
@@ -116,6 +120,7 @@ namespace WebRPG
             else
             {
                 AdventureSkillState skill = _skills[PlayerAction.SkillIndex];
+
                 foreach (EffectDefinition effect in skill.Definition.Effects)
                 {
                     int amount = effect.Amount + effect.PerLevel * (skill.Level - 1);
@@ -128,8 +133,10 @@ namespace WebRPG
                         healing += amount;
                     }
                 }
+
                 skill.RemainingCooldown = skill.Definition.Cooldown;
             }
+
             AdventureProjectileState projectile = new AdventureProjectileState(sequence, -1,
                 damage > 0 ? LockedEnemyIndex : -1, name, damage, healing,
                 _configuration.ProjectileTravelTime, basicAttack, false);
@@ -149,7 +156,9 @@ namespace WebRPG
             {
                 return;
             }
+
             LockedEnemyIndex = -1;
+
             for (int index = 0; index < Enemies.Count; index++)
             {
                 if (Enemies[index].Health > 0 && (LockedEnemyIndex < 0 ||
@@ -169,6 +178,7 @@ namespace WebRPG
         {
             PlayerAction = null;
             LockedEnemyIndex = -1;
+
             foreach (AdventureSkillState skill in _skills)
             {
                 skill.RemainingCooldown = 0;

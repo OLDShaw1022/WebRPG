@@ -40,6 +40,7 @@ namespace WebRPG
             {
                 using Process process = Process.Start(start);
                 if (process == null) return string.Empty;
+
                 Task<string> output = process.StandardOutput.ReadToEndAsync();
                 Task<string> errors = process.StandardError.ReadToEndAsync();
                 if (value != null) process.StandardInput.Write(value);
@@ -49,6 +50,7 @@ namespace WebRPG
                 {
                     try { process.Kill(); }
                     catch (InvalidOperationException) { }
+
                     UnityEngine.Debug.LogWarning(UnavailableMessage);
                     return string.Empty;
                 }

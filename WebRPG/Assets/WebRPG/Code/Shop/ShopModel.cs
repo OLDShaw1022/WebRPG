@@ -12,6 +12,7 @@ namespace WebRPG
         private const string TopUpPath = "shop/top-ups";
         private const string TopUpSyncPath = "shop/top-ups/{0:D}/sync";
         private const string InvalidResponseMessage = "商店回應不完整，請重試。";
+
         private readonly AccountModel _account;
 
         public ShopModel(AccountModel account) => _account = account;
@@ -22,6 +23,7 @@ namespace WebRPG
             ShopSnapshot snapshot = JsonConvert.DeserializeObject<ShopSnapshot>(json);
             if (snapshot?.Balance == null || snapshot.Offers == null)
                 throw new InvalidOperationException(InvalidResponseMessage);
+
             return snapshot;
         }
 
@@ -37,6 +39,7 @@ namespace WebRPG
             ShopTopUpResult result = JsonConvert.DeserializeObject<ShopTopUpResult>(json);
             if (result == null || (!result.OfferChanged && result.Order?.Offer == null))
                 throw new InvalidOperationException(InvalidResponseMessage);
+
             return result;
         }
 
@@ -50,6 +53,7 @@ namespace WebRPG
             string json = await _account.SendAuthenticatedAsync(ExchangePath, body);
             ShopExchangeResult result = JsonConvert.DeserializeObject<ShopExchangeResult>(json);
             if (result?.Balance == null) throw new InvalidOperationException(InvalidResponseMessage);
+
             return result;
         }
     }

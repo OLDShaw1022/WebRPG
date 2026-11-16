@@ -21,6 +21,7 @@ public sealed class LobbySendFailureTests
         using ControlledLobbySocket observer = new();
         Task slowConnection = hub.HandleConnectionAsync(slow, connectionCancellation.Token);
         Task observerConnection = hub.HandleConnectionAsync(observer, timeout.Token);
+
         try
         {
             await slow.RequestAsync(new LobbyPacket { Type = LobbyPacketType.Hello, Username = "Slow" }, timeout.Token);

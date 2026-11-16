@@ -41,6 +41,7 @@ jobs:
       - name: Build shared library and verify Unity copy
         run: |
           dotnet build WebRPGShared/WebRPGShared.csproj --configuration Release
+
           cmp WebRPGShared/bin/Release/netstandard2.1/WebRPGShared.dll WebRPG/Assets/Plugins/WebRPGShared.dll
           cmp WebRPGShared/bin/Release/netstandard2.1/WebRPGShared.pdb WebRPG/Assets/Plugins/WebRPGShared.pdb
 
@@ -59,6 +60,7 @@ jobs:
         run: |
           test ! -e WebRPG/Assets/Editor/WebRPGContinuousIntegration
           test ! -e WebRPG/Assets/WebGLTemplates/WebRPGContinuousIntegration
+
           mkdir -p WebRPG/Assets/Editor/WebRPGContinuousIntegration
           mkdir -p WebRPG/Assets/WebGLTemplates/WebRPGContinuousIntegration
           mkdir -p artifacts
@@ -149,6 +151,7 @@ jobs:
               ...context.repo,
               ref: 'heads/main'
             });
+
             if (data.object.sha !== context.sha) {
               core.setFailed('This commit is no longer the latest main commit. Deployment skipped.');
             }

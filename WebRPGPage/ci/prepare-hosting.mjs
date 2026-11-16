@@ -14,6 +14,7 @@ function listFiles(directory, relativeDirectory = '') {
     return fileSystem.readdirSync(path.join(directory, relativeDirectory), { withFileTypes: true })
         .flatMap(entry => {
             const relativePath = path.join(relativeDirectory, entry.name);
+
             if (entry.isSymbolicLink() || entry.name.startsWith('.')) {
                 throw new Error('Hidden files and symbolic links are not allowed: ' + relativePath);
             }
@@ -23,6 +24,7 @@ function listFiles(directory, relativeDirectory = '') {
             if (!entry.isFile()) {
                 throw new Error('Unsupported file: ' + relativePath);
             }
+
             return [relativePath];
         });
 }
@@ -33,6 +35,7 @@ for (const suffix of ['.loader.js', '.framework.js', '.data', '.wasm']) {
         throw new Error('Missing Unity Build output: ' + suffix);
     }
 }
+
 if (!generatedFiles.includes('index.html') ||
     generatedFiles.some(file => /\.(br|gz|unityweb)$/.test(file))) {
     throw new Error('Expected an index page and uncompressed Unity output.');
@@ -53,6 +56,7 @@ for (const relativePath of websiteFiles) {
     fileSystem.mkdirSync(path.dirname(destinationPath), { recursive: true });
     fileSystem.copyFileSync(path.join(websiteDirectory, 'public', relativePath), destinationPath);
 }
+
 fileSystem.copyFileSync(
     path.join(websiteDirectory, 'firebase.json'),
     path.join(hostingDirectory, 'firebase.json')
@@ -64,5 +68,6 @@ const checksumLines = listFiles(hostingDirectory).sort().map(relativePath => {
         .digest('hex');
     return checksum + '  ' + relativePath.split(path.sep).join('/');
 });
+
 fileSystem.writeFileSync(path.join(hostingDirectory, 'SHA256SUMS'), checksumLines.join('\n') + '\n');
 console.log('Prepared Firebase Hosting artifact with ' + checksumLines.length + ' files.');

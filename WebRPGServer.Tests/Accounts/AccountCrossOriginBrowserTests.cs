@@ -130,9 +130,11 @@ public sealed class AccountCrossOriginBrowserTests
             $"--host-resolver-rules=MAP {GameHost} 127.0.0.1, MAP {ApiHost} 127.0.0.1" };
         string login = await RememberedBrowserHelper.RunAsync(browser!, profile,
             new Uri(gameOrigin + "/browser-test?stage=login"), BrowserTimeoutSeconds, arguments);
+
         Assert.That(login, Does.Contain("<output id=\"result\">cross-origin-cookie-saved</output>"));
         string restore = await RememberedBrowserHelper.RunAsync(browser!, profile,
             new Uri(gameOrigin + "/browser-test?stage=restore"), BrowserTimeoutSeconds, arguments);
+
         Assert.That(
             restore, Does.Contain("<output id=\"result\">cross-origin-restored-after-restart-and-revoked</output>"));
         await application.StopAsync();

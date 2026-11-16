@@ -9,7 +9,9 @@ namespace WebRPGServer.Tests;
 internal sealed class LocalAccountDatabase : IAsyncDisposable
 {
     private const int StartupTimeoutSeconds = 30;
+
     private readonly string _binaryDirectory;
+
     public string DataDirectory { get; }
     public int Port { get; }
     public string ConnectionString { get; }
@@ -39,6 +41,7 @@ internal sealed class LocalAccountDatabase : IAsyncDisposable
         await database.RunAsync(
             "initdb.exe", "-D", database.DataDirectory, "-U", "webrpg_test", "-A", "trust", "--no-locale", "-E",
             "UTF8");
+
         try
         {
             await database.StartProcessAsync();
@@ -74,6 +77,7 @@ internal sealed class LocalAccountDatabase : IAsyncDisposable
             RedirectStandardOutput = captureOutput, RedirectStandardError = captureOutput
         };
         foreach (string argument in arguments) start.ArgumentList.Add(argument);
+
         using Process process = Process.Start(start)!;
         Task<string> output = captureOutput ? process.StandardOutput.ReadToEndAsync() : Task.FromResult(string.Empty);
         Task<string> errors = captureOutput ? process.StandardError.ReadToEndAsync() : Task.FromResult(string.Empty);
@@ -81,6 +85,7 @@ internal sealed class LocalAccountDatabase : IAsyncDisposable
         await process.WaitForExitAsync(timeout.Token);
         if (process.ExitCode != 0) throw new InvalidOperationException(
             $"{executable} failed: {await output}\n{await errors}");
+
         await Task.WhenAll(output, errors);
     }
 

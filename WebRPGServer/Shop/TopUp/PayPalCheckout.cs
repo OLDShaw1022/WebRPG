@@ -39,11 +39,13 @@ internal sealed class PayPalCheckout(HttpClient client, PayPalSettings settings)
         JsonElement root = result.RootElement;
         string? id = PayPalResponse.Text(root, "id");
         if (!PayPalResponse.IsId(id)) throw new HttpRequestException("PayPal did not return an order ID.");
+
         if (root.TryGetProperty("links", out JsonElement links))
         {
             foreach (JsonElement link in links.EnumerateArray())
             {
                 if (PayPalResponse.Text(link, "rel") is not ("approve" or "payer-action")) continue;
+
                 string? url = PayPalResponse.Text(link, "href");
                 if (Uri.TryCreate(url, UriKind.Absolute, out Uri? uri) && uri.Scheme == Uri.UriSchemeHttps &&
                     uri.IsDefaultPort && uri.UserInfo.Length == 0 &&
@@ -65,12 +67,14 @@ internal sealed class PayPalCheckout(HttpClient client, PayPalSettings settings)
         JsonElement root = result.RootElement;
         if (!root.TryGetProperty("details", out JsonElement details) || details.ValueKind != JsonValueKind.Array)
             return true;
+
         foreach (JsonElement detail in details.EnumerateArray())
         {
             string? issue = PayPalResponse.Text(detail, "issue");
             if (issue is "ORDER_ALREADY_CAPTURED" or "ORDER_NOT_APPROVED") return true;
             if (issue is "INSTRUMENT_DECLINED" or "PAYER_CANNOT_PAY" or "TRANSACTION_REFUSED") return false;
         }
+
         throw new HttpRequestException("PayPal did not accept capture.");
     }
 
@@ -84,6 +88,7 @@ internal sealed class PayPalCheckout(HttpClient client, PayPalSettings settings)
         string signature = headers["PAYPAL-TRANSMISSION-SIG"].ToString();
         if (new[] { transmissionId, transmissionTime, certUrl, algorithm, signature }.Any(string.IsNullOrWhiteSpace))
             return false;
+
         var body = new
         {
             transmission_id = transmissionId, transmission_time = transmissionTime, cert_url = certUrl,

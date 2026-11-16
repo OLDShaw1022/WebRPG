@@ -78,8 +78,10 @@ namespace WebRPG
                 new MainMenuModel(), _mainMenuView, StartAdventure, QuitGame, OpenLobby);
             _mainMenuView.LogoutRequested += Logout;
             _mainMenuView.gameObject.SetActive(false);
+
             if (!_accountViewPrefab || !_lobbyConfiguration)
                 throw new InvalidOperationException(MissingAccountPrefabMessage);
+
             LobbyClientConfiguration accountConfiguration =
                 JsonConvert.DeserializeObject<LobbyClientConfiguration>(_lobbyConfiguration.text);
             _accountModel = new AccountModel(accountConfiguration, Application.isEditor);
@@ -108,6 +110,7 @@ namespace WebRPG
                 _mainMenuView.LogoutRequested -= Logout;
                 _mainMenuView.ShopRequested -= OpenShop;
             }
+
             DisposeLobby();
             DisposeAdventure();
             _mainMenuPresenter?.Dispose();
@@ -131,6 +134,7 @@ namespace WebRPG
             _accountView.gameObject.SetActive(false);
             _mainMenuView.gameObject.SetActive(true);
             _mainMenuView.ShowMessage(string.Format(LoggedInFormat, _accountModel.Username));
+
             _sessionLifetime = new CancellationTokenSource();
             CancellationToken cancellationToken = _sessionLifetime.Token;
             WatchSessionExpiryAsync(cancellationToken).Forget();
@@ -156,6 +160,7 @@ namespace WebRPG
         private async Awaitable RefreshSessionAsync(CancellationToken cancellationToken)
         {
             DateTimeOffset refreshAt = _accountModel.ExpiresAt.AddSeconds(-RefreshLeadSeconds);
+
             while (!cancellationToken.IsCancellationRequested && _accountModel.IsLoggedIn)
             {
                 double wait = (refreshAt - DateTimeOffset.UtcNow).TotalSeconds;
@@ -170,8 +175,10 @@ namespace WebRPG
                     await AwaitableExtensions.WaitForSecondsRealtimeAsync(RefreshRetrySeconds, cancellationToken);
                     continue;
                 }
+
                 DateTimeOffset previousExpiry = _accountModel.ExpiresAt;
                 _refreshingSession = true;
+
                 try
                 {
                     bool refreshed = _lobbyModel == null
@@ -185,6 +192,7 @@ namespace WebRPG
                 catch (Exception exception) when (exception is InvalidOperationException || exception is JsonException)
                 {
                     if (cancellationToken.IsCancellationRequested) return;
+
                     refreshAt = DateTimeOffset.UtcNow.AddSeconds(RefreshRetrySeconds);
                 }
                 finally
@@ -211,10 +219,12 @@ namespace WebRPG
         {
             _loggingOut = true;
             CancellationToken cancellationToken = _sessionLifetime?.Token ?? default;
+
             try
             {
                 while (this && _refreshingSession) await Awaitable.NextFrameAsync(cancellationToken);
                 if (!this || cancellationToken.IsCancellationRequested) return;
+
                 await _accountModel.LogoutAsync();
                 if (this && !cancellationToken.IsCancellationRequested) ShowLogin(string.Empty);
             }
@@ -264,13 +274,16 @@ namespace WebRPG
         {
             if (_refreshingSession || _accountModel == null || !_accountModel.IsLoggedIn) return false;
             if (_lobbyPresenter != null || _adventurePresenter != null) return false;
+
             try
             {
                 if (!_lobbyViewPrefab || !_lobbyConfiguration)
                     throw new InvalidOperationException(MissingLobbyPrefabMessage);
+
                 LobbyClientConfiguration configuration =
                     JsonConvert.DeserializeObject<LobbyClientConfiguration>(_lobbyConfiguration.text);
                 configuration.Validate();
+
                 _lobbyView = Instantiate(_lobbyViewPrefab);
                 _lobbyModel = new LobbyModel(configuration, Application.isEditor, _accountModel);
                 _lobbyModel.AdventureReceived += HandleAdventurePacket;
@@ -353,12 +366,14 @@ namespace WebRPG
                     model = new AdventureModel(configuration, seed);
                     model.StartRun();
                 }
+
                 _adventureView = Instantiate(_adventureViewPrefab);
                 if (multiplayer)
                 {
                     _adventureView.EnableRoomChat();
                     _adventureChatPresenter = new RoomChatPresenter(_lobbyModel, _adventureView.RoomChat, model);
                 }
+
                 _adventurePresenter = new AdventurePresenter(model, _adventureView, _multiplayerAdventureSession);
                 _adventureMenuPresenter = new AdventureMenuPresenter(new AdventureMenuModel(!multiplayer),
                     _adventureView.Menu, multiplayer ? _ => { } : _adventurePresenter.SetPaused,
@@ -376,6 +391,7 @@ namespace WebRPG
                     Destroy(_adventureView.gameObject);
                     _adventureView = null;
                 }
+
                 _mainMenuView.ShowMessage(AdventureStartFailureMessage);
                 return false;
             }
@@ -406,6 +422,7 @@ namespace WebRPG
                 Destroy(_adventureView.gameObject);
                 _adventureView = null;
             }
+
             _mainMenuPresenter?.Dispose();
             _mainMenuPresenter = new MainMenuPresenter(
                 new MainMenuModel(), _mainMenuView, StartAdventure, QuitGame, OpenLobby);

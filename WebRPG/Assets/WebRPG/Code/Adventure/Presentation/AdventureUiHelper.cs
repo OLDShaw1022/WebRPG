@@ -27,7 +27,6 @@ namespace WebRPG
             control.Value.text = includeTitle ? model.Title + GaugeTitleSeparator + model.Text : model.Text;
         }
 
-
         public static AdventureActorViewReferences FindActor(AdventureActorViewReferences[] players,
             AdventureActorViewReferences[] enemies, string characterId)
         {
@@ -35,10 +34,12 @@ namespace WebRPG
             {
                 if (actor.Id == characterId) return actor;
             }
+
             foreach (AdventureActorViewReferences actor in enemies)
             {
                 if (actor.Id == characterId) return actor;
             }
+
             return null;
         }
 

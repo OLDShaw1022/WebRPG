@@ -19,6 +19,7 @@ namespace WebRPG.Tests
             AdventureConfiguration configuration = LoadConfiguration();
             configuration.BasicAttack.CastTime = 0.125f;
             configuration.ProjectileTravelTime = 0.125f;
+
             foreach (EnemyDefinition enemy in configuration.Enemies)
             {
                 enemy.Health = 1;
@@ -26,6 +27,7 @@ namespace WebRPG.Tests
                 enemy.CastTime = 100;
                 enemy.SpecialSkill = null;
             }
+
             return configuration;
         }
 

@@ -12,11 +12,14 @@ public static class AccountCookieHelper
     public static bool IsTrustedRequest(HttpContext context)
     {
         if (context.Request.Headers["Sec-Fetch-Site"] == "cross-site") return false;
+
         string origin = context.Request.Headers.Origin.ToString();
         if (string.IsNullOrEmpty(origin)) return true;
+
         string[] origins = context.RequestServices.GetRequiredService<IConfiguration>()
             .GetSection("Accounts:AllowedOrigins").Get<string[]>() ?? new[] { ProductionOrigin };
         if (origins.Contains(origin, StringComparer.Ordinal)) return true;
+
         return context.Connection.RemoteIpAddress is { } remote && System.Net.IPAddress.IsLoopback(remote) &&
             Uri.TryCreate(origin, UriKind.Absolute, out Uri? address) && address.IsLoopback &&
             origin == context.Request.Scheme + "://" + context.Request.Host;
@@ -24,6 +27,7 @@ public static class AccountCookieHelper
 
     public static bool HasRequestHeader(
         HttpContext context) => context.Request.Headers[RequestHeader] == RequestHeaderValue;
+
     public static string? Read(HttpContext context) => context.Request.Cookies[CookieName];
 
     public static void Write(HttpContext context, RememberedAccountSession session) =>

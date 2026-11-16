@@ -31,11 +31,14 @@ public sealed class MultiplayerRoomState
             throw new ArgumentException("操作類型或冒險回合已失效。");
         if (!AdventureCommandPayloadHelper.TryRead(request.Payload, out int index, out int amount) || amount != 0)
             throw new ArgumentException("冒險操作格式錯誤。");
+
         string command = request.Command;
+
         switch (command)
         {
             case AdventureCommand.Vote:
                 if (index < 0 || index > MaximumChoiceIndex) throw new ArgumentException("無效的地圖選項。");
+
                 _votes[playerId] = index;
                 if (_votes.Count == room.Members.Length)
                 {
@@ -46,12 +49,14 @@ public sealed class MultiplayerRoomState
                     command = AdventureCommand.Node;
                     _votes.Clear();
                 }
+
                 break;
             case AdventureCommand.Speed:
                 if (room.LeaderId != playerId)
                     throw new ArgumentException("只有隊長可以調整戰鬥速度。");
                 if (index < AdventureCommand.MinimumBattleSpeed || index > AdventureCommand.MaximumBattleSpeed)
                     throw new ArgumentException("無效的戰鬥速度。");
+
                 break;
             case AdventureCommand.Tick:
                 if (room.LeaderId != playerId || index < 1 || index > MaximumStepsPerPacket)
@@ -59,19 +64,24 @@ public sealed class MultiplayerRoomState
                 if (_ticks + index > (
                     DateTime.UtcNow - _startedAt).TotalSeconds * SimulationStepsPerSecond + AllowedSimulationLeadSteps)
                     throw new ArgumentException("模擬時間推進過快。");
+
                 _ticks += index;
                 break;
             case AdventureCommand.Skill:
                 if (index < 0 || index > MaximumSkillSlotIndex) throw new ArgumentException("無效的技能槽。");
+
                 break;
             case AdventureCommand.Target:
                 if (index < 0 || index > MaximumEnemyTargetIndex) throw new ArgumentException("無效的敵方目標。");
+
                 break;
             case AdventureCommand.Reward:
                 if (index < 0 || index > MaximumChoiceIndex) throw new ArgumentException("無效的獎勵選項。");
+
                 break;
             case AdventureCommand.Resolve:
                 if (index < 0 || index > MaximumResolveOptionIndex) throw new ArgumentException("無效的節點選項。");
+
                 break;
             case AdventureCommand.Abandon:
                 Failed = true;
@@ -79,6 +89,7 @@ public sealed class MultiplayerRoomState
             default:
                 throw new ArgumentException("不支援的冒險操作。");
         }
+
         AdventurePacket result = new()
         {
             Type = AdventurePacketType.Command, PlayerId = playerId, RoomId = room.Id,
@@ -92,6 +103,7 @@ public sealed class MultiplayerRoomState
     public AdventurePacket? Fail(string roomId, string playerId)
     {
         if (Failed) return null;
+
         Failed = true;
         return new AdventurePacket
         {

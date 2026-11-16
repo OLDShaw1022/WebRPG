@@ -10,6 +10,7 @@ namespace WebRPG
     public sealed class RoomChatView : MonoBehaviour
     {
         private const float FollowBottomThreshold = 0.01f;
+
         [SerializeField]
         private TMP_InputField _input;
         [SerializeField]
@@ -39,6 +40,7 @@ namespace WebRPG
                 _input.SetTextWithoutNotify(string.Empty);
                 _roomId = roomId;
             }
+
             _error.text = error;
             _input.interactable = roomId != null;
             _send.interactable = canChat;
@@ -55,9 +57,11 @@ namespace WebRPG
         private void RenderLog(string text)
         {
             if (_log.text == text) return;
+
             bool followLatest = _scroll.verticalNormalizedPosition <= FollowBottomThreshold || _log.text.Length == 0;
             _log.text = text;
             if (!isActiveAndEnabled) return;
+
             LayoutRebuilder.ForceRebuildLayoutImmediate(_scroll.content);
             if (followLatest) _scroll.verticalNormalizedPosition = 0f;
         }

@@ -21,6 +21,7 @@ namespace WebRPG.Tests
             {
                 view.SetSpeed(speed);
                 bool movedBetweenSteps = false;
+
                 for (int frame = 0; frame < 48; frame++)
                 {
                     float remaining = model.PlayerAction.RemainingCastTime;
@@ -30,17 +31,20 @@ namespace WebRPG.Tests
                         view.Screen.Players[0].Action.FillAmount > displayed)
                         movedBetweenSteps = true;
                 }
+
                 Assert.That(movedBetweenSteps, Is.True);
                 presenter.SetPaused(true);
                 float pausedFill = view.Screen.Players[0].Action.FillAmount;
                 float pausedRemaining = model.PlayerAction.RemainingCastTime;
                 presenter.Tick(1);
+
                 Assert.That(view.Screen.Players[0].Action.FillAmount, Is.EqualTo(pausedFill));
                 Assert.That(model.PlayerAction.RemainingCastTime, Is.EqualTo(pausedRemaining));
                 presenter.SetPaused(false);
                 view.SetSpeed(0);
                 float stoppedFill = view.Screen.Players[0].Action.FillAmount;
                 presenter.Tick(1);
+
                 Assert.That(view.Screen.Players[0].Action.FillAmount, Is.EqualTo(stoppedFill));
             }
         }
@@ -76,15 +80,19 @@ namespace WebRPG.Tests
                     });
                     float remaining = session.LocalModel.PlayerAction.RemainingCastTime;
                     float previous = view.Screen.Players[0].Action.FillAmount;
+
                     for (int frame = 0; frame < 6; frame++)
                     {
                         presenter.Tick(1f / 60);
                         float current = view.Screen.Players[0].Action.FillAmount;
+
                         Assert.That(current, Is.GreaterThan(previous));
                         Assert.That(session.LocalModel.PlayerAction.RemainingCastTime, Is.EqualTo(remaining));
                         previous = current;
                     }
+
                     presenter.Tick(1);
+
                     Assert.That(view.Screen.Players[0].Action.FillAmount, Is.EqualTo(previous).Within(0.00001f));
                 }
             }
@@ -115,10 +123,12 @@ namespace WebRPG.Tests
             presentation.Apply(snapshot(0.2f, 0.2f), 0);
             presentation.Apply(snapshot(0.8f, 0.8f), 0);
             float previous = 0.2f;
+
             for (int frame = 0; frame < (int)Math.Ceiling(framesPerSecond / 10.0); frame++)
             {
                 AdventureScreenModel screen = snapshot(0.8f, 0.8f);
                 presentation.Apply(screen, 1f / framesPerSecond);
+
                 Assert.That(screen.Projectile.Progress, Is.GreaterThan(previous));
                 Assert.That(screen.Projectile.Progress, Is.LessThanOrEqualTo(0.8f));
                 Assert.That(screen.InspectedSkills[0].FillAmount, Is.EqualTo(screen.Projectile.Progress));
@@ -127,21 +137,26 @@ namespace WebRPG.Tests
                 Assert.That(screen.PlayerHealth.FillAmount, Is.EqualTo(0.4f));
                 previous = screen.Projectile.Progress;
             }
+
             AdventureScreenModel stalled = snapshot(0.8f, 0.8f);
             presentation.Apply(stalled, 1);
+
             Assert.That(stalled.Projectile.Progress, Is.EqualTo(0.8f));
             AdventureScreenModel reset = snapshot(0.1f, 0.1f);
             presentation.Apply(reset, 0);
+
             Assert.That(reset.InspectedSkills[0].FillAmount, Is.EqualTo(0.1f));
             Assert.That(reset.Projectile.Progress, Is.EqualTo(0.1f));
             AdventureScreenModel next = snapshot(0.9f, 0.9f);
             next.Projectile.TargetCharacterId = "other-enemy";
             presentation.Apply(next, 0);
+
             Assert.That(next.Projectile.Progress, Is.EqualTo(0.9f));
             next.ShowBattle = false;
             presentation.Apply(next, 0);
             AdventureScreenModel newBattle = snapshot(0.5f, 0.5f);
             presentation.Apply(newBattle, 0);
+
             Assert.That(newBattle.InspectedSkills[0].FillAmount, Is.EqualTo(0.5f));
         }
 
@@ -157,6 +172,7 @@ namespace WebRPG.Tests
                 AdventureScreenModel before = view.Screen;
                 float remaining = model.PlayerAction.RemainingCastTime;
                 presenter.Tick(configuration.SimulationStep);
+
                 Assert.That(model.PlayerAction.RemainingCastTime, Is.LessThan(remaining));
                 Assert.That(view.Screen.MapRows, Is.SameAs(before.MapRows));
                 Assert.That(view.Screen.Relics, Is.SameAs(before.Relics));
@@ -164,6 +180,7 @@ namespace WebRPG.Tests
                 Assert.That(view.Screen.Journal, Is.SameAs(before.Journal));
                 view.ToggleMap();
                 view.ToggleMap();
+
                 Assert.That(view.Screen.MapRows, Is.SameAs(before.MapRows));
             }
         }
@@ -173,10 +190,12 @@ namespace WebRPG.Tests
         {
             AdventureModel model = new AdventureModel(AdventureModelScenarioHelper.LoadConfiguration(), 1);
             var skills = model.Skills;
+
             Assert.That(model.Skills, Is.SameAs(skills));
             Assert.That(model.Relics, Is.SameAs(model.Relics));
             Assert.That(model.Rewards, Is.SameAs(model.Rewards));
             model.StartRun();
+
             Assert.That(skills.Count, Is.EqualTo(model.Configuration.StartingSkills.Length));
             Assert.That(model.Journal, Is.SameAs(model.Journal));
         }
@@ -188,20 +207,25 @@ namespace WebRPG.Tests
             AdventureModel model = new AdventureModel(configuration, 1);
             TestAdventureView view = new TestAdventureView();
             AdventurePresenter presenter = new AdventurePresenter(model, view);
+
             Assert.That(view.Screen.CanStart, Is.True);
             view.Start();
+
             Assert.That(model.Phase, Is.EqualTo(AdventurePhase.Map));
             Assert.That(view.Screen.Skills.Length, Is.EqualTo(6));
             Assert.That(view.Screen.Choices.Length, Is.EqualTo(model.AvailableNodes.Count));
             view.Choose(0);
+
             Assert.That(model.Phase, Is.EqualTo(AdventurePhase.Battle));
             Assert.That(view.Screen.Choices, Is.Empty);
             view.Abandon();
+
             Assert.That(view.Screen.CanStart, Is.True);
             Assert.That(model.Phase, Is.EqualTo(AdventurePhase.Failed));
             presenter.Dispose();
             presenter.Dispose();
             view.Start();
+
             Assert.That(model.Phase, Is.EqualTo(AdventurePhase.Failed));
         }
 
@@ -214,8 +238,10 @@ namespace WebRPG.Tests
             {
                 string expected = string.Format("本機玩家 · 生命 {0} / {0} · 金幣 0 · 第 1 / {1} 層",
                     configuration.StartingHealth, configuration.Floors.Length);
+
                 Assert.That(view.Screen.Summary, Is.EqualTo(expected));
                 view.Start();
+
                 Assert.That(view.Screen.Summary, Is.EqualTo(expected));
             }
         }
@@ -240,6 +266,7 @@ namespace WebRPG.Tests
                 Assert.That(view.Screen.Skills, Has.Length.EqualTo(6));
                 Assert.That(view.Screen.Skills.All(skill => skill.FillAmount == 0), Is.True);
                 view.Start();
+
                 Assert.That(view.Screen.ShowMap, Is.True);
                 Assert.That(view.Screen.Skills[0].Title, Does.Contain(configuration.Skills[0].Name));
                 Assert.That(view.Screen.Skills[0].DisplayName, Is.EqualTo(configuration.Skills[0].Name));
@@ -261,16 +288,21 @@ namespace WebRPG.Tests
                 Assert.That(view.Screen.Skills[0].FillAmount, Is.EqualTo(1));
                 Assert.That(AdventureBattleTestHelper.Read<bool>(view.Screen.Skills[0], "CanUse"), Is.True);
                 presenter.Tick(0.25f);
+
                 Assert.That(view.Screen.BasicAttack.FillAmount, Is.EqualTo(0.125f));
                 AdventureGaugeScreenModel enemyCast = AdventureBattleTestHelper.Read<AdventureGaugeScreenModel>(
                     view.Screen.Enemies[0], "Action");
+
                 Assert.That(enemyCast.FillAmount, Is.EqualTo(0.5f));
                 presenter.Tick(0.25f);
+
                 Assert.That(model.Health, Is.EqualTo(configuration.StartingHealth));
                 presenter.Tick(0.5f);
+
                 Assert.That(view.Screen.PlayerHealth.FillAmount,
                     Is.EqualTo((float)(configuration.StartingHealth - 7) / configuration.StartingHealth));
                 view.Abandon();
+
                 Assert.That(view.Screen.ShowBattle, Is.False);
                 Assert.That(view.Screen.Skills.All(skill => skill.FillAmount == 0), Is.True);
             }
@@ -285,6 +317,7 @@ namespace WebRPG.Tests
             configuration.ProjectileTravelTime = 0.125f;
             configuration.Skills[0].Cooldown = 100;
             configuration.Floors[0].Rows[0].NodePool[0].EnemyGroupPool = new[] { "patrol1" };
+
             foreach (EnemyDefinition enemy in configuration.Enemies)
             {
                 enemy.Health = enemy.Id == "guard1" ? 1 : 10000;
@@ -299,6 +332,7 @@ namespace WebRPG.Tests
                 view.Start();
                 view.Choose(0);
                 presenter.Tick(0.375f);
+
                 Assert.That(view.Screen.ShowBattle, Is.True);
                 Assert.That(view.Screen.Enemies, Has.Length.EqualTo(2));
                 Assert.That(view.Screen.Enemies[0].Health.FillAmount, Is.Zero);
@@ -315,6 +349,7 @@ namespace WebRPG.Tests
             configuration.SimulationStep = 0.125f;
             configuration.BasicAttack.CastTime = 0.5f;
             configuration.ProjectileTravelTime = 0.125f;
+
             foreach (EnemyDefinition enemy in configuration.Enemies)
             {
                 enemy.Health = 1;
@@ -334,9 +369,11 @@ namespace WebRPG.Tests
                 view.Start();
                 view.Choose(0);
                 presenter.Tick(0.625f);
+
                 Assert.That(model.Phase, Is.EqualTo(AdventurePhase.SkillReward));
                 view.Choose(0);
                 view.Choose(0);
+
                 Assert.That(view.Screen.ShowBattle, Is.True);
                 Assert.That(view.Screen.BasicAttack.FillAmount, Is.Zero);
                 Assert.That(view.Screen.Skills.Take(model.Skills.Count).All(skill => skill.FillAmount == 1), Is.True);
@@ -354,6 +391,7 @@ namespace WebRPG.Tests
             {
                 string summary = view.Screen.Summary;
                 view.Inspect("enemy:2");
+
                 Assert.That(model.LockedEnemyIndex, Is.EqualTo(2));
                 Assert.That(AdventureBattleTestHelper.Read<bool>(view.Screen.Enemies[2], "IsLocked"), Is.True);
                 Assert.That(view.Screen.InspectedCharacterId, Is.EqualTo("local-player"));
@@ -361,6 +399,7 @@ namespace WebRPG.Tests
                 Assert.That(view.Screen.Summary, Is.EqualTo(summary));
                 view.Inspect(null);
                 view.Inspect("missing");
+
                 Assert.That(model.LockedEnemyIndex, Is.EqualTo(2));
             }
         }
@@ -369,6 +408,7 @@ namespace WebRPG.Tests
         public void MapInspectionPreservesBattleAndShowsActualChosenPath()
         {
             AdventureConfiguration configuration = AdventureModelScenarioHelper.LoadConfiguration();
+
             foreach (EnemyDefinition enemy in configuration.Enemies)
             {
                 enemy.Health = 10000;
@@ -380,6 +420,7 @@ namespace WebRPG.Tests
             TestAdventureView view = new TestAdventureView();
             AdventurePresenter presenter = new AdventurePresenter(model, view);
             view.Start();
+
             Assert.That(view.Screen.ShowMap, Is.True);
             Assert.That(view.Screen.CanToggleMap, Is.False);
             Assert.That(view.Screen.MapRows[0].Nodes.All(node => node.CanSelect), Is.True);
@@ -387,20 +428,24 @@ namespace WebRPG.Tests
             view.Choose(0);
             view.Inspect("enemy:0");
             view.ToggleMap();
+
             Assert.That(view.Screen.ShowMap, Is.True);
             Assert.That(view.Screen.InspectedCharacterId, Is.EqualTo("local-player"));
             Assert.That(view.Screen.MapRows[0].Nodes[0].IsChosen, Is.True);
             Assert.That(view.Screen.MapRows.SelectMany(row => row.Nodes).Any(node => node.CanSelect), Is.False);
             float cooldown = model.PlayerAction.RemainingCastTime;
             presenter.Tick(0.25f);
+
             Assert.That(model.Phase, Is.EqualTo(AdventurePhase.Battle));
             Assert.That(model.PlayerAction.RemainingCastTime, Is.LessThan(cooldown));
             view.ToggleMap();
+
             Assert.That(view.Screen.ShowMap, Is.False);
             AdventureScreenModel last = view.Screen;
             presenter.Dispose();
             view.Inspect("enemy:0");
             view.ToggleMap();
+
             Assert.That(view.Screen, Is.SameAs(last));
         }
 
@@ -411,21 +456,26 @@ namespace WebRPG.Tests
             TestAdventureView view = new TestAdventureView();
             AdventurePresenter presenter = new AdventurePresenter(model, view);
             view.UseSkill(0);
+
             Assert.That(model.PlayerAction.SkillIndex, Is.Zero);
             view.SetSpeed(2);
             presenter.Tick(0.25f);
+
             Assert.That(model.PlayerAction.RemainingCastTime, Is.EqualTo(2.5f));
             presenter.SetPaused(true);
             presenter.Tick(5);
+
             Assert.That(model.PlayerAction.RemainingCastTime, Is.EqualTo(2.5f));
             presenter.SetPaused(false);
             view.SetSpeed(0);
             presenter.Tick(5);
+
             Assert.That(model.PlayerAction.RemainingCastTime, Is.EqualTo(2.5f));
             view.SetSpeed(1);
             presenter.Dispose();
             view.SetSpeed(2);
             view.Inspect("enemy:2");
+
             Assert.That(model.BattleSpeed, Is.EqualTo(1));
             Assert.That(model.LockedEnemyIndex, Is.Zero);
         }
@@ -439,6 +489,7 @@ namespace WebRPG.Tests
             {
                 presenter.Tick(2);
                 object projectile = AdventureBattleTestHelper.Read<object>(view.Screen, "Projectile");
+
                 Assert.That(projectile, Is.Not.Null);
                 Assert.That(AdventureBattleTestHelper.Read<string>(projectile, "SourceCharacterId"),
                     Is.EqualTo("local-player"));
@@ -446,13 +497,16 @@ namespace WebRPG.Tests
                     Is.EqualTo("enemy:0"));
                 presenter.Tick(0.25f);
                 projectile = AdventureBattleTestHelper.Read<object>(view.Screen, "Projectile");
+
                 Assert.That(AdventureBattleTestHelper.Read<float>(projectile, "Progress"), Is.EqualTo(0.5f));
                 view.SetSpeed(0);
                 presenter.Tick(10);
                 projectile = AdventureBattleTestHelper.Read<object>(view.Screen, "Projectile");
+
                 Assert.That(AdventureBattleTestHelper.Read<float>(projectile, "Progress"), Is.EqualTo(0.5f));
                 view.SetSpeed(2);
                 presenter.Tick(0.125f);
+
                 Assert.That(AdventureBattleTestHelper.Read<object>(view.Screen, "Projectile"), Is.Null);
                 Assert.That(model.Enemies[0].Health, Is.EqualTo(94));
             }
@@ -474,6 +528,7 @@ namespace WebRPG.Tests
             {
                 string action = AdventureBattleTestHelper.Read<string>(view.Screen.Enemies[0], "ActionDescription");
                 string intent = AdventureBattleTestHelper.Read<string>(view.Screen.Enemies[0], "SpecialIntent");
+
                 Assert.That(action, Does.Contain("普攻"));
                 Assert.That(intent, Does.Contain("----------------"));
                 Assert.That(intent, Does.Contain("2 次普攻"));
@@ -491,6 +546,7 @@ namespace WebRPG.Tests
             public event Action MapToggleRequested;
             public event Action<int> SkillRequested;
             public event Action<float> BattleSpeedRequested;
+
             public AdventureScreenModel Screen { get; private set; }
 
             public void Render(AdventureScreenModel screen)
