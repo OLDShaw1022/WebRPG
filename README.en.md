@@ -1,6 +1,8 @@
 # WebRPG
 
-[繁體中文](README.md) · [Play in your browser](https://oldshaw-webrpg.com/)
+[繁體中文](README.md)
+
+Play in your browser ([Production](https://oldshaw-webrpg.com/) · [Test](https://test.oldshaw-webrpg.com/))
 
 WebRPG is a 2D RPG prototype I built as a portfolio project. It shows how I develop a Unity game client, connect it to account APIs and a real-time multiplayer backend, and collaborate with AI throughout development.
 
@@ -28,6 +30,7 @@ The repository also documents how AI reads project specs, backs up local changes
 | [Frontend tests](WebRPG/Assets/WebRPG/Tests/Editor/) | Unity Test Framework (Edit Mode) covers adventure and combat logic, UI, and multiplayer connection flows. |
 | [Backend tests](WebRPGServer.Tests/) | NUnit unit, component, and WebSocket integration tests. |
 | [CI/CD (GitHub Actions)](.github/workflows/) | Manually triggered workflows build and deploy the WebGL client to Firebase Hosting, and run backend tests and deploy the server to AWS EC2. |
+| Production and test separation | The production environment serves the stable build for players. The test environment is used to verify new features and fixes. Each environment has its own WebGL site and game server. |
 | DNS | Cloudflare manages DNS for the game site and server. |
 
 [Project documentation index (Traditional Chinese)](WebRPGDocument/Document%20Directory.md)

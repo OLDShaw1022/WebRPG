@@ -1,6 +1,8 @@
 # WebRPG
 
-[English](README.en.md) · [線上試玩](https://oldshaw-webrpg.com/)
+[English](README.en.md)
+
+線上試玩：[正式版](https://oldshaw-webrpg.com/) · [測試版](https://test.oldshaw-webrpg.com/)
 
 WebRPG 是我的個人作品集專案，以一款 2D RPG 原型展示我如何開發 Unity 遊戲前端、串接帳號 API 與即時多人後端，以及如何在開發過程中與 AI 協作。
 
@@ -26,6 +28,7 @@ WebRPG 是我的個人作品集專案，以一款 2D RPG 原型展示我如何�
 | [前端測試](WebRPG/Assets/WebRPG/Tests/Editor/) | Unity Test Framework（Edit Mode）。涵蓋冒險與戰鬥邏輯、UI 和多人連線流程。 |
 | [後端測試](WebRPGServer.Tests/) | NUnit。包含單元、元件與 WebSocket 整合測試。 |
 | [CI/CD（GitHub Actions）](.github/workflows/) | 手動觸發 WebGL 建置與 Firebase Hosting 部署，或執行後端測試並將伺服器部署至 AWS EC2。 |
+| 正式與測試分流 | 正式環境提供穩定版本供玩家遊玩，測試環境用於驗證新功能與修正。兩個環境各自部署 WebGL 網站，並連線至各自的遊戲伺服器。 |
 | 網域 DNS | Cloudflare 管理遊戲網站和伺服器的 DNS。 |
 
 更多功能規格與驗收方式可見[專案文件目錄](WebRPGDocument/Document%20Directory.md)。
