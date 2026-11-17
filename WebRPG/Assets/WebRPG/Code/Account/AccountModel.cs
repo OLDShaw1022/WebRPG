@@ -172,7 +172,7 @@ namespace WebRPG
         }
 
         internal Awaitable<string> SendAuthenticatedAsync(string path, string body) =>
-            SendAsync(ServerIndex, path, body, true);
+            SendAsync(ServerIndex, path, body, true, includeBrowserAccountCookie: false);
 
         private async Awaitable<string> SendAsync(
             int serverIndex,
@@ -180,7 +180,8 @@ namespace WebRPG
             string body,
             bool authenticated,
             bool allowUnauthorized = false,
-            int timeoutSeconds = RequestTimeoutSeconds)
+            int timeoutSeconds = RequestTimeoutSeconds,
+            bool includeBrowserAccountCookie = true)
         {
             if (_disposed || _request != null || serverIndex < 0 || serverIndex >= _servers.Length)
                 throw new InvalidOperationException(RequestFailedMessage);
@@ -202,7 +203,7 @@ namespace WebRPG
 
             try
             {
-                AccountBrowserRequestHelper.Configure(address.Uri);
+                if (includeBrowserAccountCookie) AccountBrowserRequestHelper.Configure(address.Uri);
 #if UNITY_EDITOR || UNITY_STANDALONE
                 await AccountNativeCookieHelper.ConfigureAsync(request);
                 if (_request != request) throw new OperationCanceledException();
