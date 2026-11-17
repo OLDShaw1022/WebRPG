@@ -1,7 +1,7 @@
 # GitHub Actions 部署工作流程
 
 - 適用範圍為 WebRPG 正式與測試環境的 EC2 伺服器和 Unity WebGL 部署。
-- 四支 workflow 都從 GitHub Actions 手動觸發，只部署遠端 `main` 的最新提交。
+- 四支 workflow 都從 GitHub Actions 手動觸發，分支選 `main`，並部署該次執行建置的版本。
 
 ## 工作流程與部署目標
 
