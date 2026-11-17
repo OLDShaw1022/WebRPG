@@ -50,7 +50,7 @@ jobs:
           catalog=WebRPG/Assets/WebRPG/Data/LobbyClient.json
           jq '.DefaultServerId = "test" | .Servers = [{
             Id: "test",
-            Name: "Test",
+            Name: "AWS EC2（測試伺服器）",
             Url: "wss://ws-test.oldshaw-webrpg.com/ws?channel=lobby",
             EditorOnly: false
           }]' "$catalog" > "$catalog.tmp"
