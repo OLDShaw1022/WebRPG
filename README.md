@@ -11,6 +11,7 @@ WebRPG 是我的個人作品集專案，以一款 2D RPG 原型展示我如何�
 - **單人冒險**：探索多層地圖、選擇路線、參與戰鬥，並在途中取得技能與道具。
 - **多人冒險**：玩家可建立或加入房間，最多 4 人準備後一同出發。伺服器處理房間與冒險狀態，並透過 WebSocket 同步給玩家。房間內也能即時聊天。
 - **帳號系統**：支援 Email 註冊、登入與記住登入，帳號資料儲存在 PostgreSQL。
+- **商店儲值**。玩家可在商店選擇方案，透過 PayPal 購買晶石，並查詢訂單狀態與晶石餘額。
 
 ## 我如何與 AI 協作
 
@@ -30,5 +31,6 @@ WebRPG 是我的個人作品集專案，以一款 2D RPG 原型展示我如何�
 | [CI/CD（GitHub Actions）](.github/workflows/) | 手動觸發 WebGL 建置與 Firebase Hosting 部署，或執行後端測試並將伺服器部署至 AWS EC2。 |
 | 正式與測試分流 | 正式環境提供穩定版本供玩家遊玩，測試環境用於驗證新功能與修正。兩個環境各自部署 WebGL 網站，並連線至各自的遊戲伺服器。 |
 | 網域 DNS | Cloudflare 管理遊戲網站和伺服器的 DNS。 |
+| 金流 | PayPal 託管結帳與 Orders API 用於建立訂單及請款。後端驗證 Webhook 簽章並核對付款金額與幣別，以 PostgreSQL 交易同步更新訂單、晶石餘額與錢包流水，避免重複入帳。全額退款或拒付確認後會沖銷入帳。測試環境使用 PayPal Sandbox，正式環境可設定 PayPal Live。 [貨幣與商店規格](WebRPGDocument/CurrencyAndShop.md) |
 
 更多功能規格與驗收方式可見[專案文件目錄](WebRPGDocument/Document%20Directory.md)。
